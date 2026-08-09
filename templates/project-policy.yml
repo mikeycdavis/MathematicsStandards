@@ -1,0 +1,93 @@
+# Mathematics standards policy for this project.
+#
+# This file declares what applies here. It is the only place a project may say a rule does not apply,
+# is knowingly unmet, or has been satisfied by human review — and the three are different mechanisms
+# that must not be confused for one another:
+#
+#   applicability: not-applicable   the rule has no subject in this project
+#   exceptions:                     the rule applies and the project knowingly does not satisfy it
+#   attestations:                   the rule applies and a human established that it is satisfied
+#
+# A fourth outcome needs no declaration and is the most common: the rule applies, nothing evaluated
+# it, and the report says `not-evaluated` rather than pretending it passed.
+
+standardVersion: "1.0.0"
+project: "<your project name>"
+
+mathematics:
+  # Which of the five regimes describe this project (Standard 1 R1). A claim about the PROJECT, not
+  # about the standards — it stops being true the moment you acquire the capability you disclaimed.
+  regimes:
+    - informal
+    # - computational
+    # - formal
+    # - theorem-proving
+    # - open-problem
+
+  # Where the claims ledger lives. Default shown; change it only if you have a reason.
+  claimsLedger: "artifacts/claims-ledger.md"
+
+  # Uncomment when you use a proof assistant. Scanning covers all three regardless; declaring them
+  # records what a reader of a formal claim is being asked to trust.
+  # proofAssistants:
+  #   - lean4
+
+  # Set true when working toward a major open problem. This turns on Standard 17's higher bar: the
+  # per-problem tracking record becomes required, and so do stopping criteria.
+  # openProblemMode: true
+  # openProblemsDir: "artifacts/open-problems"
+
+# --- Applicability -------------------------------------------------------------------------------
+#
+# Every not-applicable declaration needs a reason AND a revisitWhen naming the event that would end
+# it. `math-standards policy` rejects one without a revisit condition, because a classification with
+# no end condition is a permanent exemption wearing a temporary label.
+#
+# Example — a project with no proof assistant:
+#
+# applicability:
+#   formal.trusted-chain-tracked:
+#     status: not-applicable
+#     reason: "This project contains no proof-assistant sources."
+#     reviewedAt: "2026-01-01"
+#     revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+
+# --- Exceptions ----------------------------------------------------------------------------------
+#
+# A time-bounded, approved waiver of a rule that DOES apply. An expired exception is a compliance
+# failure, not a resolution.
+#
+# An exception against a rule the catalog marks `forbidden` and `nonExemptible` is REJECTED, and the
+# rejection is itself a failure. That is what makes a prohibition a prohibition: a rule a policy
+# could waive would not be one.
+#
+# exceptions:
+#   - rule: computation.scope-declared
+#     reason: "The 2024 scans predate this standard; they are being re-run with full metadata."
+#     approvedBy: "<name>"
+#     approvedAt: "2026-01-01"
+#     expires: "2026-06-01"
+#     reference: "artifacts/adr/0003-rescanning-legacy-computations.md"
+
+# --- Attestations --------------------------------------------------------------------------------
+#
+# Most of what these standards require is mathematical judgement, so this is where most of the real
+# assurance lives. An attestation is evidence, not a waiver:
+#
+#   * it never overrides an automated finding — a contradicted attestation fails;
+#   * it goes stale, back to not-evaluated, when the files it reviewed change;
+#   * it can record a REJECTION, which is a first-class outcome. A system that only lets a human
+#     record approval has decided in advance what the human will say.
+#
+# Omit `digest` on the first pass: `math-standards validate` prints the current digest so you can
+# record it.
+#
+# attestations:
+#   rigor.unjustified-division:
+#     status: approved
+#     reviewedBy: "<name>"
+#     reviewedAt: "2026-01-15"
+#     evidence: "Checked every cancellation in proofs/clm-0002.md; each denominator is non-vanishing on the stated domain by Lemma CLM-0005."
+#     reviewedAgainst:
+#       paths:
+#         - "proofs/clm-0002.md"

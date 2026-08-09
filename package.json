@@ -1,0 +1,29 @@
+{
+  "name": "mathematics-standards",
+  "version": "1.0.0",
+  "description": "Numbered standards for mathematical reasoning, proof, and theorem work, and the audit command that checks a research repository against them.",
+  "type": "module",
+  "bin": {
+    "math-standards": "scripts/standards.mjs"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "audit": "node scripts/standards.mjs audit .",
+    "validate": "node scripts/standards.mjs validate .",
+    "check": "node scripts/standards.mjs validate .",
+    "explain": "node scripts/standards.mjs explain",
+    "status": "node scripts/standards.mjs status .",
+    "inventory": "node scripts/inventory.mjs",
+    "fidelity": "node scripts/fidelity.mjs",
+    "policy": "node scripts/policy.mjs",
+    "diagrams": "node scripts/diagrams.mjs",
+    "assurance": "node scripts/assurance.mjs",
+    "mutation-check": "node scripts/mutation-check.mjs",
+    "audit:strict": "node scripts/standards.mjs audit . --strict"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

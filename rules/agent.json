@@ -1,0 +1,45 @@
+{
+  "$comment": "Rule catalog — the AI agent operation contract. Standard 22.",
+  "rules": [
+    {
+      "id": "agent.explainable-findings",
+      "title": "Every finding can be explained",
+      "standard": 22,
+      "category": "agent",
+      "level": "required",
+      "severity": "error",
+      "validationType": "structural",
+      "assurance": "full",
+      "nonExemptible": false,
+      "introducedIn": "1.0.0",
+      "description": "Every finding in the audit envelope carries a canonical rule id, a standardRef that resolves to a requirement anchor, an evidence label, a non-empty message, and the catalog's remediation string.",
+      "rationale": "'Rule X failed' is a report. An agent has to be able to say why the rule applies here and what would satisfy it, and it can only do that if every finding carries the material to construct the explanation.",
+      "remediation": "This is a check on the tooling. A finding missing any of these fields is a defect in the detector that produced it.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Exact, and its subject is this tool's own output rather than anyone's mathematics. It establishes that the material for an explanation is present, not that any agent used it well."
+    },
+    {
+      "id": "agent.refusal-on-invariant",
+      "title": "An agent stops rather than working around an invariant",
+      "standard": 22,
+      "category": "agent",
+      "level": "forbidden",
+      "severity": "error",
+      "validationType": "manual-review",
+      "assurance": "none",
+      "nonExemptible": true,
+      "introducedIn": "1.0.0",
+      "description": "On a BLOCKED_BY_INVARIANT verdict, an agent edits the ledger, the policy, the catalog, or a detector to clear the block; reclassifies the rule as not applicable; writes an exception or attestation against it; or proceeds on the grounds that the blocked item is peripheral.",
+      "rationale": "Non-compliance is a state a project can knowingly occupy while work continues. An invariant violation means a claim in the record is untrue in a way that invalidates work resting on it, and continuing produces more work resting on it.",
+      "remediation": "Fix the underlying condition — remove the placeholder, demote the claim, discharge the obligation — or stop and report the blocking rule ids from the envelope's blockedBy array. Those are the only two permitted responses.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "No detector. Nothing in a repository records whether an agent stopped when it should have: the evidence of compliance is an absence of work, and absences are not observable. What the framework supplies is an unambiguous signal to stop, an enumerated list of the available evasions so that taking one is a named violation rather than an improvisation, and a verdict none of them clears."
+    }
+  ]
+}

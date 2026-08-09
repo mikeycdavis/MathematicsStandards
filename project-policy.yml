@@ -1,0 +1,429 @@
+# This repository's own policy — the framework applied to itself.
+#
+# WHY THIS FILE IS MOSTLY not-applicable, AND WHY THAT IS THE POINT.
+#
+# MathematicsStandards is the standards framework, not a mathematical research project. It has no
+# claims ledger, no proof-assistant sources, and no open problem, so the rules that read those
+# artifacts have no subject here. That is a claim about THIS PROJECT, not about the rules, and it
+# stops being true the moment the repository gains the capability — which is why every declaration
+# below carries a revisitWhen condition naming the event that would end it (Standard 1 R2).
+#
+# Declaring them not-applicable rather than deleting them, or lowering their level until they stop
+# failing, is the mechanism the framework ships. Using it on ourselves is the only way to find out
+# whether it is usable, and it is what makes the difference between "this rule has no subject here"
+# and "this rule is inconvenient" a thing the repository has actually had to answer for.
+#
+# The rules that DO apply are the ones whose subject is the framework itself: the provenance
+# digests, the rule lifecycle, the evidence labelling on our own findings, the never-report-a-skip-
+# as-a-pass invariant, and the explainability of what we emit.
+
+standardVersion: "1.0.0"
+project: "MathematicsStandards"
+
+applicability:
+  # --- The claims ledger and everything that reads it (Standards 2, 3, 4) -------------------------
+  claims.ledger-exists:
+    status: not-applicable
+    reason: "This repository is the standards framework, not a mathematical research project; it registers no claims of its own."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins making mathematical claims of its own, or a claims ledger is added."
+  claims.ledger-parse-valid:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.status-vocabulary:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.history-complete:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.definitions-first:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.inline-label-consistency:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists. The CLM identifiers appearing in the standards documents are format examples, not references to registered claims."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.silent-promotion:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists. There is no claim here that could be promoted."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.status-exceeds-support:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.conditional-as-unconditional:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.silent-strengthening:
+    status: not-applicable
+    reason: "No mathematical claims are made here, so none can be strengthened."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.silent-weakening:
+    status: not-applicable
+    reason: "No mathematical claims are made here, so no hypotheses can be weakened."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  claims.reformulation-as-progress:
+    status: not-applicable
+    reason: "No mathematical claims are made here, so none can be reformulated."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+
+  # --- Rigor (Standards 5, 6, 13) ------------------------------------------------------------------
+  rigor.explicit-domain:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.explicit-quantifiers:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.explicit-assumptions:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.conjecture-registered:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.symbolic-validity-conditions:
+    status: not-applicable
+    reason: "This repository contains no mathematical derivations."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact or derivation is added to this repository."
+  rigor.hidden-assumption:
+    status: not-applicable
+    reason: "This repository contains no mathematical proofs."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact is added to this repository."
+  rigor.domain-restrictions-ignored:
+    status: not-applicable
+    reason: "This repository contains no mathematical claims with domains."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.unjustified-division:
+    status: not-applicable
+    reason: "This repository contains no mathematical derivations."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact or derivation is added to this repository."
+  rigor.unjustified-interchange:
+    status: not-applicable
+    reason: "This repository contains no mathematical derivations."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact or derivation is added to this repository."
+  rigor.wlog-abuse:
+    status: not-applicable
+    reason: "This repository contains no mathematical derivations."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact or derivation is added to this repository."
+  rigor.almost-all-as-all:
+    status: not-applicable
+    reason: "This repository states no quantified mathematical results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  rigor.notation-equivocation:
+    status: not-applicable
+    reason: "This repository contains no mathematical derivations."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact or derivation is added to this repository."
+
+  # --- Proof structure (Standards 7, 8, 9) ---------------------------------------------------------
+  proof.obligations-enumerated:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  proof.dependency-traceability:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  proof.circular-dependency:
+    status: not-applicable
+    reason: "No claims ledger — there is no dependency graph here to be circular."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  proof.complete-with-open-obligations:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  proof.counterexample-search-recorded:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  proof.edge-cases-addressed:
+    status: not-applicable
+    reason: "This repository contains no mathematical proofs."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact is added to this repository."
+  proof.difficulty-displacement:
+    status: not-applicable
+    reason: "This repository pursues no mathematical result whose difficulty could move."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger or open-problem record is added to this repository."
+  proof.unjustified-triviality:
+    status: not-applicable
+    reason: "This repository contains no mathematical proofs."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact is added to this repository."
+  proof.existence-as-construction:
+    status: not-applicable
+    reason: "This repository contains no mathematical existence results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact is added to this repository."
+  proof.induction-gaps:
+    status: not-applicable
+    reason: "This repository contains no inductive arguments."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A proof artifact is added to this repository."
+
+  # --- Computation (Standards 10, 11, 12) ----------------------------------------------------------
+  computation.scope-declared:
+    status: not-applicable
+    reason: "This repository performs no mathematical computation. Its scripts check documents, not mathematics."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A verification computation is added to this repository."
+  computation.reproducible-runs:
+    status: not-applicable
+    reason: "This repository performs no mathematical computation."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A verification computation is added to this repository."
+  computation.error-bounds-stated:
+    status: not-applicable
+    reason: "This repository states no approximate numerical results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A numerical result is stated in this repository."
+  computation.evidence-as-proof:
+    status: not-applicable
+    reason: "This repository states no mathematical claims and produces no numerical evidence for any."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  computation.finite-case-generalization:
+    status: not-applicable
+    reason: "This repository states no universally quantified mathematical claims."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  computation.float-as-exact:
+    status: not-applicable
+    reason: "This repository performs no floating-point mathematics."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A verification computation is added to this repository."
+  computation.cherry-picking:
+    status: not-applicable
+    reason: "This repository reports no computational results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A verification computation is added to this repository."
+  computation.cas-output-trust:
+    status: not-applicable
+    reason: "This repository uses no computer algebra system."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A computer algebra derivation is added to this repository."
+
+  # --- Literature (Standard 14) --------------------------------------------------------------------
+  literature.known-result-comparison:
+    status: not-applicable
+    reason: "This repository claims no mathematical results to compare against the literature."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  literature.resolvable-identifiers:
+    status: not-applicable
+    reason: "This repository cites no mathematical literature. The historical conjectures named in Standard 11 are illustrations in prose, not dependencies of any claim."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger with external references is added to this repository."
+  literature.fabricated-citation:
+    status: not-applicable
+    reason: "This repository makes no citations that a mathematical result depends on."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger with external references is added to this repository."
+  literature.unchecked-novelty:
+    status: not-applicable
+    reason: "This repository claims no mathematical novelty."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  literature.citation-statement-drift:
+    status: not-applicable
+    reason: "This repository cites no mathematical results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger with external references is added to this repository."
+
+  # --- Formal theorem proving (Standard 16) --------------------------------------------------------
+  formal.status-declared:
+    status: not-applicable
+    reason: "This repository contains no proof-assistant sources."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.trusted-chain-tracked:
+    status: not-applicable
+    reason: "This repository contains no proof-assistant sources."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.axiom-disclosure:
+    status: not-applicable
+    reason: "This repository contains no proof-assistant sources."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.gap-inventory:
+    status: not-applicable
+    reason: "This repository contains no claims to formalise."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  formal.placeholder-inventory:
+    status: not-applicable
+    reason: "This repository contains no proof-assistant sources."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.placeholder-in-chain:
+    status: not-applicable
+    reason: "This repository asserts no machine-checked results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.parse-as-proof:
+    status: not-applicable
+    reason: "This repository reports no proof-assistant results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.compile-as-proof:
+    status: not-applicable
+    reason: "This repository reports no proof-assistant results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.helper-as-target:
+    status: not-applicable
+    reason: "This repository reports no proof-assistant results."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.statement-overclaim:
+    status: not-applicable
+    reason: "This repository states no formal theorems."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+  formal.trusted-base-enlarged:
+    status: not-applicable
+    reason: "This repository contains no proof-assistant sources."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+
+  # --- Open problems and lifecycle (Standards 17, 18) ----------------------------------------------
+  problems.tracking-file:
+    status: not-applicable
+    reason: "This repository is not working toward a mathematical open problem."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "mathematics.openProblemMode is set, or an open-problem record is added."
+  problems.proved-vs-conjectural:
+    status: not-applicable
+    reason: "No open-problem record — see problems.tracking-file."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  problems.known-result-check:
+    status: not-applicable
+    reason: "No open-problem record — see problems.tracking-file."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  problems.equivalence-tracking:
+    status: not-applicable
+    reason: "No open-problem record — see problems.tracking-file."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  problems.difficulty-location:
+    status: not-applicable
+    reason: "No open-problem record — see problems.tracking-file."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  problems.barriers-recorded:
+    status: not-applicable
+    reason: "No open-problem record — see problems.tracking-file."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  problems.restatement-as-solution:
+    status: not-applicable
+    reason: "This repository pursues no mathematical conjecture."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "An open-problem record is added to this repository."
+  lifecycle.failed-routes-preserved:
+    status: not-applicable
+    reason: "This repository conducts no mathematical research whose routes could fail. Its own design decisions are preserved in artifacts/adr/."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+  lifecycle.terminated-approaches:
+    status: not-applicable
+    reason: "No mathematical research approaches — see lifecycle.failed-routes-preserved."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+  lifecycle.reopening-evidence:
+    status: not-applicable
+    reason: "No terminated approaches — see lifecycle.failed-routes-preserved."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+  lifecycle.stopping-criteria:
+    status: not-applicable
+    reason: "No mathematical research effort — see lifecycle.failed-routes-preserved."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+
+  # --- Evidence (Standards 1, 15, 19) --------------------------------------------------------------
+  evidence.applicability-declared:
+    status: not-applicable
+    reason: "The regimes of Standard 1 describe mathematical research projects. This repository is the framework they are evaluated against, and declaring it 'informal mathematics' to satisfy a check would be a false declaration."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+  evidence.type-vocabulary:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  evidence.artifact-linked:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  evidence.equivalence-direction-proved:
+    status: not-applicable
+    reason: "No claims ledger — see claims.ledger-exists."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "A claims ledger is added to this repository."
+  evidence.hidden-counterexample:
+    status: not-applicable
+    reason: "This repository conducts no mathematical searches that could produce a counterexample."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+  evidence.discarded-failures:
+    status: not-applicable
+    reason: "This repository runs no mathematical experiments."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository begins mathematical research of its own."
+
+  # --- The AI agent contract (Standard 22) ---------------------------------------------------------
+  agent.refusal-on-invariant:
+    status: not-applicable
+    reason: "This rule governs an agent operating ON a project. It has no subject in the framework repository itself, where no verdict is being acted upon."
+    reviewedAt: "2026-08-09"
+    revisitWhen: "This repository is itself audited by an agent acting on the verdict."
+
+# Everything not listed above applies at its catalog level. Those are the rules whose subject IS the
+# framework: integrity.provenance-digest, integrity.rule-lifecycle-honest, integrity.no-self-serving-
+# modification, evidence.labels, evidence.skipped-never-passed, and agent.explainable-findings.
+#
+# integrity.no-self-serving-modification is manual-review with assurance none, so it reports
+# not-evaluated in every automated run. It is deliberately NOT attested here: an attestation that the
+# authors did not weaken any standard for their own convenience, written by the authors, establishes
+# nothing. It stands as not-evaluated, which is the honest state.

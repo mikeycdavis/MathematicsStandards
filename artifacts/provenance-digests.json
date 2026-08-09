@@ -1,0 +1,18 @@
+{
+  "$comment": "Digests of the two source documents the standards are derived from. Recorded once, on 2026-08-09, and never regenerated from a run — the same guarantee artifacts/standards-source-inventory.json carries, for the same reason. The rule integrity.provenance-digest recomputes these and fails if either source has changed. WHY THIS EXISTS: the cheapest way to make a standard true is to edit the prompt it claims to implement. Fidelity checking would still pass, because fidelity compares a standard against the source and the source is what moved. This file is the fixed point that makes that edit loud (Standard 21).",
+  "algorithm": "sha256",
+  "normalization": "Carriage returns are stripped before hashing, then the text is hashed as UTF-8. Line endings differ between checkouts on Windows and Linux; the content does not, and it is the content these digests are about.",
+  "recordedOn": "2026-08-09",
+  "files": [
+    {
+      "path": "artifacts/prompt/original-prompt.md",
+      "digest": "40d20052b563123f2a3e45c0a7383cdcd62739012ef0338f2055bc7b71ce223e",
+      "role": "The mathematical requirements. Source of standards 1 through 20."
+    },
+    {
+      "path": "artifacts/prompt/standards-repository-charter.md",
+      "digest": "ec77e4f9bffb0591832fe16422589fb96a87c63768bc558bb3c937e296e11038",
+      "role": "The repository-design requirements. Source of standards 21 and 22, the CLI design, and the concept investigation."
+    }
+  ]
+}

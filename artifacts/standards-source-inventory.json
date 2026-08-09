@@ -1,0 +1,30 @@
+{
+  "$comment": "The canonical enumeration of the standards series. Reviewed by a human on 2026-08-09 against artifacts/prompts/mathematics-standards-spec.md, which is itself derived from artifacts/prompt/original-prompt.md (items 1-20) and artifacts/prompt/standards-repository-charter.md (items 21-22). scripts/inventory.mjs extracts from the source and compares the result AGAINST this file. It is never regenerated from a run: a parser that becomes more or less forgiving must not be able to redefine how many standards exist.",
+  "source": "artifacts/prompts/mathematics-standards-spec.md",
+  "reviewedOn": "2026-08-09",
+  "expectedCount": 22,
+  "standards": [
+    { "number": 1, "title": "Applicability and Scope", "implementedBy": "standards/01-applicability-and-scope.md" },
+    { "number": 2, "title": "Claim Hierarchy", "implementedBy": "standards/02-claim-hierarchy.md" },
+    { "number": 3, "title": "Claims Ledger", "implementedBy": "standards/03-claims-ledger.md" },
+    { "number": 4, "title": "Definitions Before Dependent Claims", "implementedBy": "standards/04-definitions-before-dependent-claims.md" },
+    { "number": 5, "title": "Domains and Quantifiers", "implementedBy": "standards/05-domains-and-quantifiers.md" },
+    { "number": 6, "title": "Assumptions and Hidden Conjectures", "implementedBy": "standards/06-assumptions-and-hidden-conjectures.md" },
+    { "number": 7, "title": "Proof Obligations", "implementedBy": "standards/07-proof-obligations.md" },
+    { "number": 8, "title": "Dependency Traceability", "implementedBy": "standards/08-dependency-traceability.md" },
+    { "number": 9, "title": "Edge Cases and Counterexamples", "implementedBy": "standards/09-edge-cases-and-counterexamples.md" },
+    { "number": 10, "title": "Computational and Numerical Evidence", "implementedBy": "standards/10-computational-and-numerical-evidence.md" },
+    { "number": 11, "title": "Finite and Infinite Reasoning", "implementedBy": "standards/11-finite-and-infinite-reasoning.md" },
+    { "number": 12, "title": "Approximation and Error Bounds", "implementedBy": "standards/12-approximation-and-error-bounds.md" },
+    { "number": 13, "title": "Symbolic Manipulation", "implementedBy": "standards/13-symbolic-manipulation.md" },
+    { "number": 14, "title": "Literature and Novelty", "implementedBy": "standards/14-literature-and-novelty.md" },
+    { "number": 15, "title": "Equivalent Reformulations", "implementedBy": "standards/15-equivalent-reformulations.md" },
+    { "number": 16, "title": "Formal Theorem Proving", "implementedBy": "standards/16-formal-theorem-proving.md" },
+    { "number": 17, "title": "Open Problems", "implementedBy": "standards/17-open-problems.md" },
+    { "number": 18, "title": "Research Lifecycle", "implementedBy": "standards/18-research-lifecycle.md" },
+    { "number": 19, "title": "Evidence Requirements", "implementedBy": "standards/19-evidence-requirements.md" },
+    { "number": 20, "title": "Must-Never Rules", "implementedBy": "standards/20-must-never-rules.md" },
+    { "number": 21, "title": "Standards Integrity", "implementedBy": "standards/21-standards-integrity.md" },
+    { "number": 22, "title": "AI Agent Operation", "implementedBy": "standards/22-ai-agent-operation.md" }
+  ]
+}

@@ -1,0 +1,59 @@
+name: CI
+
+# There is deliberately no dependency-install step. This repository has zero runtime dependencies,
+# and the absence of `npm ci` here is what enforces that: adding a dependency would make the code
+# fail to run in CI rather than quietly succeed. A lint rule could be turned off; this cannot.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Order matters. Each gate assumes the previous one held, and a failure names itself rather
+      # than surfacing as a confusing downstream error.
+
+      # 1. The standards series has not silently changed shape.
+      - name: Inventory
+        run: npm run inventory
+
+      # 2. Every block a standard claims is verbatim source actually is.
+      - name: Fidelity
+        run: npm run fidelity
+
+      # 3. This repository's own policy is well-formed and internally consistent.
+      - name: Policy
+        run: npm run policy
+
+      # 4. Every .mmd matches the copy embedded in the documentation.
+      - name: Diagrams
+        run: npm run diagrams
+
+      # 5. The generated assurance report matches the catalog it is generated from.
+      - name: Assurance report is current
+        run: node scripts/assurance.mjs --check
+
+      # 6. Unit and fixture tests, including the self-audit and every detector asserted in both
+      #    directions.
+      - name: Tests
+        run: npm test
+
+      # 7. Evidence discovery. Deliberately NOT --strict: the error gate is the self-audit assertion
+      #    in test/audit.test.mjs, which knows which findings this repository's policy has answered.
+      #    Gating on --strict here would fail the build for the missing claims ledger that the policy
+      #    correctly declares not-applicable.
+      - name: Audit
+        run: npm run audit
+
+      # 8. The verdict. This is the gate.
+      - name: Validate
+        run: npm run validate

@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor Agent
+    participant CLI as math-standards validate
+    participant Cat as catalog.mjs
+    participant Det as detectors
+    participant Cmp as compliance.mjs
+
+    Agent->>CLI: validate .
+    CLI->>Cat: loadCatalog()
+    Cat-->>CLI: rules + aliases
+    CLI->>Det: scan ledger, proofs, formal sources
+    Det-->>CLI: findings + EVALUATED_RULES
+    CLI->>Cat: assertBindings(evaluated)
+    Note over CLI,Cat: A finding against an unknown rule id throws — the evaluator may not invent vocabulary
+    CLI->>Cmp: evaluate(catalog, policy, findings, evaluated)
+    Cmp-->>CLI: verdict + blockedBy
+    alt an invariant failed
+        CLI-->>Agent: BLOCKED_BY_INVARIANT — stop work
+    else a required rule failed
+        CLI-->>Agent: NON_COMPLIANT — remediate
+    else nothing evaluated the rule
+        CLI-->>Agent: skipped / not-evaluated — never reported as passing
+    end

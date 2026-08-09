@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph provenance["Provenance (frozen)"]
+        prompt["original-prompt.md"]
+        charter["standards-repository-charter.md"]
+        digests[("provenance-digests.json")]
+    end
+
+    subgraph normative["Normative layer"]
+        spec["mathematics-standards-spec.md"]
+        docs2["standards/01-22.md"]
+        catalog[("rules/*.json")]
+        inv[("standards-source-inventory.json")]
+    end
+
+    subgraph target["Target research repository"]
+        ledger["artifacts/claims-ledger.md"]
+        proofs["proof artifacts"]
+        formal["*.lean / *.v / *.thy"]
+        openp["artifacts/open-problems/"]
+        policy["project-policy.yml"]
+    end
+
+    subgraph engine["Evaluation engine"]
+        parser["claims.mjs parser"]
+        detect["detectors in standards.mjs"]
+        comply["compliance.mjs"]
+    end
+
+    subgraph out["Outputs"]
+        verdict[["audit / validate envelope"]]
+        assure["docs/assurance-report.md"]
+    end
+
+    prompt -->|derived once, reviewed| spec
+    charter -->|derived once, reviewed| spec
+    digests -.->|integrity.provenance-digest| prompt
+    spec -->|inventory.mjs, fidelity.mjs| docs2
+    inv -.->|canonical enumeration| docs2
+    docs2 -->|one standard number per rule| catalog
+    ledger --> parser
+    formal --> detect
+    proofs --> detect
+    openp --> detect
+    parser --> detect
+    catalog -->|rule identity| comply
+    policy -->|applicability, exceptions, attestations| comply
+    detect -->|findings + evaluated set| comply
+    comply --> verdict
+    catalog -->|assurance partition| assure

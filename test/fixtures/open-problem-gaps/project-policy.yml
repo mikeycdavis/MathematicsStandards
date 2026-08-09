@@ -1,0 +1,8 @@
+standardVersion: "1.0.0"
+project: "open-problem-gaps"
+
+mathematics:
+  regimes:
+    - open-problem
+    - computational
+  openProblemMode: true

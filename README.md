@@ -131,7 +131,7 @@ scripts/         the CLI and its gates — zero dependencies, Node >= 18
 templates/       what `init` writes into a project
 test/            unit tests, plus fixture research repositories
 docs/            architecture, diagrams, and the generated assurance report
-design/          concept and CLI design reasoning
+design/          concept and CLI design reasoning, testing principles, v1.1 candidates
 artifacts/       the source prompts, their digests, the derived spec, the inventory, ADRs
 ```
 

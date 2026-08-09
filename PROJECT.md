@@ -35,6 +35,8 @@ original governs.
 | Architecture and diagrams | `docs/architecture.md`, `docs/*.mmd` |
 | Generated assurance report | `docs/assurance-report.md` |
 | Design reasoning | `design/concept-decisions.md`, `design/cli.md` |
+| Testing principles | `design/testing-principles.md` |
+| Recorded v1.1 candidates (not implemented) | `design/v1.1-candidates.md` |
 | Decisions | `artifacts/adr/` |
 | Canonical enumeration | `artifacts/standards-source-inventory.json` |
 

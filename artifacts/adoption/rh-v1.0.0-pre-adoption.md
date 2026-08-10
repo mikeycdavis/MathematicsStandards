@@ -120,7 +120,7 @@ fifteen times and written a rule after each.
 
 | Mechanism | Why it matters | General? |
 | --- | --- | --- |
-| **First unproved bridge** — one distinguished field naming the single statement that would close the route | Makes difficulty-displacement operational: the screening rule tests *that field* for target-equivalence, so "did the difficulty move?" becomes a check on a named statement rather than a judgement. The ledger has an obligation *list* and no frontier pointer | **General** — the strongest candidate |
+| **First unproved bridge** — one distinguished field naming the single statement that would close the route | Makes difficulty-displacement operational: the screening rule tests *that field* for target-equivalence, so "did the difficulty move?" becomes a check on a named statement rather than a judgement. The ledger has an obligation *list* and no frontier pointer | ~~**General** — the strongest candidate~~ **FALSIFIED — see the correction below** |
 | **Relevance-to-target category, orthogonal to status** | A result can be a proved theorem and still be category 2: correct, unconditional, irrelevant. The ledger grades strength and never asks whether a claim moves anything | **General** in concept |
 | **Explicitly-NOT reopening conditions** — more effort, a different reviewer or session, more numerics, more formalization, "feels close" | Called "the operative half of the rule", and it is. 18 R2 has the positive half only | **General** |
 | **Ordered promotion gates, no skipping forward** | An evidence-acquisition sequence orthogonal to the status ladder | **General** — see §5 |
@@ -130,6 +130,25 @@ fifteen times and written a rule after each.
 | **"The absence of open work is not itself a reason to open work"** | Sharper than 18 R4 | **General** |
 | **S1/S2/S3 stability** — precision, tolerance, representation, with the measured finding that precision *held while being silent on both bugs* and representation was the discriminating check | Standard 12 has nothing of this shape | **Semi-general** — spectral and numerical work |
 | **Constructor-level refusal** — a certificate builder that refuses to construct an object whose omitted sectors are non-empty while its not-certified list is empty | Makes the failure unconstructible rather than detectable afterwards. The framework checks artifacts; it never refuses to produce one | **General**, and architecturally unlike anything in v1.0.0 |
+
+> **Correction, recorded after the second adopter (2026-08-10).** Row 1's verdict was wrong, and it
+> was the row this document was most confident about. **"First unproved bridge" is not general.** It
+> is a property of *chain-shaped* research programmes. PvsNP has no equivalent concept and dropped a
+> sequential ordering rule on its own record as a mistake: its lower-bound tracks depend on none of
+> its foundational work, and serialising them "would have bought nothing and cost the two closures
+> that came out of running them." RH's frontier is a point because its contracts are chains; PvsNP's
+> is an antichain, and what it has instead is a frontier *set* with no first element.
+>
+> The caveat above the table — *"a second adopter should test it; some of this may be idiosyncratic
+> to a project that has been burned fifteen times"* — was the right instinct, and it was aimed at the
+> wrong rows. This is left in place rather than edited out: the strongest-looking candidate from one
+> adopter was the one an independent adopter falsified, which is the argument for the two-producer
+> rule itself.
+>
+> What survives is weaker and is deferred, not accepted: *a programme should be able to name what
+> currently blocks it, without the framework imposing a total order or a singleton frontier.*
+> Disposition: [`../../design/v1.1-disposition.md`](../../design/v1.1-disposition.md) §2.
+> Rows 2, 4 and 6 were tested by the second adopter and held; the rest remain untested.
 
 **Structural mismatch worth recording separately.** Standard 17 models an open problem as *one*
 `problem.md` with nine sections. This project models it as one target with **seven contracts**, each

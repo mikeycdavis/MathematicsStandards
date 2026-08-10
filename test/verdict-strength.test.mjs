@@ -100,6 +100,40 @@ test("M1 · a finding with no label at all cannot elevate", () => {
   assert.notEqual(verdict.status, STATUS.BLOCKED_BY_INVARIANT, "absence of a label is not certainty");
 });
 
+test("M1 · a rejected attestation on an invariant still blocks, and is not capped", () => {
+  // The row Tier 1 must not touch. A rejected attestation produces a failing invariant result whose
+  // label is null, because it is not a detector finding and has no evidentiary classification to
+  // carry. The obvious wrong implementation writes the cap as `label !== "OBSERVED"`, which is true
+  // of null, and silently downgrades every human reviewer's recorded rejection to the same standing
+  // as a regex over prose. It is the wrong direction twice over: the review is stronger evidence
+  // than the heuristic, and the framework would be weakening a conclusion a person reached.
+  //
+  // Two of RiemannHypothesis's three blockers arrive this way, so this is a live path, not a
+  // hypothetical.
+  const rule = [...catalog.rules.values()].find((r) => r.attestable && isInvariant(r));
+  assert.ok(rule, "the catalog must contain an attestable invariant");
+
+  const verdict = evaluate({
+    catalog,
+    policy: {
+      ...policyDoc,
+      attestations: {
+        [rule.id]: { status: "rejected", reviewedBy: "a reviewer", reviewedAt: TODAY, evidence: "reviewed, unmet" },
+      },
+    },
+    findings: [],
+    evaluated: [],
+    today: TODAY,
+  });
+
+  const result = failedFor(verdict, rule.id);
+  assert.ok(result, "the rejected attestation must still produce a failing result");
+  assert.equal(result.label, null, "it is not a detector finding and must carry no evidence label");
+  assert.ok(!("cappedFrom" in result), "Tier 1 must not reach a result path it did not create");
+  assert.equal(verdict.status, STATUS.BLOCKED_BY_INVARIANT, "a recorded human rejection still blocks");
+  assert.deepEqual(verdict.blockedBy.map((b) => b.rule), [rule.id]);
+});
+
 // ---------------------------------------------------------------------------
 // Envelope contract. Two additive fields, and exactly one meaningful cap transition.
 //
@@ -199,6 +233,30 @@ test("contract · when cappedFrom exists it records the one transition that can 
   }
 });
 
+test("contract · a capped run is NON_COMPLIANT everywhere a consumer can look", () => {
+  // cappedFrom is explanatory metadata, not an alternate active status. Nothing downstream may see
+  // it and conclude the run is blocked after all, and nothing may see `invariant: true` on a capped
+  // result and conclude the same. The three places a consumer actually looks are the status string,
+  // the blockedBy array, and the process exit code.
+  const verdict = verdictFor("INFERRED");
+  assert.equal(verdict.status, STATUS.NON_COMPLIANT);
+  assert.deepEqual(verdict.blockedBy, [], "a capped result is not a block, and must not be listed as one");
+  assert.equal(
+    verdict.results.filter((r) => r.cappedFrom).length,
+    1,
+    "exactly the planted finding was capped",
+  );
+
+  const rendered = run(["validate", `--dir=${fixture("silent-promotion")}`]);
+  assert.equal(rendered.code, 1, "a capped run still fails the exit contract");
+  assert.doesNotMatch(rendered.out, /BLOCKED BY INVARIANT/, "the human output must not say blocked");
+
+  // And the opposite failure, which is the one the renderer actually had: the capped finding was
+  // filtered out of the failing list as an invariant, and out of the blocked list as capped, so it
+  // appeared nowhere. A cap that hides the finding is worse than the false block it replaced.
+  assert.match(rendered.out, /claims\.silent-promotion/, "the capped finding must still be shown");
+});
+
 // ---------------------------------------------------------------------------
 // M2 · detector basis. The two arms of one rule must declare different bases.
 //
@@ -232,12 +290,29 @@ test("M2 · the two arms are the same rule with different bases", () => {
 test("M2 · the genuine promotion still blocks and the prose one does not", () => {
   const ledger = JSON.parse(run(["validate", `--dir=${fixture("unevidenced-promotion")}`, "--json"]).out || "{}");
   const prose = JSON.parse(run(["validate", `--dir=${fixture("silent-promotion")}`, "--json"]).out || "{}");
+
+  // Named exactly, not merely counted. `status === BLOCKED_BY_INVARIANT` would also be satisfied by
+  // some other invariant firing in the fixture, which would make this test pass while the arm it is
+  // about had stopped working.
   assert.equal(ledger.status, STATUS.BLOCKED_BY_INVARIANT, "an unevidenced promotion is a real violation");
+  assert.deepEqual(ledger.blockedBy.map((b) => b.rule), ["claims.silent-promotion"]);
+
   assert.notEqual(prose.status, STATUS.BLOCKED_BY_INVARIANT, "a prose match must not be terminal");
+  assert.deepEqual(prose.blockedBy, [], "and it must not be listed as blocking either");
   assert.ok(
     (prose.findings ?? []).some((f) => f.rule === "claims.silent-promotion"),
     "and the prose finding must still be reported",
   );
+
+  // The consequence moved; the detection did not. This is the distinction the whole milestone rests
+  // on, so it is asserted rather than left to be inferred from the status.
+  const proseResult = prose.results.find((r) => r.ruleId === "claims.silent-promotion");
+  assert.equal(proseResult.status, "failed", "the run still fails on it");
+  assert.equal(proseResult.invariant, true, "the rule is still an invariant; the cap is not a reclassification");
+  assert.equal(proseResult.cappedFrom, STATUS.BLOCKED_BY_INVARIANT);
+
+  const ledgerResult = ledger.results.find((r) => r.ruleId === "claims.silent-promotion");
+  assert.ok(!("cappedFrom" in ledgerResult), "an observed violation is not capped");
 });
 
 // ---------------------------------------------------------------------------

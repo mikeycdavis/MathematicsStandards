@@ -1,0 +1,10 @@
+standardVersion: "1.0.0"
+project: "silent-promotion"
+
+# See the note in ../unevidenced-promotion/project-policy.yml: a fixture with no policy yields
+# NOT_EVALUATED, against which "must not block" is true for the wrong reason.
+mathematics:
+  regimes:
+    - informal
+    - computational
+  claimsLedger: "artifacts/claims-ledger.md"

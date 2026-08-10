@@ -130,11 +130,22 @@ const policyDoc = { standardVersion: "1.0.0", project: "t" };
 const invariantRule = [...catalog.rules.values()].find(isInvariant);
 const ordinaryRule = [...catalog.rules.values()].find((r) => r.level === "required" && !r.nonExemptible);
 
+// Both tests below plant `label: "OBSERVED"` explicitly, and did not before the Tier 1 ceiling.
+//
+// They are not being adjusted to fit the implementation. They were written when report() defaulted
+// the label to "OBSERVED", so a fixture that said nothing was silently given certainty — the exact
+// mechanism §0b names. The first test's own title says "an observed violation"; adding the label
+// makes the fixture assert what the title always claimed. The second is about the lattice ordering
+// and needs a blocking invariant to have anything to rank, which now requires an observation.
+//
+// The case they used to cover by accident — an unlabelled finding against an invariant — is now
+// covered on purpose, and with the opposite expectation, by "M1 · a finding with no label at all
+// cannot elevate" in verdict-strength.test.mjs.
 test("an observed violation of an invariant produces BLOCKED_BY_INVARIANT", () => {
   const verdict = evaluate({
     catalog,
     policy: policyDoc,
-    findings: [{ rule: invariantRule.id, message: "planted", evidence: ["x"] }],
+    findings: [{ rule: invariantRule.id, message: "planted", evidence: ["x"], label: "OBSERVED" }],
     evaluated: [invariantRule.id],
     today: TODAY,
   });
@@ -148,7 +159,7 @@ test("BLOCKED_BY_INVARIANT outranks NON_COMPLIANT", () => {
     policy: policyDoc,
     findings: [
       { rule: ordinaryRule.id, message: "ordinary failure", evidence: [] },
-      { rule: invariantRule.id, message: "planted", evidence: [] },
+      { rule: invariantRule.id, message: "planted", evidence: [], label: "OBSERVED" },
     ],
     evaluated: [ordinaryRule.id, invariantRule.id],
     today: TODAY,

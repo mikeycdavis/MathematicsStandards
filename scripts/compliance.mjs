@@ -138,19 +138,34 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
     }
 
     const exception = activeExceptions.get(rule.id);
-    // Step 1 of the Tier 1 milestone: the label is preserved, and nothing yet acts on it. The
-    // outcome is still a function of the rule's level alone, deliberately — the ceiling lands
-    // separately, so that the call-site classification can be reviewed against real result data
-    // before any verdict moves.
     const outcome = level === "required" || level === "forbidden" ? RESULT.failed : RESULT.warning;
-    const result = base(
-      rule,
-      level,
-      outcome,
-      exception ? "excepted" : "evaluated",
-      hits[0].message,
-      strongestLabel(hits),
-    );
+    const label = strongestLabel(hits);
+    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message, label);
+
+    // The Tier 1 ceiling, and the only place in the engine that applies it.
+    //
+    // It lives on this branch and nowhere else on purpose: this is the branch that evaluates a
+    // detector finding, and a detector finding is the only kind of result that carries an
+    // evidentiary classification. Attestations, exceptions, skips and passes are built elsewhere
+    // and are not reached from here, so Tier 1 assigns no evidence meaning to result paths it did
+    // not create.
+    //
+    // The predicate is written positively — elevation requires OBSERVED — rather than as
+    // `label !== "OBSERVED"`. The two are equivalent on this branch and would not stay equivalent
+    // if the check ever moved: `null` is not a weak label, it is the absence of the concept, and a
+    // rejected attestation carrying `null` must keep blocking. Saying what earns the terminal
+    // verdict is also the honest statement of the rule. An unlabelled finding does not earn it,
+    // which is the acceptance rule for the whole milestone: no finding acquires evidentiary
+    // certainty through a default.
+    const mayElevateInvariant = result.invariant === true && label === "OBSERVED";
+    if (result.status === RESULT.failed && result.invariant === true && !mayElevateInvariant) {
+      // Explanatory metadata, not a second status. The result still fails, still counts toward
+      // NON_COMPLIANT, and is still reported in full; what is recorded is the one consequence the
+      // ceiling prevented. Absent whenever nothing was prevented — see summarise, which reads it
+      // only to decide whether this result blocks.
+      result.cappedFrom = STATUS.BLOCKED_BY_INVARIANT;
+    }
+
     result.evidence = hits.flatMap((h) => h.evidence ?? []);
     result.files = result.evidence;
     if (exception) {
@@ -382,7 +397,14 @@ function summarise(results, policy) {
   // actually failed an evaluation. `excepted` is deliberately not subtracted here: the exception
   // engine already rejects waivers on non-exemptible rules, and honouring one at this layer would
   // reintroduce the bypass through the back door.
-  const blocking = results.filter((r) => r.status === RESULT.failed && r.invariant === true);
+  //
+  // `cappedFrom` is subtracted, and it is not the same kind of subtraction. An exception is a
+  // request to disregard a rule; a cap is the engine declining to draw a conclusion its evidence
+  // does not support. The result still fails and still makes the run NON_COMPLIANT — the cap
+  // removes the terminal verdict, never the finding.
+  const blocking = results.filter(
+    (r) => r.status === RESULT.failed && r.invariant === true && r.cappedFrom === undefined,
+  );
 
   let status;
   if (!policy) status = STATUS.NOT_EVALUATED;

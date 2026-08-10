@@ -1695,11 +1695,22 @@ function renderVerdict(report, policyState) {
     out.push("");
   }
 
-  const failed = report.results.filter((r) => r.status === "failed" && !r.invariant);
+  // Invariant failures are excluded here because they were already printed, in full, in the block
+  // above — except when the evidence ceiling capped them, in which case they were not, and without
+  // `r.cappedFrom` they would appear in neither list and disappear from the human output entirely.
+  // A finding the engine deliberately declined to escalate is precisely the finding a person needs
+  // to see and adjudicate.
+  const failed = report.results.filter((r) => r.status === "failed" && (!r.invariant || r.cappedFrom));
   if (failed.length) {
     out.push("  Failing:");
     for (const r of failed) {
       out.push(`    ${r.ruleId} [${r.level}] ${r.message}`);
+      if (r.cappedFrom) {
+        out.push(
+          `      This rule is an invariant. The finding is ${r.label}, not observed, so it is reported`,
+        );
+        out.push("      as a failure and not as a block. Confirm or dismiss it; do not assume either.");
+      }
       out.push(`      -> ${r.remediation}`);
     }
     out.push("");

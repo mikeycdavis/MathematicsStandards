@@ -167,19 +167,30 @@ test("no declared flag is silently ignored by any command", () => {
 test("the classifier and the CLI agree, for every command and every declared flag", () => {
   const flags = declaredFlags();
   for (const command of COMMANDS) {
-    for (const [name, { valued }] of flags) {
-      if (name === "--help" || name === "-h") continue; // exits 0 by design, tested above
-      const arg = valued ? `${name}=x` : name;
-      const expected = classifyArg(command, arg) === null;
-      // `explain` with no rule and `init` into a nonexistent path have their own exit paths, so the
-      // question asked here is only whether the invocation guard rejected it.
-      const { code, out } = run([command, `--dir=${HOME}`, arg]);
-      const rejected = code === EXIT_INVOCATION && /nothing was read and nothing was written/i.test(out);
-      assert.equal(
-        rejected,
-        !expected,
-        `${command} ${arg}: CLI and classifier disagree about acceptance`,
-      );
+    // NEVER point a command that can write at this repository. An earlier draft of this test swept
+    // `init` across `--dir=<HOME>` and scaffolded three files into the framework's own tree — which
+    // is the RiemannHypothesis operator error, committed by the test written to prevent it. The
+    // no-overwrite default is what stopped it being worse. Writing commands get a scratch directory,
+    // and the accepted case is exercised there.
+    const dir = command === "init" ? scratch() : HOME;
+    try {
+      for (const [name, { valued }] of flags) {
+        if (name === "--help" || name === "-h") continue; // exits 0 by design, tested above
+        const arg = valued ? `${name}=x` : name;
+        // A valued flag needs a real path for --dir, and a scratch one for anything that writes.
+        const concrete = name === "--dir" ? `--dir=${dir}` : arg;
+        const expected = classifyArg(command, concrete) === null;
+        const { code, out } = run([command, `--dir=${dir}`, concrete]);
+        const rejected =
+          code === EXIT_INVOCATION && /nothing was read and nothing was written/i.test(out);
+        assert.equal(
+          rejected,
+          !expected,
+          `${command} ${concrete}: CLI and classifier disagree about acceptance`,
+        );
+      }
+    } finally {
+      if (dir !== HOME) rmSync(dir, { recursive: true, force: true });
     }
   }
 });

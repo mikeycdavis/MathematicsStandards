@@ -325,6 +325,83 @@ if (!COMMANDS.has(subcommand)) {
 }
 
 /**
+ * Unknown or invalid arguments fail closed, before anything is read and before anything is written.
+ *
+ * The defect this exists for: `--dry-run` was tested by exact presence, so `--dryrun`, `--dry_run`
+ * and `--dry-run=true` all parsed as a bare `init` and applied. `--help` was recognised only as a
+ * subcommand, so `init --help` applied against a real repository. In both cases an operator who
+ * believed they were previewing had instead scaffolded, and the command exited 0.
+ *
+ * The rule is deliberately uniform across commands rather than confined to `init`. A flag silently
+ * ignored on a read-only command is the same defect one step further from the damage: it is how a CI
+ * job comes to believe it ran `--strict` when it did not. Refusing loudly is the framework's own
+ * stated preference over quietly ignoring a construct — the vendored YAML reader argues exactly this
+ * in its header — and the cost of being wrong here is a rerun, against a mutation that cannot be
+ * undone.
+ *
+ * A flag accepted by another command is named as such, because the near-miss that produced this
+ * defect is a plausible spelling, not a random string.
+ */
+const GLOBAL_FLAGS = new Set(["--json", "--help", "-h"]);
+const GLOBAL_VALUE_FLAGS = new Set(["--dir"]);
+const COMMAND_FLAGS = {
+  audit: { plain: new Set(["--strict"]), valued: new Set() },
+  validate: { plain: new Set(), valued: new Set() },
+  check: { plain: new Set(), valued: new Set() },
+  status: { plain: new Set(), valued: new Set() },
+  explain: { plain: new Set(), valued: new Set() },
+  init: { plain: new Set(["--dry-run"]), valued: new Set(["--mode", "--force-overwrite"]) },
+};
+
+function flagOwners(name) {
+  return Object.entries(COMMAND_FLAGS)
+    .filter(([, spec]) => spec.plain.has(name) || spec.valued.has(name))
+    .map(([command]) => command);
+}
+
+{
+  const spec = COMMAND_FLAGS[subcommand];
+  for (const arg of argv.slice(1)) {
+    if (!arg.startsWith("-")) continue;
+    const eq = arg.indexOf("=");
+    const name = eq === -1 ? arg : arg.slice(0, eq);
+    const valued = eq !== -1;
+
+    const known =
+      (!valued && (GLOBAL_FLAGS.has(name) || spec.plain.has(name))) ||
+      (valued && (GLOBAL_VALUE_FLAGS.has(name) || spec.valued.has(name)));
+    if (known) continue;
+
+    // Distinguish the three ways an argument can be wrong, because the fix differs for each.
+    let detail;
+    if (valued && (GLOBAL_FLAGS.has(name) || spec.plain.has(name))) {
+      detail = `${name} takes no value`;
+    } else if (!valued && (GLOBAL_VALUE_FLAGS.has(name) || spec.valued.has(name))) {
+      detail = `${name} requires a value, as ${name}=<value>`;
+    } else {
+      const owners = flagOwners(name);
+      detail = owners.length
+        ? `${name} is accepted by ${owners.join(", ")}, not by ${subcommand}`
+        : `unknown option ${name}`;
+    }
+
+    process.stderr.write(
+      `math-standards ${subcommand}: ${detail}\n` +
+        `Nothing was read and nothing was written. Re-run with a correct invocation.\n\n`,
+    );
+    usage();
+    process.exit(EXIT_INVOCATION);
+  }
+}
+
+// `--help` anywhere, on any command, prints usage and does nothing else. This is the RH instance:
+// `init --help` parsed as a bare init with an ignored flag and applied.
+if (argv.includes("--help") || argv.includes("-h")) {
+  usage(process.stdout);
+  process.exit(EXIT_OK);
+}
+
+/**
  * audit and validate have genuinely different jobs and different exit-code contracts, which is the
  * practical reason they cannot be one command: audit exits 0 on warnings unless --strict, while
  * validate exits non-zero on a required-rule failure regardless of it. One command cannot hold both

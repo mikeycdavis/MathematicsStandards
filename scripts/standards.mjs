@@ -27,6 +27,7 @@ import { loadCatalog, assertBindings, coverage, resolve as resolveRule } from ".
 import { evaluate, envelope, isInvariant } from "./compliance.mjs";
 import { plan as planInit, apply as applyInit, render as renderInit } from "./init.mjs";
 import { parseYaml } from "./yaml.mjs";
+import { classifyArg } from "./invocation.mjs";
 import { validate as validateSchema } from "./jsonschema.mjs";
 import {
   STATUS_RANK,
@@ -339,59 +340,19 @@ if (!COMMANDS.has(subcommand)) {
  * in its header — and the cost of being wrong here is a rerun, against a mutation that cannot be
  * undone.
  *
- * A flag accepted by another command is named as such, because the near-miss that produced this
- * defect is a plausible spelling, not a random string.
+ * The contract itself is in scripts/invocation.mjs, so a test can enumerate it rather than restate
+ * it. The property worth pinning is not that one flag is refused by one command, but that no
+ * declared flag is ever silently ignored by any of them.
  */
-const GLOBAL_FLAGS = new Set(["--json", "--help", "-h"]);
-const GLOBAL_VALUE_FLAGS = new Set(["--dir"]);
-const COMMAND_FLAGS = {
-  audit: { plain: new Set(["--strict"]), valued: new Set() },
-  validate: { plain: new Set(), valued: new Set() },
-  check: { plain: new Set(), valued: new Set() },
-  status: { plain: new Set(), valued: new Set() },
-  explain: { plain: new Set(), valued: new Set() },
-  init: { plain: new Set(["--dry-run"]), valued: new Set(["--mode", "--force-overwrite"]) },
-};
-
-function flagOwners(name) {
-  return Object.entries(COMMAND_FLAGS)
-    .filter(([, spec]) => spec.plain.has(name) || spec.valued.has(name))
-    .map(([command]) => command);
-}
-
-{
-  const spec = COMMAND_FLAGS[subcommand];
-  for (const arg of argv.slice(1)) {
-    if (!arg.startsWith("-")) continue;
-    const eq = arg.indexOf("=");
-    const name = eq === -1 ? arg : arg.slice(0, eq);
-    const valued = eq !== -1;
-
-    const known =
-      (!valued && (GLOBAL_FLAGS.has(name) || spec.plain.has(name))) ||
-      (valued && (GLOBAL_VALUE_FLAGS.has(name) || spec.valued.has(name)));
-    if (known) continue;
-
-    // Distinguish the three ways an argument can be wrong, because the fix differs for each.
-    let detail;
-    if (valued && (GLOBAL_FLAGS.has(name) || spec.plain.has(name))) {
-      detail = `${name} takes no value`;
-    } else if (!valued && (GLOBAL_VALUE_FLAGS.has(name) || spec.valued.has(name))) {
-      detail = `${name} requires a value, as ${name}=<value>`;
-    } else {
-      const owners = flagOwners(name);
-      detail = owners.length
-        ? `${name} is accepted by ${owners.join(", ")}, not by ${subcommand}`
-        : `unknown option ${name}`;
-    }
-
-    process.stderr.write(
-      `math-standards ${subcommand}: ${detail}\n` +
-        `Nothing was read and nothing was written. Re-run with a correct invocation.\n\n`,
-    );
-    usage();
-    process.exit(EXIT_INVOCATION);
-  }
+for (const arg of argv.slice(1)) {
+  const detail = classifyArg(subcommand, arg);
+  if (!detail) continue;
+  process.stderr.write(
+    `math-standards ${subcommand}: ${detail}\n` +
+      `Nothing was read and nothing was written. Re-run with a correct invocation.\n\n`,
+  );
+  usage();
+  process.exit(EXIT_INVOCATION);
 }
 
 // `--help` anywhere, on any command, prints usage and does nothing else. This is the RH instance:

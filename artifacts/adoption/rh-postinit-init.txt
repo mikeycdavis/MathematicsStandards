@@ -1,0 +1,39 @@
+$ node F:\Repos\MathematicsStandards\scripts\standards.mjs init --dir=F:\Repos\RiemannHypothesis
+$ echo $LASTEXITCODE  ->  1
+
+math-standards init
+
+  Mode: ledger-required [INFERRED]
+        mathematical work: lakefile.toml
+        no claims ledger found alongside the existing mathematics
+
+  created:
+    + project-policy.yml
+    + PROJECT.md
+    + artifacts/claims-ledger.md
+    + artifacts/open-problems/
+    + artifacts/adr/
+  conflicts — nothing was changed:
+    ? AGENTS.md
+        exists and differs from the template; nothing was changed
+        Review it. To replace it, re-run with --force-overwrite=AGENTS.md.
+    ? CLAUDE.md
+        exists and differs from the template; nothing was changed
+        Review it. To replace it, re-run with --force-overwrite=CLAUDE.md.
+
+  This project already contains mathematics and has no claims ledger.
+  The ledger template is a scaffold, not a record: registering the existing claims means
+  deciding, for each result, what status its evidence supports — which is exactly the
+  question the ledger exists to ask, and not one a bootstrap command may answer for you.
+
+  Next: Register the claims this project has already made in artifacts/claims-ledger.md, giving each the status its evidence supports rather than the status it currently carries in the writing. Then run `math-standards validate`.
+
+
+$ node F:\Repos\MathematicsStandards\scripts\standards.mjs status --dir=F:\Repos\RiemannHypothesis
+$ echo $LASTEXITCODE  ->  1
+
+RiemannHypothesis: BLOCKED_BY_INVARIANT
+  score 92% over 39 evaluated required rule(s)
+  49 passed · 4 failed · 0 warning · 29 skipped
+  coverage 53/82 rules have a detector; 7/22 standards fully machine-represented
+  BLOCKED: computation.evidence-as-proof

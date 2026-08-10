@@ -26,9 +26,18 @@ Raw artifacts preserved beside it: [`rh-baseline-audit.json`](rh-baseline-audit.
 | `formal.status-declared` | warning | 152 Lean files; no claim declares formal status against them |
 
 `math-standards validate` — `NOT_EVALUATED`, exit 2, "nothing declares what applies here." Correct:
-a configuration problem, not a red build. `init --dry-run` classified the project `ledger-required`
-and refused to generate a ledger, reporting conflicts on `AGENTS.md` and `CLAUDE.md` and changing
-nothing.
+a configuration problem, not a red build. `init --dry-run` classified the project `ledger-required`,
+reported conflicts on `AGENTS.md` and `CLAUDE.md`, and changed nothing.
+
+> **Correction, made after the apply (2026-08-09).** This paragraph originally said the dry run
+> "refused to generate a ledger." It does not. `ledger-required` mode plans and writes
+> `artifacts/claims-ledger.md` from the template like any other missing artifact; what the mode
+> changes is only the closing prose, which declines to *populate* the ledger and says why. The
+> scaffold it writes carries a worked example claim at status `THEOREM`. Three of the four
+> disposition changes at post-init validation are about that example rather than about this
+> repository — see [`rh-v1.0.0-post-init.md`](rh-v1.0.0-post-init.md) §2. The error was mine, in
+> reading the mode's message as a description of its file plan; it is corrected here rather than
+> silently edited out.
 
 **The substantive observation is what is absent from those two findings.** This repository maintains
 per-route reopening conditions, a retraction index, an anti-circularity dependency graph, eleven

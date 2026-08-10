@@ -24,7 +24,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { loadCatalog, assertBindings, coverage, resolve as resolveRule } from "./catalog.mjs";
-import { evaluate, envelope, isInvariant } from "./compliance.mjs";
+import { evaluate, envelope, isInvariant, EVIDENCE_LABELS } from "./compliance.mjs";
 import { plan as planInit, apply as applyInit, render as renderInit } from "./init.mjs";
 import { parseYaml } from "./yaml.mjs";
 import { classifyArg } from "./invocation.mjs";
@@ -540,10 +540,32 @@ function addFinding({ id, category, severity = "info", label, evidence = [], mes
   });
 }
 
-/** Report against a catalog rule, taking severity and the standard reference from the catalog. */
-function report(rule, { message, evidence = [], label = "OBSERVED", severityOverride = null }) {
+/**
+ * Report against a catalog rule, taking severity and the standard reference from the catalog.
+ *
+ * `label` is required, and that is the whole point of it being required.
+ *
+ * It used to default to "OBSERVED", and forty-four of the fifty-two call sites took the default —
+ * which meant the tool asserted that it had directly observed a violation every time an author
+ * did not think about the question. Seven of those defaults were wrong, two of them on invariants,
+ * and an invariant is a verdict no exception can clear. A default cannot be audited, because a
+ * site that omits the argument is indistinguishable from a site that considered it and chose
+ * OBSERVED. So there is no default: every detector states what its finding rests on, and a
+ * detector that does not state it fails here rather than being believed.
+ *
+ * The classification of every site, with the proposition it asserts and the basis for the label,
+ * is in test/fixtures/evidence-classification.json, which test/verdict-strength.test.mjs holds to
+ * this file.
+ */
+function report(rule, { message, evidence = [], label, severityOverride = null }) {
   const definition = CATALOG.rules.get(rule);
   if (!definition) throw new Error(`detector reports against unknown rule ${rule}`);
+  if (!EVIDENCE_LABELS.includes(label)) {
+    throw new Error(
+      `detector for ${rule} supplied no valid evidence label (got ${JSON.stringify(label)}). ` +
+        `Every finding must state whether the proposition it reports is ${EVIDENCE_LABELS.join(", ")}.`,
+    );
+  }
   addFinding({
     id: rule.replace(/\./g, "-"),
     category: definition.category,
@@ -593,6 +615,7 @@ function detectLedgerPresence() {
   report("claims.ledger-exists", {
     message: `No claims ledger at ${LEDGER_PATH}. Every claim rule reads it, so without one nothing about this project's claims is checked.`,
     evidence: [LEDGER_PATH],
+    label: "OBSERVED",
   });
 }
 
@@ -602,6 +625,7 @@ function detectLedgerParse() {
   report("claims.ledger-parse-valid", {
     message: `${ledger.malformed.length} ledger entr(ies) do not parse. A malformed entry is skipped by every other check, which removes a claim from scrutiny while leaving it in the document.`,
     evidence: ledger.malformed.map((m) => `${LEDGER_PATH}:${m.line} ${m.id ?? "(no id)"} — ${m.reason}`),
+    label: "OBSERVED",
   });
 }
 
@@ -612,6 +636,7 @@ function detectStatusVocabulary() {
   report("claims.status-vocabulary", {
     message: `${bad.length} claim(s) carry a status outside the fifteen canonical tokens. The vocabulary is closed so that "essentially proved" cannot be introduced when the honest token is uncomfortable.`,
     evidence: bad.map((e) => `${LEDGER_PATH}:${e.line} ${e.id} — status '${e.status}'`),
+    label: "OBSERVED",
   });
 }
 
@@ -633,6 +658,7 @@ function detectHistoryComplete() {
   report("claims.history-complete", {
     message: `${bad.length} claim(s) have a status that disagrees with their own recorded history, which is the trace a status change without a record leaves.`,
     evidence: bad,
+    label: "OBSERVED",
   });
 }
 
@@ -653,6 +679,7 @@ function detectDefinitionsFirst() {
   report("claims.definitions-first", {
     message: `${bad.length} claim(s) depend on a definition stated after them. An undefined term does not make a claim false; it makes it unevaluable.`,
     evidence: bad,
+    label: "OBSERVED",
   });
 }
 
@@ -681,6 +708,7 @@ function detectInlineLabels(references) {
   report("claims.inline-label-consistency", {
     message: `${unknown.length} reference(s) name a claim the ledger does not define. A reference to an unregistered claim points at something the project can no longer identify.`,
     evidence: unknown.map((r) => `${rel(r.file)}:${r.line} — ${r.id}`),
+    label: "INFERRED",
   });
 }
 
@@ -712,12 +740,14 @@ function detectSilentPromotion(references) {
     report("claims.silent-promotion", {
       message: `${prose.length} passage(s) assert a status above the ledger's. Claims are supposed to get stronger; what is prohibited is the strengthening that leaves no record.`,
       evidence: prose,
+      label: "INFERRED",
     });
   }
   if (unevidenced.length > 0) {
     report("claims.silent-promotion", {
       message: `${unevidenced.length} claim(s) reached proved rank with no evidence recorded on the promoting history entry.`,
       evidence: unevidenced,
+      label: "OBSERVED",
     });
   }
 }
@@ -773,12 +803,14 @@ function detectStatusExceedsSupport() {
     report("claims.status-exceeds-support", {
       message: `${capped.length} claim(s) outrank their dependency closure. The honest ceiling is CONDITIONAL_THEOREM until the dependency is proved.`,
       evidence: capped,
+      label: "OBSERVED",
     });
   }
   if (unconditional.length > 0) {
     report("claims.conditional-as-unconditional", {
       message: `${unconditional.length} claim(s) are stated as full theorems while resting on something unproved. The condition belongs in the statement, not in a footnote.`,
       evidence: unconditional,
+      label: "OBSERVED",
     });
   }
 }
@@ -803,6 +835,7 @@ function detectRigorFields() {
     report(rule, {
       message: `${missing.length} claim(s) at HYPOTHESIS rank or above state no ${label}.`,
       evidence: missing.map((e) => `${LEDGER_PATH}:${e.line} ${e.id} (${e.status})`),
+      label: "OBSERVED",
     });
   }
 
@@ -813,6 +846,7 @@ function detectRigorFields() {
     report("rigor.explicit-assumptions", {
       message: `${noAssumptions.length} claim(s) omit the Assumptions field. An absent field and a field reading 'none' are different, and only one shows that the author considered the question.`,
       evidence: noAssumptions.map((e) => `${LEDGER_PATH}:${e.line} ${e.id} (${e.status})`),
+      label: "OBSERVED",
     });
   }
 }
@@ -827,6 +861,7 @@ function detectConjectureRegistered(dangling) {
   report("rigor.conjecture-registered", {
     message: `${fromAssumptions.length} declared assumption(s) resolve to nothing. An unproved statement relied upon must be registered with a status, not named only in prose.`,
     evidence: fromAssumptions.map((d) => `${LEDGER_PATH}:${d.line} ${d.from} assumes ${d.edge}`),
+    label: "OBSERVED",
   });
 }
 
@@ -841,6 +876,7 @@ function detectObligations() {
     report("proof.obligations-enumerated", {
       message: `${missing.length} claim(s) at proved rank enumerate no obligations. 'Complete' has to be a checkable claim about a list.`,
       evidence: missing.map((e) => `${LEDGER_PATH}:${e.line} ${e.id} (${e.status})`),
+      label: "OBSERVED",
     });
   }
 
@@ -857,6 +893,7 @@ function detectObligations() {
     report("proof.complete-with-open-obligations", {
       message: `${open.length} obligation(s) are open on claims held at proved rank.`,
       evidence: open,
+      label: "INFERRED",
     });
   }
 }
@@ -867,6 +904,7 @@ function detectDependencyIntegrity(dangling) {
     report("proof.dependency-traceability", {
       message: `${dangling.length} declared dependenc(ies) resolve to nothing. A dangling identifier means the claim rests on something the project can no longer identify.`,
       evidence: dangling.map((d) => `${LEDGER_PATH}:${d.line} ${d.from} -> ${d.edge}`),
+      label: "OBSERVED",
     });
   }
   const cycles = findCycles(ledger.entries);
@@ -874,6 +912,7 @@ function detectDependencyIntegrity(dangling) {
     report("proof.circular-dependency", {
       message: `${cycles.length} dependency cycle(s). A claim in its own closure is the target theorem assumed in its own proof, however many lemmas the route passes through.`,
       evidence: cycles.map((c) => c.join(" -> ")),
+      label: "OBSERVED",
     });
   }
 }
@@ -970,6 +1009,7 @@ function detectComputationEvidence() {
     report("computation.reproducible-runs", {
       message: `${missingArtifact.length} cited computation(s) are not in the repository. A result nobody can re-run is an assertion.`,
       evidence: missingArtifact,
+      label: "OBSERVED",
     });
   }
   if (floatExact.length > 0) {
@@ -1009,6 +1049,7 @@ function detectNumericsAsProof() {
     report("computation.evidence-as-proof", {
       message: `${ledgerHits.length} claim(s) at proved rank have no proof, formal, or citation evidence. Restating the claim on the range checked makes it a genuine theorem; leaving it universal does not.`,
       evidence: ledgerHits,
+      label: "OBSERVED",
     });
   }
   if (finite.length > 0) {
@@ -1054,6 +1095,7 @@ function detectLiterature(dangling) {
     report("literature.resolvable-identifiers", {
       message: `${unresolved.length} external reference(s) are used and never defined in the ledger's References section.`,
       evidence: unresolved.map((d) => `${LEDGER_PATH}:${d.line} ${d.from} -> ${d.edge}`),
+      label: "OBSERVED",
     });
   }
 
@@ -1068,6 +1110,7 @@ function detectLiterature(dangling) {
     report("literature.resolvable-identifiers", {
       message: `${malformed.length} reference identifier(s) are malformed. A well-formed identifier for a paper that does not exist still passes this check — see the rule's assurance note.`,
       evidence: malformed,
+      label: "INFERRED",
     });
   }
 
@@ -1094,6 +1137,7 @@ function detectLiterature(dangling) {
     report("literature.known-result-comparison", {
       message: `${uncompared.length} claim(s) at proved rank record no comparison against the literature. A recorded negative search is evidence; silence is not.`,
       evidence: uncompared,
+      label: "OBSERVED",
     });
   }
 }
@@ -1167,12 +1211,14 @@ function detectFormal(proofs) {
     report("formal.placeholder-inventory", {
       message: `${placeholderFiles.size} proof-assistant file(s) contain placeholders. This is information, not a violation — a formalisation in progress is supposed to have them.`,
       evidence: [...placeholderFiles].map(([f, n]) => `${f} (${n} placeholder${n === 1 ? "" : "s"})`),
+      label: "OBSERVED",
     });
   }
   if (enlarged.length > 0) {
     report("formal.trusted-base-enlarged", {
       message: `${enlarged.length} use(s) of constructs that enlarge the trusted base beyond the kernel. Legitimate, and worth recording in the Formal block.`,
       evidence: enlarged,
+      label: "INFERRED",
     });
   }
 
@@ -1185,6 +1231,7 @@ function detectFormal(proofs) {
     report("formal.status-declared", {
       message: `${proofs.length} proof-assistant file(s) exist and no claim declares formal status against them. A development no ledger entry mentions is a formalisation gap at its widest.`,
       evidence: proofs.slice(0, MAX_EVIDENCE).map((p) => `${rel(p.file)} (${p.assistant})`),
+      label: "OBSERVED",
     });
   }
 
@@ -1221,12 +1268,14 @@ function detectFormal(proofs) {
     report("formal.trusted-chain-tracked", {
       message: `${incomplete.length} formal claim(s) have an incomplete Formal block. A reader entitled to know what a machine-checked claim rests on cannot find out any other way.`,
       evidence: incomplete,
+      label: "OBSERVED",
     });
   }
   if (inChain.length > 0) {
     report("formal.placeholder-in-chain", {
       message: `${inChain.length} claim(s) assert formal certification over a placeholder, a missing file, or nothing at all. A clean pass here is still not certification — that requires running the assistant.`,
       evidence: inChain,
+      label: "OBSERVED",
     });
   }
 
@@ -1240,6 +1289,7 @@ function detectFormal(proofs) {
     report("formal.axiom-disclosure", {
       message: `${undisclosed.length} axiom declaration(s) are undisclosed. An undisclosed axiom is a hidden assumption with a compiler's blessing on it.`,
       evidence: undisclosed,
+      label: "INFERRED",
     });
   }
 
@@ -1249,6 +1299,7 @@ function detectFormal(proofs) {
       report("formal.gap-inventory", {
         message: `${noField.length} claim(s) at proved rank omit the Formal field. Without it, 'we have a Lean development' reads as 'the results are machine-checked'.`,
         evidence: noField.map((e) => `${LEDGER_PATH}:${e.line} ${e.id}`),
+        label: "OBSERVED",
       });
     }
   }
@@ -1293,6 +1344,7 @@ function detectOpenProblems() {
     report("problems.tracking-file", {
       message: `The policy declares openProblemMode and no ${OPEN_PROBLEMS_DIR}/<slug>/problem.md exists.`,
       evidence: [OPEN_PROBLEMS_DIR],
+      label: "OBSERVED",
     });
     return;
   }
@@ -1314,6 +1366,7 @@ function detectOpenProblems() {
       report(rule, {
         message: `${evidence.length} required section(s) of the open-problem record are missing or empty.`,
         evidence,
+        label: "OBSERVED",
       });
     }
 
@@ -1333,12 +1386,14 @@ function detectOpenProblems() {
       report("lifecycle.terminated-approaches", {
         message: `${noStatus.length} terminated approach(es) record no status. Termination is a decision, and a decision with no record is indistinguishable from drifting away from the work.`,
         evidence: noStatus,
+        label: "OBSERVED",
       });
     }
     if (noReopen.length > 0) {
       report("lifecycle.reopening-evidence", {
         message: `${noReopen.length} terminated approach(es) state no reopening condition. Without one, an approach reopens whenever morale improves.`,
         evidence: noReopen,
+        label: "OBSERVED",
       });
     }
   }
@@ -1401,18 +1456,21 @@ function detectEvidenceShape() {
     report("evidence.type-vocabulary", {
       message: `${badTypes.length} evidence entr(ies) use a type outside the closed vocabulary. Each type carries a ceiling; an open-ended field would let a writer choose their own.`,
       evidence: badTypes,
+      label: "OBSERVED",
     });
   }
   if (missing.length > 0) {
     report("evidence.artifact-linked", {
       message: `${missing.length} evidence reference(s) point at nothing. Evidence that points at nothing is an assertion.`,
       evidence: missing,
+      label: "INFERRED",
     });
   }
   if (equivalences.length > 0) {
     report("evidence.equivalence-direction-proved", {
       message: `${equivalences.length} asserted equivalence(s) are unproved or unresolvable. Asserting iff where one direction is proved is a silent strengthening.`,
       evidence: equivalences,
+      label: "OBSERVED",
     });
   }
 }
@@ -1426,6 +1484,7 @@ function detectApplicability() {
     report("evidence.applicability-declared", {
       message: "project-policy.yml declares no mathematics.regimes. A standard that applies to everything applies to nothing.",
       evidence: ["project-policy.yml"],
+      label: "OBSERVED",
     });
     return;
   }
@@ -1434,16 +1493,23 @@ function detectApplicability() {
     report("evidence.applicability-declared", {
       message: `Unknown regime(s): ${unknown.join(", ")}.`,
       evidence: ["project-policy.yml"],
+      label: "OBSERVED",
     });
   }
 }
 
 function detectFindingLabels() {
-  const bad = findings.filter((f) => !["OBSERVED", "INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"].includes(f.label));
+  // `report` now refuses an invalid label outright, and it is the only caller of addFinding, so on
+  // this code path the rule cannot fire. That is not a rule quietly reporting a pass it did not
+  // earn: the condition is enforced at construction instead of detected afterwards, which is
+  // strictly stronger. The check stays because the enforcement and the rule are separate things,
+  // and a future second path into `findings` must still meet it.
+  const bad = findings.filter((f) => !EVIDENCE_LABELS.includes(f.label));
   if (bad.length === 0) return;
   report("evidence.labels", {
     message: `${bad.length} finding(s) carry no valid evidence label. A heuristic reported as observed is this tool fabricating certainty about its own output.`,
     evidence: bad.map((f) => `${f.rule ?? f.id} — label '${f.label}'`),
+    label: "OBSERVED",
   });
 }
 
@@ -1455,6 +1521,7 @@ function detectExplainability() {
   report("agent.explainable-findings", {
     message: `${bad.length} finding(s) lack the rule, standard reference, message, or remediation an agent needs to explain why the rule applies here.`,
     evidence: bad.map((f) => f.id),
+    label: "OBSERVED",
   });
 }
 
@@ -1468,6 +1535,7 @@ async function detectProvenance() {
     report("integrity.provenance-digest", {
       message: "No artifacts/provenance-digests.json. Without recorded digests, editing a source prompt so a standard becomes true passes every other check.",
       evidence: ["artifacts/provenance-digests.json"],
+      label: "OBSERVED",
     });
     return;
   }
@@ -1488,6 +1556,7 @@ async function detectProvenance() {
   report("integrity.provenance-digest", {
     message: `${drifted.length} source document(s) have changed since their digest was recorded. A genuine correction is a deliberate act: re-review the derived spec and every affected standard, and update the digest in the same reviewed change.`,
     evidence: drifted,
+    label: "OBSERVED",
   });
 }
 
@@ -1503,6 +1572,7 @@ function detectRuleLifecycle() {
   report("integrity.rule-lifecycle-honest", {
     message: `${bad.length} rule(s) have an inconsistent lifecycle. A rule that disappears silently takes with it every record that it once failed.`,
     evidence: bad,
+    label: "OBSERVED",
   });
 }
 
@@ -1821,6 +1891,7 @@ if (falseGreen.length > 0) {
   report("evidence.skipped-never-passed", {
     message: `${falseGreen.length} rule(s) are reported as passing while nothing evaluated them. This is a defect in the tool, not in the project.`,
     evidence: falseGreen.map((r) => r.ruleId),
+    label: "OBSERVED",
   });
   verdict = evaluate(evaluateArgs);
 }

@@ -126,6 +126,45 @@ test("contract · every result carries a label key, valid or null", () => {
   }
 });
 
+test("contract · results built outside base() carry the label key too", () => {
+  // `base` is not the only constructor of a result: the attestation verdicts and the two exception
+  // dispositions are hand-built object literals, and they omitted the key entirely. A consumer
+  // reading `result.label` got `undefined` from those paths and `null` from every other, which is
+  // the shape of bug that turns into a truthiness test somewhere downstream.
+  //
+  // Found by auditing a real adopter rather than a fixture: two of RiemannHypothesis's blocking
+  // results come from rejected attestations and had no label key at all.
+  const attestable = [...catalog.rules.values()].find((r) => r.attestable && isInvariant(r));
+  assert.ok(attestable, "the catalog must contain an attestable invariant for this to mean anything");
+
+  const exemptible = [...catalog.rules.values()].find((r) => !r.nonExemptible && r.level === "required");
+  const verdict = evaluate({
+    catalog,
+    policy: {
+      ...policyDoc,
+      attestations: {
+        [attestable.id]: { status: "rejected", reviewedBy: "a reviewer", reviewedAt: TODAY, evidence: "e" },
+      },
+      exceptions: [
+        { rule: attestable.id, reason: "r", approvedBy: "a", approvedAt: TODAY },
+        { rule: exemptible.id, reason: "r", approvedBy: "a", approvedAt: TODAY, expires: "2020-01-01" },
+      ],
+    },
+    findings: [],
+    evaluated: [],
+    today: TODAY,
+  });
+
+  const dispositions = new Set(verdict.results.map((r) => r.disposition));
+  for (const expected of ["attested-rejected", "rejected-exception", "expired-exception"]) {
+    assert.ok(dispositions.has(expected), `the run must exercise the ${expected} path`);
+  }
+  for (const r of verdict.results) {
+    assert.ok("label" in r, `${r.ruleId} (${r.disposition}) has no label key`);
+    assert.ok(r.label === null || LABELS.includes(r.label), `${r.ruleId} has label ${JSON.stringify(r.label)}`);
+  }
+});
+
 test("contract · a result derived from a finding has a non-null label", () => {
   const capped = failedFor(verdictFor("INFERRED"), invariantRule.id);
   assert.equal(capped.label, "INFERRED");
@@ -304,6 +343,87 @@ test("M4 · every report() invocation supplies an explicit valid label", () => {
     .map((c) => ({ rule: c.rule, label: /\blabel\s*:\s*"([A-Z_]+)"/.exec(c.body)?.[1] }))
     .filter((c) => c.label !== undefined && !LABELS.includes(c.label));
   assert.deepEqual(invalid, [], "a label outside the validated set");
+});
+
+test("M4 · the classification table and the detector file agree, site for site", () => {
+  // The scan above keys on a string-literal rule id, and two call sites report against a variable
+  // because they loop over several rules. Those are exactly the sites a rule-keyed scan cannot see,
+  // so this check is line-keyed instead and covers every one.
+  //
+  // It is bidirectional on purpose. A new detector cannot be added without classifying it, and a
+  // classification cannot be left behind when its detector is deleted — a stale row asserting that
+  // some finding is OBSERVED, for a finding that no longer exists, is documentation that outlives
+  // its subject and gets believed.
+  const table = JSON.parse(
+    readFileSync(path.join(HOME, "test/fixtures/evidence-classification.json"), "utf8"),
+  );
+  const lines = detectorSource.split("\n");
+
+  // Keyed by `<rule expression as written>#<nth occurrence>`, not by line, because line numbers move
+  // whenever anything above them changes and a key that rots is a key that gets deleted. This one
+  // only changes when a detector is added or removed — which is exactly when the table should be
+  // revisited.
+  const inSource = new Map();
+  const lineOf = new Map();
+  const seen = new Map();
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^\s*report\(/.test(lines[i])) continue;
+    const expr = /^\s*report\(\s*("[^"]+"|[A-Za-z_$][\w$]*)\s*,/.exec(lines[i])?.[1];
+    assert.ok(expr, `report() at standards.mjs:${i + 1} is not in the form this scan understands`);
+    const key = `${expr.replace(/"/g, "")}#${(seen.get(expr) ?? 0) + 1}`;
+    seen.set(expr, (seen.get(expr) ?? 0) + 1);
+
+    let depth = 0;
+    let label = null;
+    scan: for (let j = i; j < lines.length; j++) {
+      const found = /^\s*label:\s*"([A-Z_]+)"/.exec(lines[j]);
+      if (found && depth > 0) label = found[1];
+      for (const ch of lines[j]) {
+        if (ch === "{") depth++;
+        else if (ch === "}" && --depth === 0) break scan;
+      }
+    }
+    inSource.set(key, label);
+    lineOf.set(key, i + 1);
+  }
+
+  const inTable = new Map();
+  for (const site of table.sites) {
+    const prior = inTable.get(site.site);
+    assert.ok(
+      prior === undefined || prior === site.label,
+      `the table gives ${site.site} two labels; one call site emits one label`,
+    );
+    inTable.set(site.site, site.label);
+  }
+
+  assert.deepEqual(
+    [...inSource.keys()].sort(),
+    [...inTable.keys()].sort(),
+    "every report() call site must appear in test/fixtures/evidence-classification.json and vice versa",
+  );
+  for (const [key, label] of inSource) {
+    assert.equal(label, inTable.get(key), `the label at ${key} (standards.mjs:${lineOf.get(key)}) contradicts the table`);
+  }
+
+  // The recorded line is for a human opening the file, so it is checked but reported as its own
+  // failure — a stale line number is a documentation bug, not a classification bug.
+  for (const site of table.sites) {
+    assert.equal(
+      lineOf.get(site.site),
+      site.line,
+      `${site.site} is recorded at line ${site.line} and is actually at ${lineOf.get(site.site)}`,
+    );
+  }
+
+  // Non-vacuity, and a guard against a table that classifies everything the same way. A pass whose
+  // every row read OBSERVED would satisfy the checks above and mean nothing.
+  const labels = new Set(inTable.values());
+  assert.ok(labels.has("OBSERVED") && labels.has("INFERRED"), "the classification must discriminate");
+  for (const site of table.sites) {
+    assert.ok(site.proposition?.length > 20, `${site.rule} states no proposition`);
+    assert.ok(site.basis?.length > 20, `${site.rule} states no basis for its label`);
+  }
 });
 
 test("M4 · omitting the label fails at runtime too, not only in this test", () => {

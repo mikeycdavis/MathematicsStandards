@@ -175,6 +175,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       validationType: "configuration",
       assurance: "full",
       disposition: "rejected-exception",
+      label: null,
       message: `${entry.rule} is non-exemptible; the exception against it is rejected, not applied.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
@@ -195,6 +196,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       validationType: "configuration",
       assurance: "full",
       disposition: "expired-exception",
+      label: null,
       message: `The exception for ${entry.rule} expired on ${entry.expires}.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
@@ -223,6 +225,12 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     validationType: "configuration",
     assurance: "full",
     disposition,
+    // Not a detector finding, so there is no detector label to carry. See the note on `base`:
+    // `null` means "this result did not come from an evidence-labelled observation", which is a
+    // different thing from an observation whose basis is unknown. The distinction matters at the
+    // ceiling — a human's recorded review is not weaker evidence than a regex, and must not be
+    // capped as though it were.
+    label: null,
     message,
     evidence: ["project-policy.yml"],
     files: ["project-policy.yml"],
@@ -280,6 +288,7 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     // the assurance breakdown is the honest home for it — never `automated`.
     assurance: "full",
     disposition: "attested",
+    label: null,
     message: `Attested by ${attestation.reviewedBy} on ${attestation.reviewedAt}: ${attestation.evidence}`,
     evidence: against?.paths ?? [],
     files: against?.paths ?? [],

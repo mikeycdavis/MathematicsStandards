@@ -11,6 +11,13 @@ Raw artifacts: [`rh-postinit-init.txt`](rh-postinit-init.txt),
 [`rh-postinit-validate.json`](rh-postinit-validate.json). Pre-adoption baseline:
 [`rh-v1.0.0-pre-adoption.md`](rh-v1.0.0-pre-adoption.md).
 
+**Followed by [`rh-postinit-characterization.md`](rh-postinit-characterization.md)**, which classifies
+the five false positives and traces the scaffold claim's full downstream effect. Two conclusions
+there revise what is written below: the five matches are **two** semantic categories rather than one,
+and the blocking verdict is causally downstream of the scaffold claim rather than independent of it —
+the prose arm sits inside a ledger-gated function and had never executed against this repository
+before initialization.
+
 ---
 
 ## 1. What initialization did

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "repo": "F:/Repos/RiemannHypothesis",
+  "auditedAt": "2026-08-10T03:36:04.015Z",
+  "findings": [
+    {
+      "id": "claims-ledger-exists",
+      "category": "claims",
+      "severity": "error",
+      "label": "OBSERVED",
+      "evidence": [
+        "artifacts/claims-ledger.md"
+      ],
+      "message": "No claims ledger at artifacts/claims-ledger.md. Every claim rule reads it, so without one nothing about this project's claims is checked.",
+      "standardRef": "standards/03-claims-ledger.md",
+      "rule": "claims.ledger-exists"
+    },
+    {
+      "id": "formal-status-declared",
+      "category": "formal",
+      "severity": "warning",
+      "label": "OBSERVED",
+      "evidence": [
+        "Research/axiom_check.lean (lean4)",
+        "RiemannResearch/Candidates/BBMCoordinate.lean (lean4)",
+        "RiemannResearch/Candidates/FiniteSpectralModel.lean (lean4)",
+        "RiemannResearch/Candidates/GalerkinConvergence.lean (lean4)",
+        "RiemannResearch/Definitions.lean (lean4)",
+        "RiemannResearch/EquivalentForms/LiCriterion.lean (lean4)",
+        "RiemannResearch/EquivalentForms/OrbitEscape.lean (lean4)",
+        "RiemannResearch/ExistingResults.lean (lean4)",
+        "RiemannResearch/Main.lean (lean4)",
+        "RiemannResearch/Obstructions/BandLimitedDetection.lean (lean4)",
+        "RiemannResearch/Obstructions/GaussianDetectionBarrier.lean (lean4)",
+        "RiemannResearch/Obstructions/ProportionBarrier.lean (lean4)"
+      ],
+      "message": "152 proof-assistant file(s) exist and no claim declares formal status against them. A development no ledger entry mentions is a formalisation gap at its widest.",
+      "standardRef": "standards/16-formal-theorem-proving.md",
+      "rule": "formal.status-declared"
+    }
+  ]
+}

@@ -880,20 +880,36 @@ function detectObligations() {
     });
   }
 
+  // Two arms, because the parser now distinguishes two situations that used to be one. An
+  // obligation the ledger states is open is an observation; an obligation whose line the grammar
+  // could not read is not, and the difference decides whether an invariant blocks.
   const open = [];
+  const unreadable = [];
   for (const entry of ledger.entries.values()) {
     if (!isProvedRank(entry.status)) continue;
     for (const obligation of entry.obligations) {
-      if (obligation.state === "open") {
-        open.push(`${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) — ${obligation.id ?? "obligation"} is open`);
-      }
+      const where = `${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) — ${obligation.id ?? "obligation"}`;
+      if (obligation.state === "open") open.push(`${where} is open`);
+      else if (obligation.state === "unrecognised") unreadable.push(`${where}: ${obligation.text}`);
     }
   }
   if (open.length > 0) {
     report("proof.complete-with-open-obligations", {
       message: `${open.length} obligation(s) are open on claims held at proved rank.`,
       evidence: open,
-      label: "INFERRED",
+      // The ledger says `open` in as many words. Reading a field is not interpreting it.
+      label: "OBSERVED",
+    });
+  }
+  if (unreadable.length > 0) {
+    report("proof.complete-with-open-obligations", {
+      message: `${unreadable.length} obligation(s) on claims at proved rank state neither 'open' nor 'discharged' in a form this grammar reads. Whether the claim is complete is therefore not established here — say which, in those words, and the check becomes an observation.`,
+      evidence: unreadable,
+      // UNKNOWN, not INFERRED. INFERRED would say the tool has approximate grounds for believing the
+      // obligation is open; it has none. It could not read the line. Reporting it at all is right —
+      // a proved-rank claim whose completeness cannot be checked is worth a person's attention — but
+      // it must not reach the terminal verdict, and under the Tier 1 ceiling it does not.
+      label: "UNKNOWN",
     });
   }
 }

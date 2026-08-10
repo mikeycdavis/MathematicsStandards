@@ -11,6 +11,45 @@ is one of the arms protecting Standard 21 (see `standards/21-standards-integrity
 
 ## Unreleased
 
+**§0b + §0i — a finding's evidence strength constrains the verdict it can produce. Evaluator
+semantic change; no rule added, removed, weakened, or reclassified.**
+
+`BLOCKED_BY_INVARIANT` is the one verdict no exception, attestation, or level override can clear,
+and until now a regex over prose could produce it. Two mechanisms did that, and they are the same
+defect twice:
+
+- `report()`'s `label` argument **defaulted to `OBSERVED`**, and 44 of 52 call sites took the
+  default. Seven of those were wrong, two on invariants.
+- `parseObligation` **defaulted any line it could not read to `open`**, and an open obligation on a
+  proved-rank claim violates an invariant.
+
+In both, a value nobody chose was treated as one somebody asserted.
+
+There is now no default in either place. `report()` throws on a missing or invalid label; the
+obligation parser returns `unrecognised` and leaves the detector to decide what that is worth. Every
+call site is classified in `test/fixtures/evidence-classification.json` with the proposition it
+asserts and the basis for its label, and a test holds that file and the source to each other in
+both directions.
+
+An invariant finding reaches `BLOCKED_BY_INVARIANT` only when its label is `OBSERVED`. An `INFERRED`
+or `UNKNOWN` one is an **actionable failure, not unwaivable certainty**: still detected, still
+reported in full, still failing the run and the exit code, and carrying
+`cappedFrom: "BLOCKED_BY_INVARIANT"` to record the consequence the ceiling prevented. The cap
+applies only on the detector-finding path. Attestations, exceptions, skips and passes carry
+`label: null` and are untouched — a human reviewer's recorded rejection is not weaker evidence than
+a phrase match.
+
+Additive to the result envelope: `label` on every result, `cappedFrom` only where a cap occurred.
+`schemaVersion` is unchanged, because this framework versions the format on incompatible change and
+neither field breaks a consumer joining on `ruleId`.
+
+Effect on the two v1.0.0 field trials, predicted before implementation and measured after:
+**PvsNP moves from `BLOCKED_BY_INVARIANT` to `NON_COMPLIANT`, same two findings, same score.
+RiemannHypothesis stays `BLOCKED_BY_INVARIANT`, its blockers going from three to two — the two
+rejected attestations still block, the prose-arm heuristic no longer does.** No finding was lost in
+either. A change that had made both green would have been indifferent to the distinction this
+milestone exists to draw.
+
 **§0a — unknown or invalid arguments fail closed. Correctness fix, no evaluator semantic change.**
 
 `--dry-run` was tested by exact presence, so `--dryrun`, `--dry_run` and `--dry-run=true` parsed as a

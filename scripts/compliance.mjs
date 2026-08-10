@@ -138,8 +138,19 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
     }
 
     const exception = activeExceptions.get(rule.id);
+    // Step 1 of the Tier 1 milestone: the label is preserved, and nothing yet acts on it. The
+    // outcome is still a function of the rule's level alone, deliberately — the ceiling lands
+    // separately, so that the call-site classification can be reviewed against real result data
+    // before any verdict moves.
     const outcome = level === "required" || level === "forbidden" ? RESULT.failed : RESULT.warning;
-    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message);
+    const result = base(
+      rule,
+      level,
+      outcome,
+      exception ? "excepted" : "evaluated",
+      hits[0].message,
+      strongestLabel(hits),
+    );
     result.evidence = hits.flatMap((h) => h.evidence ?? []);
     result.files = result.evidence;
     if (exception) {
@@ -283,7 +294,34 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
   };
 }
 
-function base(rule, level, status, disposition, message) {
+/** The validated evidence labels of Standard 19 R5. */
+export const EVIDENCE_LABELS = ["OBSERVED", "INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"];
+
+/**
+ * One rule can fire more than once in a run, and the arms need not agree — `claims.silent-promotion`
+ * has a prose arm and a ledger arm with genuinely different bases. The result takes the *strongest*
+ * label present, so a real observed violation is never masked by an inferred one sharing its rule.
+ * An unrecognised label counts for nothing rather than for something.
+ */
+export function strongestLabel(hits) {
+  const present = hits.map((h) => h.label).filter((l) => EVIDENCE_LABELS.includes(l));
+  if (present.length === 0) return null;
+  return present.includes("OBSERVED") ? "OBSERVED" : present[0];
+}
+
+/**
+ * `label` is the evidentiary classification the detector supplied, carried into the result.
+ *
+ * It was previously discarded here, and that is half of §0b: the finding's own statement of what it
+ * rests on reached the human render and never reached the verdict. Threading it through changes no
+ * behaviour on its own — nothing reads it yet — but it makes the classification a property of the
+ * result rather than something that exists only in the audit output.
+ *
+ * `null` on any result not derived from a finding. A rule that passed, was skipped, or was attested
+ * has no finding to classify, and giving it a label would be manufacturing certainty in the other
+ * direction.
+ */
+function base(rule, level, status, disposition, message, label = null) {
   return {
     ruleId: rule.id,
     status,
@@ -292,6 +330,7 @@ function base(rule, level, status, disposition, message) {
     validationType: rule.validationType,
     assurance: status === RESULT.skipped ? "none" : rule.assurance,
     disposition,
+    label,
     message,
     evidence: [],
     files: [],

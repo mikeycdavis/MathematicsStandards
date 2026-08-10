@@ -28,6 +28,7 @@ const TODAY = "2026-08-10";
 const policyDoc = { standardVersion: "1.0.0", project: "t" };
 
 const invariantRule = [...catalog.rules.values()].find(isInvariant);
+const LABELS = ["OBSERVED", "INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"];
 const fixture = (name) => path.join(HOME, "test/fixtures", name);
 const auditJson = (name) => JSON.parse(run(["audit", `--dir=${fixture(name)}`, "--json"]).out || "{}");
 
@@ -97,6 +98,66 @@ test("M1 · a finding with no label at all cannot elevate", () => {
     today: TODAY,
   });
   assert.notEqual(verdict.status, STATUS.BLOCKED_BY_INVARIANT, "absence of a label is not certainty");
+});
+
+// ---------------------------------------------------------------------------
+// Envelope contract. Two additive fields, and exactly one meaningful cap transition.
+//
+//   label       evidentiary classification supplied by the detector
+//   status      consequence actually assigned to this finding
+//   cappedFrom  the stronger consequence the rule's semantics would otherwise have assigned,
+//               prevented SOLELY by the evidence-strength ceiling
+//
+// cappedFrom is not a generic previous-status field, and it is absent when nothing was prevented.
+// Given the four-row table there is exactly one transition it can record, and that narrow truth is
+// what is encoded here rather than a status-transition system.
+// ---------------------------------------------------------------------------
+
+const NON_ELEVATING = ["INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"];
+
+test("contract · every result carries a label key, valid or null", () => {
+  const verdict = verdictFor("INFERRED");
+  for (const r of verdict.results) {
+    assert.ok("label" in r, `${r.ruleId} has no label key`);
+    assert.ok(
+      r.label === null || LABELS.includes(r.label),
+      `${r.ruleId} has label ${JSON.stringify(r.label)}`,
+    );
+  }
+});
+
+test("contract · a result derived from a finding has a non-null label", () => {
+  const capped = failedFor(verdictFor("INFERRED"), invariantRule.id);
+  assert.equal(capped.label, "INFERRED");
+});
+
+test("contract · a result not derived from a finding has label null", () => {
+  const verdict = verdictFor("INFERRED");
+  const untouched = verdict.results.filter((r) => r.ruleId !== invariantRule.id);
+  assert.ok(untouched.length > 0, "the run must contain results other than the planted one");
+  for (const r of untouched) {
+    assert.equal(r.label, null, `${r.ruleId} was not derived from a finding and must not be labelled`);
+  }
+});
+
+test("contract · cappedFrom is absent unless a ceiling was applied", () => {
+  const verdict = verdictFor("OBSERVED");
+  for (const r of verdict.results) {
+    assert.ok(!("cappedFrom" in r), `${r.ruleId} carries cappedFrom with nothing prevented`);
+  }
+});
+
+test("contract · when cappedFrom exists it records the one transition that can occur", () => {
+  for (const label of NON_ELEVATING) {
+    for (const r of verdictFor(label).results) {
+      if (!("cappedFrom" in r)) continue;
+      assert.equal(r.cappedFrom, STATUS.BLOCKED_BY_INVARIANT, "the only consequence a ceiling prevents");
+      assert.equal(r.status, "failed", "a capped result still fails");
+      assert.equal(r.invariant, true, "only an invariant rule can be capped from blocking");
+      assert.ok(NON_ELEVATING.includes(r.label), "a capped result's label must be non-elevating");
+      assert.notEqual(r.cappedFrom, r.status, "cappedFrom is what was prevented, not what happened");
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -202,7 +263,7 @@ test("M3 · nothing resting on an unrecognised parse is OBSERVED", () => {
 //     Every report() invocation supplies an explicit valid label.
 // ---------------------------------------------------------------------------
 
-const LABELS = ["OBSERVED", "INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"];
+
 const detectorSource = readFileSync(path.join(HOME, "scripts/standards.mjs"), "utf8");
 
 test("M4 · report() has no default label", () => {

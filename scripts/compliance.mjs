@@ -21,6 +21,9 @@
  */
 
 import { resolve } from "./catalog.mjs";
+import { inspectionFor } from "./surfaces.mjs";
+
+const noDetectorInspection = () => inspectionFor("__no-detector__", () => []);
 
 export const STATUS = {
   COMPLIANT: "COMPLIANT",
@@ -51,13 +54,14 @@ const RESULT = { passed: "passed", failed: "failed", warning: "warning", skipped
  *                  because nothing failed is the false green this whole framework exists to stop.
  * @param today     ISO date, for exception expiry
  */
-export function evaluate({ catalog, policy, findings, evaluated, today, digests }) {
+export function evaluate({ catalog, policy, findings, evaluated, inspections, today, digests }) {
   const declaredRules = policy?.rules ?? {};
   const applicability = policy?.applicability ?? {};
   const exceptions = Array.isArray(policy?.exceptions) ? policy.exceptions : [];
   const attestations = policy?.attestations ?? {};
   const examined = new Set(evaluated ?? []);
   const currentDigests = digests ?? new Map();
+  const inspectedByRule = inspections ?? new Map();
 
   const byRule = new Map();
   for (const finding of findings) {
@@ -95,7 +99,8 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
 
     // Not applicable: the rule's subject does not exist here. Visible, never a silent exclusion.
     if (applies?.status === "not-applicable") {
-      results.push(base(rule, level, RESULT.skipped, "not-applicable", applies.reason));
+      results.push(base(rule, level, RESULT.skipped, "not-applicable", applies.reason, null,
+        inspectedByRule.get(rule.id) ?? noDetectorInspection()));
       continue;
     }
 
@@ -105,7 +110,14 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
     const attestation = attestations[rule.id];
     if (attestation) {
       const hits = byRule.get(rule.id) ?? [];
-      const verdict = judgeAttestation(rule, attestation, hits, today, currentDigests);
+      const verdict = judgeAttestation(
+        rule,
+        attestation,
+        hits,
+        today,
+        currentDigests,
+        inspectedByRule.get(rule.id) ?? noDetectorInspection(),
+      );
       if (verdict) {
         results.push(verdict);
         continue;
@@ -126,21 +138,34 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
     // found wanting. That is the false green in its other direction, and for an invariant it would
     // silently downgrade BLOCKED_BY_INVARIANT to COMPLIANT. Found by a test that planted a finding
     // against an invariant and got COMPLIANT back.
+    const inspected = examined.has(rule.id)
+      ? inspectedByRule.get(rule.id)
+      : noDetectorInspection();
+    if (hits.length === 0 && inspected?.state === "no-subject") {
+      results.push(
+        base(rule, level, RESULT.skipped, "not-evaluated",
+          `The detector for ${rule.id} had no evidence surface to inspect.`, null, inspected),
+      );
+      continue;
+    }
     if (hits.length === 0 && (rule.validationType === "manual-review" || !examined.has(rule.id))) {
       results.push(
-        base(rule, level, RESULT.skipped, "not-evaluated", `No implemented check evaluates ${rule.id}.`),
+        base(rule, level, RESULT.skipped, "not-evaluated", `No implemented check evaluates ${rule.id}.`, null,
+          inspected ?? noDetectorInspection()),
       );
       continue;
     }
     if (hits.length === 0) {
-      results.push(base(rule, level, RESULT.passed, "evaluated", `No violation of ${rule.id} was observed.`));
+      results.push(base(rule, level, RESULT.passed, "evaluated", `No violation of ${rule.id} was observed.`, null,
+        inspected));
       continue;
     }
 
     const exception = activeExceptions.get(rule.id);
     const outcome = level === "required" || level === "forbidden" ? RESULT.failed : RESULT.warning;
     const label = strongestLabel(hits);
-    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message, label);
+    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message, label,
+      inspected);
 
     // The Tier 1 ceiling, and the only place in the engine that applies it.
     //
@@ -194,6 +219,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       message: `${entry.rule} is non-exemptible; the exception against it is rejected, not applied.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
+      inspected: policyInspection(),
       remediation:
         "Remove the exception and satisfy the rule. If the rule genuinely has no subject in this project, declare it not-applicable instead.",
       // Writing a waiver against an invariant is itself the attempt Standard 21 names: weakening a
@@ -215,6 +241,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       message: `The exception for ${entry.rule} expired on ${entry.expires}.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
+      inspected: policyInspection(),
       remediation: "Renew the exception with a new approval, or satisfy the rule.",
     });
   }
@@ -231,7 +258,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
  * outranks assertion (Standard 38 R4), and that is also why an attestation cannot bypass a
  * nonExemptible rule — not as a separate prohibition, but because the automated failure survives.
  */
-function judgeAttestation(rule, attestation, hits, today, digests) {
+function judgeAttestation(rule, attestation, hits, today, digests, detectorInspection) {
   const fail = (disposition, message, remediation) => ({
     ruleId: rule.id,
     status: RESULT.failed,
@@ -249,6 +276,7 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     message,
     evidence: ["project-policy.yml"],
     files: ["project-policy.yml"],
+    inspected: policyInspection(),
     remediation,
     // A contradicted attestation on an invariant rule is still an invariant violation: the observed
     // finding did not go away because someone wrote a review note over it. Without this flag the
@@ -307,6 +335,13 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     message: `Attested by ${attestation.reviewedBy} on ${attestation.reviewedAt}: ${attestation.evidence}`,
     evidence: against?.paths ?? [],
     files: against?.paths ?? [],
+    inspected: against?.paths?.length
+      ? {
+          subject: "project",
+          state: "inspected",
+          surfaces: [{ surface: `declared:${rule.id}`, count: against.paths.length, paths: against.paths, declared: true }],
+        }
+      : detectorInspection,
     remediation: rule.remediation,
     attestation: {
       reviewedBy: attestation.reviewedBy,
@@ -315,6 +350,14 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
       reference: attestation.reference ?? null,
       expires: attestation.expires ?? null,
     },
+  };
+}
+
+function policyInspection() {
+  return {
+    subject: "project",
+    state: "inspected",
+    surfaces: [{ surface: "project-policy", count: 1, paths: ["project-policy.yml"], declared: true }],
   };
 }
 
@@ -345,7 +388,7 @@ export function strongestLabel(hits) {
  * has no finding to classify, and giving it a label would be manufacturing certainty in the other
  * direction.
  */
-function base(rule, level, status, disposition, message, label = null) {
+function base(rule, level, status, disposition, message, label = null, inspected = noDetectorInspection()) {
   return {
     ruleId: rule.id,
     status,
@@ -355,6 +398,7 @@ function base(rule, level, status, disposition, message, label = null) {
     assurance: status === RESULT.skipped ? "none" : rule.assurance,
     disposition,
     label,
+    inspected,
     message,
     evidence: [],
     files: [],

@@ -60,7 +60,7 @@ const SCHEMA_VERSION = "1.0.0";
 
 /** The rules this evaluator examines. Defined in its own module — see the comment there. */
 import { EVALUATED_RULES } from "./evaluated.mjs";
-
+import { assertSurfacesKnown, inspectionFor } from "./surfaces.mjs";
 // ---------------------------------------------------------------------------
 // Standard references
 // ---------------------------------------------------------------------------
@@ -1600,6 +1600,22 @@ const references = ledger ? scanReferences() : [];
 const dangling = ledger ? danglingEdges(ledger.entries, ledger.references) : [];
 const proofs = proofFiles();
 
+// Framework-subject detectors read the installed standards pack, not the adopter. These paths are
+// relative to HOME deliberately: `inspected.subject` supplies the root they belong to.
+const frameworkInspectionPaths = [
+  "artifacts/provenance-digests.json",
+  "rules/agent.json", "rules/claims.json", "rules/computation.json", "rules/evidence.json",
+  "rules/formal.json", "rules/integrity.json", "rules/literature.json", "rules/problems.json",
+  "rules/proof.json", "rules/rigor.json",
+];
+try {
+  const provenance = JSON.parse(await readFile(path.join(HOME, "artifacts/provenance-digests.json"), "utf8"));
+  for (const entry of provenance.files ?? []) frameworkInspectionPaths.push(entry.path);
+} catch {
+  // The provenance detector reports the missing or malformed record; the surface still records the
+  // path it attempted to inspect.
+}
+
 detectLedgerPresence();
 detectLedgerParse();
 detectStatusVocabulary();
@@ -1903,7 +1919,56 @@ async function attestationDigests(document, repoRoot) {
 
 const digests = await attestationDigests(policy.document, root);
 const today = new Date().toISOString().slice(0, 10);
-const evaluateArgs = { catalog: CATALOG, policy: policy.document, findings, evaluated: EVALUATED_RULES, today, digests };
+assertSurfacesKnown();
+const relativeFiles = files.map(rel);
+const relativeFileSet = new Set(relativeFiles);
+const problemPaths = relativeFiles.filter(
+  (p) => p.startsWith(`${OPEN_PROBLEMS_DIR.replace(/\/$/, "")}/`) && p.endsWith("/problem.md"),
+);
+const citedPaths = new Set();
+if (ledger) {
+  for (const entry of ledger.entries.values()) {
+    for (const item of entry.evidence ?? []) {
+      const candidate = item.path ?? item.file ?? item.artifact ?? item.value;
+      if (typeof candidate === "string" && isPathShaped(candidate) && relativeFileSet.has(candidate)) {
+        citedPaths.add(candidate);
+      }
+    }
+    const formalFile = entry.formal?.file;
+    if (typeof formalFile === "string" && relativeFileSet.has(formalFile)) citedPaths.add(formalFile);
+  }
+}
+const resolveSurface = (surface) => {
+  if (surface === "claims-ledger-location") return [LEDGER_PATH];
+  if (surface === "claims-ledger" || surface === "references") return ledgerText === null ? [] : [LEDGER_PATH];
+  if (surface === "cited-artifacts") return [...citedPaths].sort();
+  // Prose is only inspected when registered claims/references give the scan something to seek.
+  if (surface === "prose") {
+    if (!ledger) return [];
+    return [...contents.keys()].map(rel).filter((p) => /\.(?:md|txt|ya?ml|json)$/i.test(p)).sort();
+  }
+  if (surface === "proof-sources") return proofs.map((p) => rel(p.file)).sort();
+  if (surface === "open-problems") return problemPaths;
+  if (surface === "repository-paths") return relativeFiles;
+  if (surface === "project-policy") return relativeFileSet.has("project-policy.yml") ? ["project-policy.yml"] : [];
+  if (surface === "run-findings") {
+    return [...new Set(findings.flatMap((f) => f.evidence ?? []).map((e) => String(e).split(":")[0])
+      .filter((p) => relativeFileSet.has(p)))].sort();
+  }
+  if (surface === "framework-home") return frameworkInspectionPaths;
+  if (surface === "framework-catalog") return frameworkInspectionPaths.filter((p) => p.startsWith("rules/"));
+  throw new Error(`unknown evidence surface '${surface}'`);
+};
+const inspections = new Map(EVALUATED_RULES.map((id) => [id, inspectionFor(id, resolveSurface)]));
+const evaluateArgs = {
+  catalog: CATALOG,
+  policy: policy.document,
+  findings,
+  evaluated: EVALUATED_RULES,
+  inspections,
+  today,
+  digests,
+};
 
 /**
  * Two passes, and the reason is worth stating: evidence.skipped-never-passed is a rule about the

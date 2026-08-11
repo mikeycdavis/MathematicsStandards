@@ -1,0 +1,27 @@
+# The AFTER half of the escape-hatch pair: the same repository, plus one line that is not true.
+#
+# Byte-identical to `escape-hatch-undeclared` apart from the `artifacts.failedRoutes` block below,
+# which names a file that does not exist. Step 4 made this rule stop failing and start reporting
+# `skipped / not-evaluated` — correctly, because the framework could not read the evidence and being
+# unable to look is not an observation about what would have been seen.
+#
+# But `skipped` leaves the score's denominator and the failure list, so at step 4 this fixture scored
+# HIGHER than its honest twin and was one rule away from COMPLIANT. A better verdict, bought by
+# naming a file that is not there. That is §0m one level up, and step 5 closes it:
+#
+#     score(with an unresolved required pointer) <= score(without the pointer)
+#
+# and the terminal status may never improve either. The mechanism is not to restore the failure —
+# the framework still does not know whether this project preserves its failed routes — but to give
+# the unresolved rule a zero-credit place in the denominator and to let an aggregate
+# `unresolvedRequired` condition carry the verdict.
+standardVersion: "1.0.0"
+project: "escape-hatch-declared"
+
+artifacts:
+  failedRoutes: "docs/ABANDONED_ROUTES.md"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

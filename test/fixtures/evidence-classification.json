@@ -574,7 +574,7 @@
       "rule": "evidence.skipped-never-passed",
       "arm": "false-green",
       "site": "evidence.skipped-never-passed#1",
-      "line": 2293,
+      "line": 2319,
       "proposition": "N rules were reported as passing while nothing evaluated them.",
       "label": "OBSERVED",
       "invariant": false,

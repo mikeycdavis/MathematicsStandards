@@ -1923,10 +1923,36 @@ function renderVerdict(report, policyState) {
   const s = report.summary;
   const a = report.assurance;
   out.push(`  Status: ${report.status}`);
-  out.push(`  Score:  ${report.score === null ? "n/a" : report.score + "%"}  (${report.denominator.basis}: ${report.denominator.scored})`);
+  // The full basis sentence lives in the JSON. Here it is the short form plus the itemised
+  // `Outside:` line below, which says more than the sentence did and fits on a terminal.
+  out.push(`  Score:  ${report.score === null ? "n/a" : report.score + "%"}  (over ${report.denominator.scored} required rule(s) about this project)`);
   out.push(`  Rules:  ${s.passed} passed, ${s.failed} failed, ${s.warnings} warning(s), ${s.skipped} skipped`);
   out.push(`  Cover:  ${a.automated} automated, ${a.manualReview} manual-review, ${a.notEvaluated} not-evaluated`);
+  // What the score left out, and why — one line, itemised. "34 of 82" invites the reader to assume
+  // the other 48 were merely unimplemented; they are five different things, and two of them
+  // (someone else's property, evidence we could not read) are the ones §0h and §0m are about.
+  const d = report.denominator;
+  const excluded = [
+    [d.frameworkSubject, "about the framework"],
+    [d.runSubject, "about this run"],
+    [d.noSubject, "nothing to inspect"],
+    [d.noDetector, "no check implemented"],
+    [d.staleAttestation, "review no longer current"],
+    [d.expiredAttestation, "attestation expired"],
+  ].filter(([n]) => n > 0);
+  if (excluded.length) out.push(`  Outside: ${excluded.map(([n, why]) => `${n} ${why}`).join(", ")}`);
+  if (d.unresolvedRequired > 0) {
+    out.push(`  Unearned: ${d.unresolvedRequired} in the score and unearnable — declared evidence could not be read`);
+  }
   out.push("");
+
+  if (report.foreignFailures?.length) {
+    out.push("  Failures that are not this project's");
+    out.push("  Real, and excluded from the status and score above because they are not about this");
+    out.push("  repository. A run-subject failure means this tool misreported something.");
+    for (const f of report.foreignFailures) out.push(`    ${f.rule} (${f.subject}) — ${f.message}`);
+    out.push("");
+  }
 
   if (report.blockedBy?.length) {
     out.push("  BLOCKED BY INVARIANT — stop, do not work around this:");

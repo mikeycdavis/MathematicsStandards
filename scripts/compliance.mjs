@@ -91,6 +91,9 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     else activeExceptions.set(rule.id, entry);
   }
 
+  /** rule id → why an attestation stopped establishing it. Read by `base` a few lines later. */
+  const unevaluatedBecause = new Map();
+
   const results = [];
   for (const rule of catalog.rules.values()) {
     const declared = declaredRules[rule.id];
@@ -100,7 +103,7 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     // Not applicable: the rule's subject does not exist here. Visible, never a silent exclusion.
     if (applies?.status === "not-applicable") {
       results.push(base(rule, level, RESULT.skipped, "not-applicable", applies.reason, null,
-        inspectedByRule.get(rule.id) ?? noDetectorInspection()));
+        inspectedByRule.get(rule.id) ?? noDetectorInspection(), "not-applicable"));
       continue;
     }
 
@@ -118,10 +121,16 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
         currentDigests,
         inspectedByRule.get(rule.id) ?? noDetectorInspection(),
       );
-      if (verdict) {
+      if (verdict && !verdict.fallThrough) {
         results.push(verdict);
         continue;
       }
+      // The attestation did not establish the requirement. WHY it did not is carried forward: a
+      // stale review and a rule nobody ever attested both land on `skipped / not-evaluated`, and
+      // before this they landed there with the same message — "No implemented check evaluates X",
+      // true of the detector and false about the history. Somebody did review this rule, recorded
+      // what they read, and the thing they read has changed. Only one of the two is actionable.
+      if (verdict?.fallThrough) unevaluatedBecause.set(rule.id, verdict.fallThrough);
       // Falls through: the attestation did not establish the requirement, so the rule is evaluated
       // normally and typically lands on not-evaluated. Silently ignoring it would be worse.
     }
@@ -144,7 +153,7 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     if (hits.length === 0 && inspected?.state === "no-subject") {
       results.push(
         base(rule, level, RESULT.skipped, "not-evaluated",
-          `The detector for ${rule.id} had no evidence surface to inspect.`, null, inspected),
+          `The detector for ${rule.id} had no evidence surface to inspect.`, null, inspected, "no-subject"),
       );
       continue;
     }
@@ -171,14 +180,21 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
       results.push(
         base(rule, level, RESULT.skipped, "not-evaluated",
           `${rule.id} could not be evaluated: the evidence it was pointed at could not be read. ${why}`.trim(),
-          null, inspected),
+          null, inspected, "unresolved-evidence"),
       );
       continue;
     }
     if (hits.length === 0 && (rule.validationType === "manual-review" || !examined.has(rule.id))) {
+      // A stale or expired attestation arrives here too, and must not be told it was never looked
+      // at. The status is the same and the sentence is not.
+      const lapsed = unevaluatedBecause.get(rule.id);
+      const message = lapsed
+        ? `${rule.id} was reviewed and the review no longer applies: ` +
+          `${lapsed === "stale-attestation" ? "what was reviewed is not what is there now" : "the attestation has expired"}.`
+        : `No implemented check evaluates ${rule.id}.`;
       results.push(
-        base(rule, level, RESULT.skipped, "not-evaluated", `No implemented check evaluates ${rule.id}.`, null,
-          inspected ?? noDetectorInspection()),
+        base(rule, level, RESULT.skipped, "not-evaluated", message, null,
+          inspected ?? noDetectorInspection(), lapsed ?? "no-detector"),
       );
       continue;
     }
@@ -336,15 +352,19 @@ function judgeAttestation(rule, attestation, hits, today, digests, detectorInspe
     );
   }
 
+  // Both of the next two return the rule to not-evaluated rather than failing it — an expired or
+  // stale review is unreviewed again, not refuted. They carry a reason out with them because the
+  // status they land on is shared with "nobody ever looked", and those are different situations
+  // with different remedies: one needs a reviewer, the other needs the same reviewer again.
   if (attestation.expires && attestation.expires < today) {
-    return null; // Expired: back to not-evaluated. It is not a failure, it is unreviewed again.
+    return { fallThrough: "expired-attestation", reviewedBy: attestation.reviewedBy };
   }
 
   const against = attestation.reviewedAgainst;
   if (against?.digest) {
     const current = digests.get(rule.id);
     if (current && current !== against.digest) {
-      return null; // Stale: what was reviewed is not what is there now.
+      return { fallThrough: "stale-attestation", reviewedBy: attestation.reviewedBy };
     }
   }
 
@@ -432,7 +452,20 @@ export function strongestLabel(hits) {
  * has no finding to classify, and giving it a label would be manufacturing certainty in the other
  * direction.
  */
-function base(rule, level, status, disposition, message, label = null, inspected = noDetectorInspection()) {
+function base(
+  rule,
+  level,
+  status,
+  disposition,
+  message,
+  label = null,
+  inspected = noDetectorInspection(),
+  // Why this result was not evaluated, or null when it was. Six values share one status, and the
+  // remedy differs for each: no-detector needs an implementer, no-subject needs the project to
+  // acquire the thing, unresolved-evidence needs a corrected pointer, stale-attestation needs the
+  // same reviewer again, expired-attestation needs a renewal, not-applicable needs nothing.
+  notEvaluatedBecause = null,
+) {
   return {
     ruleId: rule.id,
     status,
@@ -443,6 +476,7 @@ function base(rule, level, status, disposition, message, label = null, inspected
     disposition,
     label,
     inspected,
+    notEvaluatedBecause,
     message,
     evidence: [],
     files: [],
@@ -471,14 +505,77 @@ function summarise(results, policy) {
     else assurance.automated++;
   }
 
+  // Normalised here rather than at each construction site. Four results are hand-built — rejected
+  // and expired exceptions, contradicted and invalid attestations — and Tier 1 lost real time to a
+  // field that was added to `base` and forgotten on exactly those four. A key that is absent on some
+  // results and present on others cannot be relied on by any consumer.
+  for (const r of results) if (r.notEvaluatedBecause === undefined) r.notEvaluatedBecause = null;
+
   const applicable = results.filter((r) => r.disposition !== "not-applicable");
-  const scored = applicable.filter((r) => r.status !== RESULT.skipped && r.level === "required");
+
+  /**
+   * Whose property is this result about?
+   *
+   * §0h, and the reason it reaches the score. `integrity.provenance-digest` certifies
+   * MathematicsStandards' own source documents: the answer is the same for every adopter and no
+   * adopter can change it. A row nobody being measured can affect is not a measurement of them, and
+   * five such rows in a denominator of forty are free marks. Results with no inspection record are
+   * the project's by default — that is what `noDetectorInspection` reports, and treating an unknown
+   * subject as foreign would silently shrink the denominator.
+   */
+  const isProjectSubject = (r) => (r.inspected?.subject ?? "project") === "project";
+  const foreign = applicable.filter((r) => !isProjectSubject(r));
+
+  /**
+   * The denominator, and the one entry in it that can never be earned.
+   *
+   * An unresolved REQUIRED surface occupies a slot and scores nothing. That is the whole of step 5's
+   * monotonicity property: without it, declaring a pointer at a file that does not exist moves the
+   * rule from `failed` (0/1) to `skipped` (out of the denominator entirely), and a repository's
+   * score RISES because it made an assertion that is not true. Measured on the fixture pair before
+   * this change: NON_COMPLIANT / 97 became COMPLIANT / 100.
+   *
+   * Keeping the slot is preferable to restoring the failure. The framework still does not know
+   * whether the project preserves its failed routes; what it knows is that it was told where to look
+   * and could not, and an unearnable slot says exactly that without claiming more.
+   */
+  const isRequired = (r) => r.level === "required";
+  const unresolvedRequired = applicable.filter(
+    (r) => isProjectSubject(r) && isRequired(r) && r.inspected?.blocked === true,
+  );
+  const scored = applicable.filter(
+    (r) =>
+      isProjectSubject(r) &&
+      isRequired(r) &&
+      (r.status !== RESULT.skipped || r.inspected?.blocked === true),
+  );
+  const scoredIds = new Set(scored.map((r) => r.ruleId));
+  for (const r of results) r.scored = scoredIds.has(r.ruleId);
   const scoredPassed = scored.filter((r) => r.status === RESULT.passed).length;
   const score = scored.length === 0 ? null : Math.round((scoredPassed / scored.length) * 100);
 
+  const notEvaluated = { noDetector: 0, noSubject: 0, unresolvedRequired: 0, staleAttestation: 0, expiredAttestation: 0 };
+  const BUCKET = {
+    "no-detector": "noDetector",
+    "no-subject": "noSubject",
+    "unresolved-evidence": "unresolvedRequired",
+    "stale-attestation": "staleAttestation",
+    "expired-attestation": "expiredAttestation",
+  };
+  for (const r of applicable) {
+    const bucket = BUCKET[r.notEvaluatedBecause];
+    if (bucket) notEvaluated[bucket]++;
+  }
+
+  // The adopter's failures are the adopter's. A framework- or run-subject failure is real and is
+  // reported — `foreignFailures`, and its own block in the render — but it is not this project's
+  // non-compliance, and putting it here was how `§0h` produced a verdict about the wrong repository.
   const requiredFailures = results.filter(
-    (r) => r.status === RESULT.failed && !(r.disposition === "excepted"),
+    (r) => r.status === RESULT.failed && !(r.disposition === "excepted") && isProjectSubject(r),
   );
+  const foreignFailures = foreign
+    .filter((r) => r.status === RESULT.failed)
+    .map((r) => ({ rule: r.ruleId, subject: r.inspected.subject, message: r.message }));
   const excepted = results.filter((r) => r.disposition === "excepted");
 
   // Invariant violations are read off the results, not recomputed, so a rule can only block if it
@@ -498,6 +595,12 @@ function summarise(results, policy) {
   if (!policy) status = STATUS.NOT_EVALUATED;
   else if (blocking.length > 0) status = STATUS.BLOCKED_BY_INVARIANT;
   else if (requiredFailures.length > 0) status = STATUS.NON_COMPLIANT;
+  // The aggregate condition that closes the escape hatch on the terminal status, as it is closed on
+  // the score. A project that declares where its evidence is and points at nothing has a defect in
+  // its records; the framework will not call that compliance. It is deliberately NOT a claim that
+  // the underlying rule is violated — the rule's own result still says `skipped / not-evaluated`,
+  // and `blockedBy` stays empty because nothing here is an invariant.
+  else if (unresolvedRequired.length > 0) status = STATUS.NON_COMPLIANT;
   else if (excepted.length > 0) status = STATUS.COMPLIANT_WITH_EXCEPTIONS;
   else status = STATUS.COMPLIANT;
 
@@ -510,8 +613,20 @@ function summarise(results, policy) {
       total: results.length,
       applicable: applicable.length,
       scored: scored.length,
-      basis: "required-level rules that were evaluated",
+      // Named parts rather than one number, because "37 of 82" invites the reader to assume the
+      // other 45 were merely unimplemented. They were five different things.
+      frameworkSubject: foreign.filter((r) => r.inspected.subject === "framework").length,
+      runSubject: foreign.filter((r) => r.inspected.subject === "run").length,
+      noSubject: notEvaluated.noSubject,
+      noDetector: notEvaluated.noDetector,
+      unresolvedRequired: notEvaluated.unresolvedRequired,
+      staleAttestation: notEvaluated.staleAttestation,
+      expiredAttestation: notEvaluated.expiredAttestation,
+      basis: "required-level rules about this project that were evaluated, plus those whose required evidence could not be read",
     },
+    // Failures that are real and are not this project's. Empty on a healthy run, and present rather
+    // than absent so a consumer can distinguish "none" from "this build does not report them".
+    foreignFailures,
     // Named so a consumer — especially an agent deciding whether to continue — can see WHICH
     // invariant stopped it without scanning every result.
     blockedBy: blocking.map((r) => ({ rule: r.ruleId, message: r.message })),
@@ -537,6 +652,9 @@ export function envelope({ verdict, project, standardVersion, auditedAt, repo, f
     // Empty on every other verdict. Non-empty exactly when status is BLOCKED_BY_INVARIANT, so a
     // consumer can branch on the array without parsing the status string.
     blockedBy: verdict.blockedBy ?? [],
+    // §0h in the envelope. A failure that is the framework's or this run's own is reported here and
+    // nowhere in the adopter's status or score — visible, and not charged to the wrong repository.
+    foreignFailures: verdict.foreignFailures ?? [],
     // Framework maturity, sitting outside the verdict on purpose. It says how much of the framework
     // has been turned into rules — never how compliant this project is.
     frameworkCoverage: frameworkCoverage ?? null,

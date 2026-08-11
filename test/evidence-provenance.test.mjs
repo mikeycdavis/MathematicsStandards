@@ -23,6 +23,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import { HOME, run } from "./helpers/cli.mjs";
+import { EVALUATED_RULES } from "../scripts/evaluated.mjs";
+import { RULE_SURFACES, SURFACES, SUBJECT, assertSurfacesKnown } from "../scripts/surfaces.mjs";
 
 const fixture = (name) => path.join(HOME, "test/fixtures", name);
 
@@ -55,6 +57,61 @@ function inspectedFor(envelope, ruleId) {
   );
   return r.inspected;
 }
+
+// ---------------------------------------------------------------------------
+// Contracts on the declaration itself. Two registers describing the same 53 detectors drift the
+// moment one is edited alone, and the drift is silent in the direction that matters: a rule in
+// EVALUATED_RULES but not RULE_SURFACES gets `no-detector` and keeps passing, which is the §0
+// defect surviving inside its own fix.
+// ---------------------------------------------------------------------------
+
+test("contract · the surface table and the evaluated list describe the same rules", () => {
+  const surfaced = [...RULE_SURFACES.keys()].sort();
+  const evaluated = [...EVALUATED_RULES].sort();
+
+  assert.deepEqual(
+    surfaced.filter((id) => !evaluated.includes(id)),
+    [],
+    "declared a surface for a rule no detector evaluates",
+  );
+  assert.deepEqual(
+    evaluated.filter((id) => !surfaced.includes(id)),
+    [],
+    "a detector exists and nothing declares what it reads, so the rule reports no-detector and passes",
+  );
+});
+
+test("contract · every declared surface and subject is in the closed vocabulary", () => {
+  assert.doesNotThrow(assertSurfacesKnown);
+
+  // Non-vacuity: the guard is only worth anything if the vocabulary is actually exercised. Both
+  // non-project subjects must be in use, or the §0h distinction exists only on paper.
+  const subjects = new Set([...RULE_SURFACES.values()].map((d) => d.subject));
+  assert.ok(subjects.has(SUBJECT.framework), "no rule declares the framework as its subject");
+  assert.ok(subjects.has(SUBJECT.run), "no rule declares the run as its subject");
+
+  const used = new Set([...RULE_SURFACES.values()].flatMap((d) => d.surfaces));
+  assert.deepEqual(
+    [...SURFACES].filter((s) => !used.has(s)),
+    [],
+    "a surface is in the vocabulary and no rule reads it",
+  );
+});
+
+test("contract · every result carries the inspected key, including hand-built ones", () => {
+  // Tier 1's expensive lesson, applied before it can cost anything twice: `label` was omitted from
+  // four hand-built result objects and surfaced only when auditing a real repository showed
+  // `label=undefined` on two blockers. An absent key and a key saying "nothing was inspected" are
+  // different propositions, and only one of them is auditable.
+  const { envelope } = validate("attested-no-digest");
+  const missing = envelope.results.filter((r) => !("inspected" in r));
+  assert.deepEqual(missing.map((r) => `${r.ruleId} (${r.disposition})`), []);
+
+  // Named, not counted: the attested path is the one that skips `base()` entirely.
+  const attested = envelope.results.find((r) => r.disposition === "attested");
+  assert.ok(attested, "the fixture's attestation must be honoured for this to test the hand-built path");
+  assert.ok("inspected" in attested);
+});
 
 // ---------------------------------------------------------------------------
 // C1 · a PASS names the project evidence it inspected.

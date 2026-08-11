@@ -1602,12 +1602,15 @@ const proofs = proofFiles();
 
 // Framework-subject detectors read the installed standards pack, not the adopter. These paths are
 // relative to HOME deliberately: `inspected.subject` supplies the root they belong to.
-const frameworkInspectionPaths = [
-  "artifacts/provenance-digests.json",
-  "rules/agent.json", "rules/claims.json", "rules/computation.json", "rules/evidence.json",
-  "rules/formal.json", "rules/integrity.json", "rules/literature.json", "rules/problems.json",
-  "rules/proof.json", "rules/rigor.json",
-];
+// Read from disk, not listed. A hand-maintained file list is a fact about someone's memory — the
+// same objection design/testing-principles.md raises against a hand-maintained coverage count — and
+// a rules file added tomorrow would silently stop being named among what was inspected. The list
+// happened to be complete when written, which is exactly how this class of drift stays invisible.
+const frameworkRulePaths = (await readdir(path.join(HOME, "rules")).catch(() => []))
+  .filter((name) => name.endsWith(".json"))
+  .map((name) => `rules/${name}`)
+  .sort();
+const frameworkInspectionPaths = ["artifacts/provenance-digests.json", ...frameworkRulePaths];
 try {
   const provenance = JSON.parse(await readFile(path.join(HOME, "artifacts/provenance-digests.json"), "utf8"));
   for (const entry of provenance.files ?? []) frameworkInspectionPaths.push(entry.path);
@@ -1929,9 +1932,15 @@ const citedPaths = new Set();
 if (ledger) {
   for (const entry of ledger.entries.values()) {
     for (const item of entry.evidence ?? []) {
-      const candidate = item.path ?? item.file ?? item.artifact ?? item.value;
-      if (typeof candidate === "string" && isPathShaped(candidate) && relativeFileSet.has(candidate)) {
-        citedPaths.add(candidate);
+      // `artifacts`, and only that. The parser builds each evidence item as
+      // `{ type, detail, artifacts, text }` (claims.mjs:405) — there is no `path`, `file`,
+      // `artifact` or `value` key on it, so a chain of fallbacks across those four names resolves
+      // to undefined for every entry in every repository and this surface reports empty forever.
+      // A surface that silently resolves to nothing is the §0 defect wearing the fix's clothes:
+      // the field would say "inspected no artifacts" about a ledger citing dozens.
+      for (const artifact of item.artifacts ?? []) {
+        const bare = String(artifact).split("#")[0];
+        if (isPathShaped(bare) && relativeFileSet.has(bare)) citedPaths.add(bare);
       }
     }
     const formalFile = entry.formal?.file;
@@ -1940,7 +1949,20 @@ if (ledger) {
 }
 const resolveSurface = (surface) => {
   if (surface === "claims-ledger-location") return [LEDGER_PATH];
-  if (surface === "claims-ledger" || surface === "references") return ledgerText === null ? [] : [LEDGER_PATH];
+  if (surface === "claims-ledger") return ledgerText === null ? [] : [LEDGER_PATH];
+  // The reference entries, and separately the ones carrying an identifier this rule can check.
+  // Locators rather than files: `<ledger>#<slug>` names the thing inspected at the granularity the
+  // rule reads it. Both frozen adopters resolve `reference-identifiers` to zero.
+  if (surface === "references") {
+    return ledger ? [...ledger.references.keys()].sort().map((slug) => `${LEDGER_PATH}#${slug}`) : [];
+  }
+  if (surface === "reference-identifiers") {
+    if (!ledger) return [];
+    return [...ledger.references]
+      .filter(([, citation]) => /\b10\.\d{4,9}\/\S+|\barXiv:/i.test(citation))
+      .map(([slug]) => `${LEDGER_PATH}#${slug}`)
+      .sort();
+  }
   if (surface === "cited-artifacts") return [...citedPaths].sort();
   // Prose is only inspected when registered claims/references give the scan something to seek.
   if (surface === "prose") {
@@ -1955,6 +1977,11 @@ const resolveSurface = (surface) => {
     return [...new Set(findings.flatMap((f) => f.evidence ?? []).map((e) => String(e).split(":")[0])
       .filter((p) => relativeFileSet.has(p)))].sort();
   }
+  // Not a path, and deliberately not pretending to be one. The subject is `run`, so no consumer can
+  // mistake this for an artifact in the adopter's tree, and the alternative — resolving it to the
+  // findings' file paths — makes the false-green guard skip itself on exactly the clean runs where
+  // a false green would go unnoticed.
+  if (surface === "run-results") return ["(the results of this evaluation)"];
   if (surface === "framework-home") return frameworkInspectionPaths;
   if (surface === "framework-catalog") return frameworkInspectionPaths.filter((p) => p.startsWith("rules/"));
   throw new Error(`unknown evidence surface '${surface}'`);

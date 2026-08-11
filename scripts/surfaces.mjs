@@ -64,6 +64,13 @@ export const SURFACES = new Set([
   "claims-ledger",
   "claims-ledger-location",
   "references",
+  // The identifiers themselves, not the block containing them. Measured against both frozen
+  // adopters: RH has 0 references, PvsNP has 16 and *none* carries a DOI or arXiv id — and
+  // `literature.resolvable-identifiers`, which checks DOI and arXiv format, passes in both. That is
+  // §0's second instance verbatim: "passed having examined nothing". Resolving the surface to the
+  // file that holds the references would report the rule as having inspected 16 things when the
+  // number of things of the kind it checks is zero.
+  "reference-identifiers",
   "cited-artifacts",
   "prose",
   "proof-sources",
@@ -71,6 +78,14 @@ export const SURFACES = new Set([
   "repository-paths",
   "project-policy",
   "run-findings",
+  // Distinct from `run-findings`, and the distinction is not pedantry. `run-findings` resolves to
+  // the project files this run's findings point at, so a clean run resolves it empty — correctly,
+  // because a rule checking that findings carry valid labels has nothing to check when there are
+  // none, and reporting that as a pass is the §0 shape exactly. `evidence.skipped-never-passed`
+  // reads the RESULT set instead, which exists on every run including a clean one, so surfacing it
+  // on findings would make the framework's own false-green guard skip itself precisely when there
+  // is nothing else wrong — the one run where a false green would be invisible.
+  "run-results",
   "framework-home",
   "framework-catalog",
 ]);
@@ -124,7 +139,14 @@ export const RULE_SURFACES = new Map([
 
   // Literature. The identifier arm reads the ledger's References section specifically.
   ["literature.known-result-comparison", { subject: P, surfaces: ["claims-ledger"] }],
-  ["literature.resolvable-identifiers", { subject: P, surfaces: ["claims-ledger", "references"] }],
+  // Two arms over two surfaces: external references used but never defined (the ledger's edges),
+  // and identifiers that are malformed (the identifiers). Both are listed because the rule is only
+  // `no-subject` when it read nothing at all — but they are listed SEPARATELY, with their own
+  // counts, so a pass over 16 references and 0 identifiers cannot be read as 16 identifiers
+  // checked. Per-arm emptiness is a visibility question, and this is the layer that answers it;
+  // whether an empty primary arm should also stop the rule passing is a verdict question, and
+  // belongs to the repair step rather than the substrate.
+  ["literature.resolvable-identifiers", { subject: P, surfaces: ["references", "reference-identifiers"] }],
   ["literature.unchecked-novelty", { subject: P, surfaces: ["claims-ledger"] }],
 
   // Formal. Placeholder and axiom scanning read the proof sources; the Formal-block rules read the
@@ -163,7 +185,7 @@ export const RULE_SURFACES = new Map([
   // the tool. `skipped-never-passed` says so in its own message: "a defect in the tool, not in the
   // project". Reported inside an adopter's run because that is where the defect would appear.
   ["evidence.labels", { subject: R, surfaces: ["run-findings"] }],
-  ["evidence.skipped-never-passed", { subject: R, surfaces: ["run-findings"] }],
+  ["evidence.skipped-never-passed", { subject: R, surfaces: ["run-results"] }],
   ["agent.explainable-findings", { subject: R, surfaces: ["run-findings"] }],
 
   // The framework's own integrity. §0h. Both read MathematicsStandards' home, and both are about

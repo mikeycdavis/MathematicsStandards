@@ -20,10 +20,13 @@ export const GLOBAL_VALUE_FLAGS = new Set(["--dir"]);
 
 /** Per-command flags. `plain` take no value; `valued` require `=<value>`. */
 export const COMMAND_FLAGS = {
-  audit: { plain: new Set(["--strict"]), valued: new Set() },
-  validate: { plain: new Set(), valued: new Set() },
-  check: { plain: new Set(), valued: new Set() },
-  status: { plain: new Set(), valued: new Set() },
+  // `--provenance` is accepted by audit as well as the verdict commands, because the question it
+  // answers — what did this rule actually read — is the same on both sides of the evidence/verdict
+  // split. It changes no status, score, or exit code; it prints what the run already computed.
+  audit: { plain: new Set(["--strict", "--provenance"]), valued: new Set() },
+  validate: { plain: new Set(["--provenance"]), valued: new Set() },
+  check: { plain: new Set(["--provenance"]), valued: new Set() },
+  status: { plain: new Set(["--provenance"]), valued: new Set() },
   explain: { plain: new Set(), valued: new Set() },
   init: { plain: new Set(["--dry-run"]), valued: new Set(["--mode", "--force-overwrite"]) },
 };

@@ -197,18 +197,81 @@ export const RULE_SURFACES = new Map([
   ["integrity.rule-lifecycle-honest", { subject: F, surfaces: ["framework-catalog"] }],
 ]);
 
-/** Refuse an unknown surface at load. Resolving one to nothing would read as `no-subject`. */
+/**
+ * Human labels for the render. The identifiers above are keys; these are what a reader sees, and
+ * they say what was counted rather than where it lives — `resolvable identifiers: 0` is a fact about
+ * the project, `artifacts/claims-ledger.md` is not.
+ */
+export const SURFACE_LABELS = {
+  "claims-ledger": "ledger claims",
+  "claims-ledger-location": "declared ledger location",
+  references: "references",
+  "reference-identifiers": "resolvable identifiers",
+  "cited-artifacts": "cited artifacts",
+  prose: "prose documents",
+  "proof-sources": "proof-assistant sources",
+  "open-problems": "open-problem records",
+  "repository-paths": "repository paths",
+  "project-policy": "policy declarations",
+  "run-findings": "findings from this run",
+  "run-results": "results from this run",
+  "framework-home": "framework source set",
+  "framework-catalog": "framework rule sources",
+};
+
+/**
+ * Refuse a declaration this module cannot honour, at load, before anything resolves.
+ *
+ * Every check here exists because the alternative is a silent empty. An unknown surface, a rule with
+ * no surfaces, a missing label — each would resolve to nothing and read as `no-subject`, which is
+ * the §0 defect reappearing inside the mechanism built to detect it.
+ */
 export function assertSurfacesKnown() {
   for (const [rule, decl] of RULE_SURFACES) {
-    for (const surface of decl.surfaces) {
-      if (!SURFACES.has(surface)) {
-        throw new Error(`${rule} declares unknown evidence surface '${surface}'`);
-      }
-    }
     if (!Object.values(SUBJECT).includes(decl.subject)) {
       throw new Error(`${rule} declares unknown subject '${decl.subject}'`);
     }
+    if (!Array.isArray(decl.surfaces) || decl.surfaces.length === 0) {
+      throw new Error(
+        `${rule} declares no evidence surface. A rule with a detector and no declared surface is ` +
+          `reported as inspecting nothing, which is indistinguishable from having nothing to inspect.`,
+      );
+    }
+    for (const surface of decl.surfaces) {
+      if (!SURFACES.has(surface)) throw new Error(`${rule} declares unknown evidence surface '${surface}'`);
+      if (!SURFACE_LABELS[surface]) throw new Error(`surface '${surface}' has no human label`);
+    }
   }
+}
+
+/**
+ * The three things a resolver can honestly report, and why all three are needed.
+ *
+ * Returning `[]` for every one of them is what the `cited-artifacts` defect looked like: a resolver
+ * reading four key names the parser never produces returned an empty array on every entry in every
+ * repository, and the output said "inspected no artifacts" about a ledger citing dozens. **Observed
+ * empty and resolver-failed-and-returned-empty are different propositions**, and a field that
+ * collapses them cannot be audited — which is the same objection this milestone raises against the
+ * framework's passes.
+ *
+ * The distinction becomes load-bearing at §0m: a declared pointer that does not resolve must fail
+ * closed, and it can only do that if `unresolved` is a state the substrate can carry.
+ */
+export const RESOLUTION = {
+  empty: "resolved-empty",
+  nonempty: "resolved-nonempty",
+  unresolved: "unresolved",
+};
+
+/** A resolver's successful answer. `items` may be paths or locators; emptiness is a real answer. */
+export function resolved(items) {
+  const list = [...items];
+  return { state: list.length > 0 ? RESOLUTION.nonempty : RESOLUTION.empty, items: list, reason: null };
+}
+
+/** A resolver that could not answer. Never the same as finding nothing. */
+export function unresolved(reason) {
+  return { state: RESOLUTION.unresolved, items: [], reason };
 }
 
 /** How many paths a surface lists before it reports a count instead. Keeps the envelope bounded. */
@@ -244,21 +307,41 @@ export function noDetectorInspection() {
  */
 export function inspectionFor(ruleId, resolve) {
   const declaration = RULE_SURFACES.get(ruleId);
-  if (!declaration) {
-    return { subject: SUBJECT.project, state: "no-detector", surfaces: [] };
-  }
+  if (!declaration) return noDetectorInspection();
+
   const surfaces = declaration.surfaces.map((surface) => {
-    const paths = resolve(surface) ?? [];
+    const answer = resolve(surface);
+    // A resolver that returns a bare array, or undefined, has not said which of the three answers
+    // it means. Throwing is the point: the failure this enforces is precisely a resolver quietly
+    // reporting nothing, and a permissive coercion here would restore it.
+    if (!answer || typeof answer !== "object" || !Object.values(RESOLUTION).includes(answer.state)) {
+      throw new Error(
+        `resolver for surface '${surface}' (rule ${ruleId}) returned ${JSON.stringify(answer)}. ` +
+          `A resolver must return resolved(items) or unresolved(reason) so that observed-empty and ` +
+          `could-not-resolve stay distinguishable.`,
+      );
+    }
     return {
       surface,
-      count: paths.length,
-      paths: paths.slice(0, MAX_SURFACE_PATHS),
+      label: SURFACE_LABELS[surface] ?? surface,
+      state: answer.state,
+      count: answer.items.length,
+      paths: answer.items.slice(0, MAX_SURFACE_PATHS),
+      reason: answer.reason ?? null,
       declared: false,
     };
   });
-  return {
-    subject: declaration.subject,
-    state: surfaces.some((s) => s.count > 0) ? "inspected" : "no-subject",
-    surfaces,
-  };
+
+  // `no-subject` requires every surface to be observed empty. A surface that could not be resolved
+  // is not evidence of absence, so a rule carrying one is neither inspected nor no-subject — it is
+  // unresolved, and step 4 decides what that costs. Reporting it as `no-subject` would let a broken
+  // resolver silently skip a rule; reporting it as `inspected` would let one silently pass it.
+  const anyUnresolved = surfaces.some((s) => s.state === RESOLUTION.unresolved);
+  const anyFound = surfaces.some((s) => s.state === RESOLUTION.nonempty);
+
+  let state = "no-subject";
+  if (anyFound) state = "inspected";
+  else if (anyUnresolved) state = "unresolved";
+
+  return { subject: declaration.subject, state, surfaces };
 }

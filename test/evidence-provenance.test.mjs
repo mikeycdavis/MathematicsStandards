@@ -321,6 +321,134 @@ test("C3 · a declared artifact is read, not merely counted", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Step 3 · rendering. Strictly observational: these assert what the output SAYS, and none of them
+// asserts a status, a score, or a verdict. The substrate is already truthful; the question here is
+// whether a person and a program are told the same true thing.
+//
+// The standing constraint the step-2 measurement produced, which these enforce at the output:
+//
+//     A surface must identify the semantic subject a detector actually examines, at the
+//     granularity of that examination — not merely the file containing it.
+// ---------------------------------------------------------------------------
+
+const provenanceText = (name) => run(["validate", `--dir=${fixture(name)}`, "--provenance"]).out;
+
+test("R1 · every evaluated result renders its subject", () => {
+  const text = provenanceText("math-compliant");
+  const { envelope } = validate("math-compliant");
+
+  const evaluated = envelope.results.filter((r) => r.disposition === "evaluated");
+  assert.ok(evaluated.length > 0, "the fixture must produce evaluated results");
+
+  const unlabelled = evaluated.filter((r) => {
+    const block = new RegExp(`${r.ruleId.replace(/[.]/g, "\\.")}[\\s\\S]{0,400}?Subject: (project|framework|run)`);
+    return !block.test(text);
+  });
+  assert.deepEqual(
+    unlabelled.map((r) => r.ruleId),
+    [],
+    "these results render without saying whose property they are about",
+  );
+});
+
+test("R2 · an empty sub-surface is rendered, not omitted", () => {
+  // The step-2 discovery, at the output layer: `references: 1, resolvable identifiers: 0` is the
+  // whole finding, and a renderer that lists only non-empty surfaces deletes it. Absence is the
+  // evidence here — omitting a zero is not a display choice, it is dropping the observation.
+  const text = provenanceText("math-compliant");
+  const { envelope } = validate("math-compliant");
+
+  const rule = envelope.results.find((r) => r.ruleId === "literature.resolvable-identifiers");
+  assert.equal(rule.status, "passed", "the fixture's identifier rule passes; the point is that it says why");
+
+  const zero = rule.inspected.surfaces.find((s) => s.count === 0);
+  assert.ok(zero, "the fixture must have an empty sub-surface for this test to mean anything");
+  assert.match(
+    text,
+    new RegExp(`${zero.label}: 0`),
+    `the render omits '${zero.label}: 0'. A pass over a surface with nothing in it must show the zero.`,
+  );
+});
+
+test("R3 · a framework check is visibly marked as one inside an adopter's report", () => {
+  // Not behind a flag. A reader of the ordinary report must not take a statement about the standards
+  // pack for a statement about their own repository — that is §0h's entire complaint, and hiding the
+  // distinction in verbose output leaves it standing for everyone who does not pass the flag.
+  const text = run(["validate", `--dir=${fixture("wrong-root-absent")}`]).out;
+
+  assert.match(
+    text,
+    /integrity\.provenance-digest/,
+    "the framework-subject rules must be named in the ordinary report, not silently reclassified",
+  );
+  assert.match(
+    text,
+    /about the framework|framework check|not about this project/i,
+    "nothing in the default render says these rows are about MathematicsStandards rather than the adopter",
+  );
+});
+
+test("R4 · human and machine output agree on subject and inspection counts", () => {
+  const text = provenanceText("math-compliant");
+  const { envelope } = validate("math-compliant");
+
+  // Split on unindented lines rather than matching per rule with a lookahead. A regex ending in
+  // `\Z` silently matched nothing for the final block — `\Z` is not JavaScript syntax, so the
+  // alternation degenerated to a literal Z and the last rule read as "absent from the render".
+  // Worth recording: the first version of this test would have reported a renderer defect that did
+  // not exist, which is the same class of error as a detector reporting a phrase match as observed.
+  const blocks = new Map();
+  let current = null;
+  for (const line of text.split("\n")) {
+    if (/^\S/.test(line)) {
+      current = line.trim();
+      blocks.set(current, []);
+    } else if (current) {
+      blocks.get(current).push(line);
+    }
+  }
+
+  const disagreements = [];
+  for (const r of envelope.results.filter((x) => x.disposition === "evaluated")) {
+    const body = blocks.get(r.ruleId)?.join("\n");
+    if (body === undefined) {
+      disagreements.push(`${r.ruleId} — absent from the human render`);
+      continue;
+    }
+    if (!new RegExp(`Subject: ${r.inspected.subject}`).test(body)) {
+      disagreements.push(`${r.ruleId} — JSON says subject ${r.inspected.subject}, the render does not`);
+    }
+    for (const s of r.inspected.surfaces) {
+      if (!new RegExp(`${s.label}: ${s.count}\\b`).test(body)) {
+        disagreements.push(`${r.ruleId} — JSON says ${s.label}=${s.count}, the render does not`);
+      }
+    }
+  }
+  assert.deepEqual(disagreements, [], "the two output surfaces disagree about what was inspected");
+});
+
+test("R4 · the acceptance specimen reads clearly in both surfaces", () => {
+  // PvsNP's identifier rule at fixture scale: references present, identifiers zero, PASS unchanged.
+  // If a human and a program both come away knowing the zero, step 3 has done its job.
+  const { envelope } = validate("math-compliant");
+  const rule = envelope.results.find((r) => r.ruleId === "literature.resolvable-identifiers");
+
+  assert.equal(rule.inspected.subject, "project");
+  assert.deepEqual(
+    rule.inspected.surfaces.map((s) => [s.label, s.count, s.state]),
+    [
+      ["references", 1, "resolved-nonempty"],
+      ["resolvable identifiers", 0, "resolved-empty"],
+    ],
+    "the machine-readable record must carry the emptiness as an observation, with its resolution state",
+  );
+
+  const text = provenanceText("math-compliant");
+  assert.match(text, /references: 1/);
+  assert.match(text, /resolvable identifiers: 0/);
+});
+
+// ---------------------------------------------------------------------------
 // C4 · `audit` declares whether a verdict was computed.
 //
 // The findings-only contract is intentional and stays: the human render already ends with "This is

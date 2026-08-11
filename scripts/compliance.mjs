@@ -349,6 +349,23 @@ function judgeAttestation(rule, attestation, hits, today, digests, detectorInspe
       evidence: attestation.evidence,
       reference: attestation.reference ?? null,
       expires: attestation.expires ?? null,
+      // §0e. The schema tells an operator to omit `digest` on a first pass "because the validator
+      // reports the current digest so it can be recorded" — and the validator does report it, in the
+      // human render, for every attestation, and nowhere else. RiemannHypothesis measured from
+      // `--json`, found nothing, and wrote into its own policy that the validator does not report
+      // it; the observation was right for the surface used and the mechanism inferred from it was
+      // not. Either way its fourteen attestations can never go stale, because the value needed to
+      // opt in is emitted only on the surface the operator was not reading.
+      //
+      // `currency` states the consequence rather than leaving it to be worked out from two nullable
+      // fields. An attestation with no recorded digest is not fresh — it is of unknown currency, and
+      // those look identical in v1.0.
+      reviewedAgainst: {
+        paths: against?.paths ?? [],
+        digest: against?.digest ?? null,
+        currentDigest: digests.get(rule.id) ?? null,
+        currency: against?.digest ? "verified-current" : "unknown",
+      },
     },
   };
 }
@@ -481,6 +498,10 @@ export function envelope({ verdict, project, standardVersion, auditedAt, repo, f
     schemaVersion: "1.0",
     standardVersion: standardVersion ?? null,
     project: project ?? repo ?? null,
+    // The other half of `audit`'s declaration. A field that appears on one command and is absent on
+    // the other is read as "this build does not emit it" — the declaration only distinguishes if
+    // both commands make it.
+    verdictComputed: true,
     status: verdict.status,
     score: verdict.score,
     summary: verdict.summary,

@@ -646,6 +646,30 @@ export function envelope({ verdict, project, standardVersion, auditedAt, repo, f
     verdictComputed: true,
     status: verdict.status,
     score: verdict.score,
+    /**
+     * Which aggregation rules produced that number.
+     *
+     * A score is only meaningful against other scores computed the same way, and this framework has
+     * now changed the way once. RiemannHypothesis reads 89 under version 1 and 88 under version 2,
+     * from the same commit of the same repository, with no mathematics and no records altered: five
+     * rules that were never about that project left the denominator. A reader comparing the two
+     * numbers across the change sees a regression that did not happen.
+     *
+     * Recording the basis is the cheap half of the fix; the expensive half would be a migration
+     * nobody can perform, since the old numbers were computed by code that no longer exists. So the
+     * contract is narrow and honest: two scores are comparable when their `scoreBasis.version`
+     * agrees, and are not otherwise.
+     */
+    scoreBasis: {
+      id: "project-subject-required",
+      version: 2,
+      since: "1.2.0",
+      note:
+        "Version 2 scores required-level rules whose subject is this project, and counts a rule " +
+        "whose required evidence could not be read as an unearnable denominator entry. Version 1 " +
+        "scored every evaluated required rule, including rules about the framework and about the " +
+        "validator's own run. Scores from different versions are not comparable.",
+    },
     summary: verdict.summary,
     assurance: verdict.assurance,
     denominator: verdict.denominator,

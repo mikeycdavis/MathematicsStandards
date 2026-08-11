@@ -231,3 +231,100 @@ test("A4 · the human render says the score excluded rules that are not about th
     "the unresolved pointer must be visible in the ordinary render, not only in JSON",
   );
 });
+
+// ---------------------------------------------------------------------------
+// A5 · score-history comparability. A number is only meaningful against numbers computed the same
+// way, and this framework changed the way once.
+// ---------------------------------------------------------------------------
+
+test("A5 · the envelope says which aggregation rules produced the score", () => {
+  const { envelope } = validate("escape-hatch-undeclared");
+
+  assert.equal(envelope.scoreBasis.id, "project-subject-required");
+  assert.equal(envelope.scoreBasis.version, 2);
+  assert.match(envelope.scoreBasis.note, /not comparable/i);
+
+  // RiemannHypothesis reads 89 under version 1 and 88 under version 2 from the same commit, with no
+  // mathematics and no records altered: five rules that were never about it left the denominator. A
+  // reader comparing across the change sees a regression that did not happen, and the only defence
+  // is that the envelope says which basis each number came from.
+  assert.ok(envelope.score !== null, "the fixture must produce a score for the field to qualify");
+});
+
+// ---------------------------------------------------------------------------
+// A6 · whose property is `integrity.provenance-digest` about?
+//
+// The step-6 architectural question, settled by a property no path constant can fake. Three adopter
+// states — no provenance record, a drifted one, a correct one — and two readings of the rule:
+//
+//   framework-ownership  the result is IDENTICAL across all three, and outside the adopter's score
+//   adopter-root         the result VARIES with all three, and is inside it
+//
+// The catalog decides. `integrity.rule-lifecycle-honest` reads the RULE CATALOG, which exists only
+// in the standards pack; there is nothing at an adopter root to relocate it to. And this rule's
+// rationale is about editing "the spec" so that fidelity still passes — the standards pack's own
+// documents. Neither is an adopter obligation, so the repair is separation, not relocation.
+// ---------------------------------------------------------------------------
+
+const DIGEST = "integrity.provenance-digest";
+
+test("A6 · an adopter's own provenance record cannot move the framework's integrity result", () => {
+  const states = ["wrong-root-absent", "wrong-root-broken", "wrong-root-clean"];
+  const seen = states.map((name) => {
+    const r = resultFor(validate(name).envelope, DIGEST);
+    return { name, status: r.status, subject: r.inspected.subject, scored: r.scored };
+  });
+
+  // Non-vacuity: the three fixtures must actually differ in the way the question is about.
+  assert.equal(validate("wrong-root-absent").envelope.results.length > 0, true);
+  for (const [name, present] of [
+    ["wrong-root-absent", false],
+    ["wrong-root-broken", true],
+    ["wrong-root-clean", true],
+  ]) {
+    const { envelope } = validate(name);
+    const files = envelope.results.flatMap((r) => r.inspected?.surfaces?.flatMap((s) => s.paths) ?? []);
+    assert.equal(
+      files.includes("artifacts/provenance-digests.json") && present,
+      present,
+      `${name}: fixture state`,
+    );
+  }
+
+  for (const s of seen) {
+    assert.equal(s.status, "passed", `${s.name}: ${DIGEST} must not move with the adopter's own record`);
+    assert.equal(s.subject, "framework", `${s.name}: the result is about the standards pack`);
+    assert.equal(s.scored, false, `${s.name}: and is outside the adopter's score`);
+  }
+});
+
+test("A6 · the render tells an adopter that its same-named file was not inspected", () => {
+  // Separation is only a repair if the reader can act on it. An adopter that keeps its own
+  // artifacts/provenance-digests.json has asserted something about its own source documents, and a
+  // row reading `integrity.provenance-digest — passed` beside their rules will be read as covering
+  // it unless the report says otherwise.
+  const text = run(["validate", `--dir=${fixture("wrong-root-broken")}`]).out;
+  assert.match(text, /your artifacts\/provenance-digests\.json was not inspected/);
+
+  const absent = run(["validate", `--dir=${fixture("wrong-root-absent")}`]).out;
+  assert.doesNotMatch(
+    absent,
+    /was not inspected/,
+    "an adopter with no such file must not be told about one",
+  );
+});
+
+test("A6 · rule-lifecycle-honest has no adopter-root reading to regress against", () => {
+  // Recorded as a test because it is the half of §0h's four-rule category that cannot be argued
+  // either way: the detector iterates the RULE CATALOG. An adopter has none. Relocation is not a
+  // decision here, it is an impossibility, and a future change that "fixes the root" for this rule
+  // would be reading a directory that does not exist.
+  for (const name of ["wrong-root-absent", "wrong-root-broken", "wrong-root-clean"]) {
+    const r = resultFor(validate(name).envelope, "integrity.rule-lifecycle-honest");
+    assert.equal(r.inspected.subject, "framework");
+    assert.ok(
+      r.inspected.surfaces.every((s) => s.paths.every((p) => p.startsWith("rules/"))),
+      `${name}: the surface must be the framework's rule sources and nothing else`,
+    );
+  }
+});

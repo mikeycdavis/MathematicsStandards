@@ -1845,6 +1845,23 @@ function renderForeignSubjects(report) {
         ? "about the framework"
         : "about this evaluation's own conduct";
     out.push(`    ${r.ruleId} — ${r.status}, ${whose}`);
+    // The sharpest case of the confusion, and the only one where the adopter has a file of the same
+    // name. A project that keeps its own artifacts/provenance-digests.json has made an assertion
+    // about its own source documents, and this row is not about it. Saying which paths were read is
+    // the §0 answer; saying which same-named path was NOT read is the §0h one, and without it a
+    // reader with such a file will reasonably assume this row covers it.
+    //
+    // Framework-subject only. A run-subject rule's surfaces resolve to the ADOPTER's files — that is
+    // what `run-findings` is — so the same test there reports every file the run touched as "not
+    // inspected", which is both false and the exact opposite of what the row means. Caught by the
+    // note firing on four of RiemannHypothesis's own documents.
+    const shadowed =
+      r.inspected.subject !== SUBJECT.framework
+        ? []
+        : r.inspected.surfaces.flatMap((s) => s.paths).filter((p) => existsSync(path.join(root, p)));
+    for (const p of shadowed) {
+      out.push(`      your ${p} was not inspected; this row read the framework's copy`);
+    }
   }
   return out.join("\n");
 }

@@ -1,0 +1,9 @@
+{
+  "$comment": "Correct on purpose. The digest below IS the sha256 of notes/method.md with line endings normalised, so an adopter-root reading of integrity.provenance-digest would report this project clean on the strength of a record the framework never reads. The framework-ownership reading produces the same result here as for the drifted sibling and for the adopter with no record at all, and that invariance is the property under test.",
+  "files": [
+    {
+      "path": "notes/method.md",
+      "digest": "2042fa4d9dbddf1720c2445c0c9a5b00fdd792b0c791e5bc88eebba448af3e79"
+    }
+  ]
+}

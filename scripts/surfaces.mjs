@@ -76,6 +76,11 @@ export const SURFACES = new Set([
   "proof-sources",
   "open-problems",
   "repository-paths",
+  // The one surface the project names rather than the framework discovers. Its resolution is
+  // therefore three-valued in a way the others are not: nothing declared is observed-empty, a
+  // declaration that resolves is the artifact, and a declaration that does not resolve is
+  // `unresolved` — a state no amount of scanning the repository can produce.
+  "declared-failed-routes",
   "project-policy",
   "run-findings",
   // Distinct from `run-findings`, and the distinction is not pedantry. `run-findings` resolves to
@@ -170,7 +175,22 @@ export const RULE_SURFACES = new Map([
   // Lifecycle. `failed-routes-preserved` reads PATH NAMES rather than content — which is §0m stated
   // as a surface: a rule looking for a record of abandoned work is matching the shape of a path.
   // `repository-paths` is named honestly here so the repair has something to replace.
-  ["lifecycle.failed-routes-preserved", { subject: P, surfaces: ["repository-paths", "open-problems"] }],
+  // `requires` names the surfaces that, when unresolved, invalidate the outcome. Only this one has
+  // any: the other two arms are the framework's own guesses, and a guess that comes back empty is an
+  // observation. A DECLARED artifact that cannot be reached is not — the project asserted it, the
+  // framework could not read it, and neither passing nor failing is honest about that.
+  //
+  // Scoped per surface rather than per rule, because rule-level contagion overstates the damage: a
+  // rule whose secondary arm is unresolved while its primary arm fully establishes the result has
+  // been evaluated, and reporting it as incomplete would be its own false statement.
+  [
+    "lifecycle.failed-routes-preserved",
+    {
+      subject: P,
+      surfaces: ["declared-failed-routes", "repository-paths", "open-problems"],
+      requires: ["declared-failed-routes"],
+    },
+  ],
   ["lifecycle.terminated-approaches", { subject: P, surfaces: ["open-problems"] }],
   ["lifecycle.reopening-evidence", { subject: P, surfaces: ["open-problems"] }],
   ["lifecycle.stopping-criteria", { subject: P, surfaces: ["open-problems"] }],
@@ -212,6 +232,7 @@ export const SURFACE_LABELS = {
   "proof-sources": "proof-assistant sources",
   "open-problems": "open-problem records",
   "repository-paths": "repository paths",
+  "declared-failed-routes": "declared record of abandoned routes",
   "project-policy": "policy declarations",
   "run-findings": "findings from this run",
   "run-results": "results from this run",
@@ -241,8 +262,24 @@ export function assertSurfacesKnown() {
       if (!SURFACES.has(surface)) throw new Error(`${rule} declares unknown evidence surface '${surface}'`);
       if (!SURFACE_LABELS[surface]) throw new Error(`surface '${surface}' has no human label`);
     }
+    // A required surface the rule does not read is never resolved, so it can never be unresolved,
+    // so the requirement silently does nothing — a fail-closed guard that fails open.
+    for (const surface of decl.requires ?? []) {
+      if (!decl.surfaces.includes(surface)) {
+        throw new Error(`${rule} requires surface '${surface}', which it does not declare as one it reads`);
+      }
+    }
   }
 }
+
+/**
+ * Surfaces the PROJECT names, as opposed to ones the framework discovers by scanning.
+ *
+ * The distinction is reported on each surface as `declared`, and it is what a reader needs in order
+ * to judge the count: `repository paths: 41` is the framework's own census, `declared record of
+ * abandoned routes: 1` is the adopter's assertion that the framework then checked.
+ */
+export const DECLARED_SURFACES = new Set(["declared-failed-routes"]);
 
 /**
  * The three things a resolver can honestly report, and why all three are needed.
@@ -291,7 +328,7 @@ export const MAX_SURFACE_PATHS = 12;
  * not-evaluated`, and until now they were indistinguishable in the output as well as in the engine.
  */
 export function noDetectorInspection() {
-  return { subject: SUBJECT.project, state: "no-detector", surfaces: [] };
+  return { subject: SUBJECT.project, state: "no-detector", surfaces: [], unresolved: [], blocked: false };
 }
 
 /**
@@ -328,7 +365,7 @@ export function inspectionFor(ruleId, resolve) {
       count: answer.items.length,
       paths: answer.items.slice(0, MAX_SURFACE_PATHS),
       reason: answer.reason ?? null,
-      declared: false,
+      declared: DECLARED_SURFACES.has(surface),
     };
   });
 
@@ -336,12 +373,20 @@ export function inspectionFor(ruleId, resolve) {
   // is not evidence of absence, so a rule carrying one is neither inspected nor no-subject — it is
   // unresolved, and step 4 decides what that costs. Reporting it as `no-subject` would let a broken
   // resolver silently skip a rule; reporting it as `inspected` would let one silently pass it.
-  const anyUnresolved = surfaces.some((s) => s.state === RESOLUTION.unresolved);
+  const unresolvedNames = surfaces.filter((s) => s.state === RESOLUTION.unresolved).map((s) => s.surface);
+  const required = new Set(declaration.requires ?? []);
+  // The one condition under which an unresolved surface invalidates an outcome the other surfaces
+  // could otherwise establish. Without the distinction, either every unresolved surface poisons its
+  // rule — overstating what could not be evaluated — or none does, and a declared artifact that
+  // cannot be read is quietly ignored in favour of the framework's guess. Both are false statements
+  // and this is the field that avoids having to pick one.
+  const blocked = unresolvedNames.some((name) => required.has(name));
   const anyFound = surfaces.some((s) => s.state === RESOLUTION.nonempty);
 
   let state = "no-subject";
-  if (anyFound) state = "inspected";
-  else if (anyUnresolved) state = "unresolved";
+  if (blocked) state = "unresolved";
+  else if (anyFound) state = "inspected";
+  else if (unresolvedNames.length > 0) state = "unresolved";
 
-  return { subject: declaration.subject, state, surfaces };
+  return { subject: declaration.subject, state, surfaces, unresolved: unresolvedNames, blocked };
 }

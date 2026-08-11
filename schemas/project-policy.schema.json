@@ -20,6 +20,19 @@
       "minLength": 1
     },
 
+    "artifacts": {
+      "description": "Where this project keeps artifacts of a named kind. A semantic vocabulary, deliberately not a per-rule one: `failedRoutes` says what the artifact IS, so any rule needing a record of abandoned routes can ask for it and no rule has to guess a filename. A key named after the rule that consumes it would tie the adopter's vocabulary to the framework's current rule ids, which change. Declaring a key is optional and never makes a rule apply that otherwise would not; what it changes is that the framework stops guessing and starts reading, and says so when it cannot. A declared artifact that does not resolve leaves its rule not-evaluated — the framework could not reach the evidence, which is not the same as the project violating the rule. Kept to one artifact class on purpose: a registry larger than the evidence requires is a vocabulary nobody has tested.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "failedRoutes": {
+          "description": "Repository-relative path to the record of routes tried and abandoned (Standard 18). A file or a directory. Both v1.0.0 field trials keep one and the framework's path-shape heuristic finds neither: RiemannHypothesis at Research/FAILED_APPROACHES.md, PvsNP at docs/FAILED_ATTEMPTS.md.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+
     "rules": {
       "description": "Level per rule. A rule absent from this map takes the framework default for the declared standardVersion; a validator reports how many rules were undeclared so absence is never mistaken for a decision.",
       "type": "object",

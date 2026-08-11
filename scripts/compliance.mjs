@@ -148,6 +148,33 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
       );
       continue;
     }
+    // Fail closed on evidence the framework could not reach.
+    //
+    // `blocked` is set when a surface the rule REQUIRES came back unresolved — in practice, an
+    // artifact the project declared and the framework could not read. Three properties, and each is
+    // a decision:
+    //
+    //   - it cannot PASS. A pointer that does not resolve establishes nothing, and a rule that
+    //     passes because nothing contradicted it is the false green this engine exists to stop;
+    //   - it cannot FAIL. Absence of evidence access is not evidence of violation. The project may
+    //     be entirely compliant and have mistyped a path; a `failed` here asserts the framework
+    //     knows which, and it does not;
+    //   - it does not invent a status. "Evaluation could not establish this" already exists and is
+    //     spelled `skipped / not-evaluated`; the pointer's own classification stays in the
+    //     diagnostic. What that costs an adopter's score is a separate question, deliberately not
+    //     answered here — see design/v1.2-evidence-provenance.md §11.
+    if (hits.length === 0 && inspected?.blocked === true) {
+      const why = inspected.surfaces
+        .filter((s) => s.reason && inspected.unresolved.includes(s.surface))
+        .map((s) => s.reason)
+        .join(" ");
+      results.push(
+        base(rule, level, RESULT.skipped, "not-evaluated",
+          `${rule.id} could not be evaluated: the evidence it was pointed at could not be read. ${why}`.trim(),
+          null, inspected),
+      );
+      continue;
+    }
     if (hits.length === 0 && (rule.validationType === "manual-review" || !examined.has(rule.id))) {
       results.push(
         base(rule, level, RESULT.skipped, "not-evaluated", `No implemented check evaluates ${rule.id}.`, null,

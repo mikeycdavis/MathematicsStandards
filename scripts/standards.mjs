@@ -61,6 +61,7 @@ const SCHEMA_VERSION = "1.0.0";
 /** The rules this evaluator examines. Defined in its own module — see the comment there. */
 import { EVALUATED_RULES } from "./evaluated.mjs";
 import { assertSurfacesKnown, inspectionFor, resolved, unresolved, SUBJECT } from "./surfaces.mjs";
+import { POINTER, resolveEvidencePointer } from "./pointers.mjs";
 // ---------------------------------------------------------------------------
 // Standard references
 // ---------------------------------------------------------------------------
@@ -602,6 +603,16 @@ const OPEN_PROBLEMS_DIR = mathPolicy.openProblemsDir ?? "artifacts/open-problems
 // The YAML reader returns every scalar as a string by design, so `openProblemMode: true` arrives as
 // "true". Both spellings are accepted here so a programmatically-supplied policy object works too.
 const OPEN_PROBLEM_MODE = mathPolicy.openProblemMode === true || mathPolicy.openProblemMode === "true";
+/**
+ * The artifact this project says records its abandoned routes, or null if it says nothing.
+ *
+ * Optional by construction. An adopter that declares nothing keeps exactly the behaviour it had at
+ * 04ba60e — both frozen adopters do, and step 4 must not move them — while an adopter that declares
+ * something gets its own artifact read instead of the framework's guess about where such a thing
+ * lives. `artifacts.` rather than `mathematics.` because this is a fact about the repository's
+ * layout, not about its mathematics.
+ */
+const DECLARED_FAILED_ROUTES = policy.document?.artifacts?.failedRoutes ?? null;
 
 const ledgerFile = path.join(root, LEDGER_PATH);
 const ledgerText = existsSync(ledgerFile) ? await readText(ledgerFile) : null;
@@ -1418,8 +1429,67 @@ function detectOpenProblems() {
 
 const ABANDONED = /(^|\/)(abandoned|failed|dead-ends?|attempts?)(\/|$)/i;
 
+/**
+ * Does this text record any abandoned route, or is it a placeholder?
+ *
+ * Deliberately weak, and the weakness is declared rather than hidden. Nothing in a document proves
+ * that what it describes was really tried and really abandoned; the catalog says so itself — "It
+ * cannot detect a deletion". What is checkable is whether the artifact has ENTRIES: a heading below
+ * the title, or a list. A file whose whole content is "Nothing has been abandoned yet" has none, and
+ * that is the case worth catching, because it is what a pointer added to satisfy a checker looks
+ * like.
+ */
+function recordsRoutes(text) {
+  const body = text.replace(/^#\s+.*$/m, "");
+  return /^#{2,6}\s+\S/m.test(body) || /^\s*[-*+]\s+\S/m.test(body) || /^\s*\d+\.\s+\S/m.test(body);
+}
+
+/**
+ * Where the declared record of abandoned routes resolved to, computed once.
+ *
+ * Null when the project declared nothing. Otherwise the pointer's resolution, whatever it says — the
+ * detector and the evidence surface must agree about it, and computing it twice is how they would
+ * come to disagree.
+ */
+const declaredRoutes = DECLARED_FAILED_ROUTES
+  ? resolveEvidencePointer(root, DECLARED_FAILED_ROUTES)
+  : null;
+
 function detectFailedRoutes() {
   if (!OPEN_PROBLEM_MODE) return;
+
+  if (declaredRoutes) {
+    // A declaration is the subject once it exists. The heuristic below is not consulted as a
+    // fallback, and that ordering is the point: letting the framework's guess rescue a declaration
+    // that did not resolve would mean the project's own statement about its evidence could only ever
+    // improve its verdict, never expose a problem with it.
+    if (declaredRoutes.status !== POINTER.resolved) {
+      // No finding. The framework could not read the evidence, which is not an observation that the
+      // project violated anything — the rule's required surface is unresolved and the engine turns
+      // that into `skipped / not-evaluated`, which is what "we could not establish this" means here.
+      return;
+    }
+    // Matched on resolved absolute paths rather than on the map key, because the key's spelling is
+    // the walker's business: a lookup that assumed one separator or one normalisation would return
+    // undefined on the other platform and report "records none" about a file full of records.
+    const target = path.resolve(root, declaredRoutes.target);
+    const texts = [...contents]
+      .filter(([f]) => {
+        const abs = path.resolve(f);
+        if (declaredRoutes.kind === "file") return abs === target;
+        const inside = path.relative(target, abs);
+        return inside !== "" && !inside.startsWith("..") && !path.isAbsolute(inside);
+      })
+      .map(([, text]) => text);
+    if (texts.some((t) => recordsRoutes(t))) return;
+    report("lifecycle.failed-routes-preserved", {
+      message: `${declaredRoutes.target} is declared as this project's record of abandoned routes and records none. A pointer's existence is not evidence; the content at the end of it is.`,
+      evidence: [declaredRoutes.target],
+      label: "OBSERVED",
+    });
+    return;
+  }
+
   const preserved = files.some((f) => ABANDONED.test(rel(f)));
   const inProblemFile = files.some(
     (f) => path.basename(f) === "problem.md" && /^###\s+/m.test(contents.get(f) ?? ""),
@@ -1792,7 +1862,11 @@ function renderVacuousArms(report) {
     (r) =>
       r.status === "passed" &&
       r.disposition === "evaluated" &&
-      r.inspected?.surfaces.some((s) => s.count === 0),
+      // `!s.declared`: an adopter-declared surface that is empty means the adopter declared
+      // nothing, which is a fact about the policy and not a check that examined nothing. Listing it
+      // here would put a line under this heading for every project that has not opted in, and a
+      // heading that fires on everyone stops being read.
+      r.inspected?.surfaces.some((s) => s.count === 0 && !s.declared),
   );
   if (vacuous.length === 0) return "";
   const out = ["", "  Passed, having examined nothing of some kind it checks"];
@@ -1802,6 +1876,30 @@ function renderVacuousArms(report) {
     const empty = r.inspected.surfaces.filter((s) => s.count === 0).map((s) => `${s.label}: 0`);
     const full = r.inspected.surfaces.filter((s) => s.count > 0).map((s) => `${s.label}: ${s.count}`);
     out.push(`    ${r.ruleId} — ${[...full, ...empty].join(", ")}`);
+  }
+  return out.join("\n");
+}
+
+/**
+ * Rules whose evidence the framework was pointed at and could not read.
+ *
+ * Unconditional, like the other two, and for a sharper reason. These rows are `skipped` — the
+ * quietest status the report has — and the thing being reported is that the PROJECT said where its
+ * evidence was and the framework failed to reach it. A reader who has to pass a flag to discover
+ * that their declared artifact is being ignored is a reader for whom the declaration silently does
+ * nothing, which is the shape of §0m rather than its repair.
+ */
+function renderUnreadableEvidence(report) {
+  const blocked = report.results.filter((r) => r.inspected?.blocked === true);
+  if (blocked.length === 0) return "";
+  const out = ["", "  Could not be evaluated — declared evidence did not resolve"];
+  out.push("  These rules neither passed nor failed. The project named an artifact, the framework could");
+  out.push("  not read it, and being unable to look is not a finding about what would have been seen.");
+  for (const r of blocked) {
+    out.push(`    ${r.ruleId}`);
+    for (const s of r.inspected.surfaces.filter((x) => r.inspected.unresolved.includes(x.surface))) {
+      out.push(`      ${s.label} — ${s.reason}`);
+    }
   }
   return out.join("\n");
 }
@@ -2125,6 +2223,15 @@ const resolveSurface = (surface) => {
       return resolved(problemPaths);
     case "repository-paths":
       return resolved(relativeFiles);
+    case "declared-failed-routes":
+      // The three answers this surface can give are the three states the tri-state exists for, and
+      // no other surface produces all three. Nothing declared is observed-empty — a real
+      // observation, and the one both frozen adopters produce, which is why they do not move.
+      // Declared and resolved is the artifact itself. Declared and unresolvable is `unresolved`,
+      // and it is the only surface any rule REQUIRES, so it is the only one that can stop a pass.
+      if (!declaredRoutes) return resolved([]);
+      if (declaredRoutes.status === POINTER.resolved) return resolved([declaredRoutes.target]);
+      return unresolved(`${declaredRoutes.status}: ${declaredRoutes.reason}`);
     case "project-policy":
       return resolved(relativeFileSet.has("project-policy.yml") ? ["project-policy.yml"] : []);
 
@@ -2216,6 +2323,8 @@ if (JSON_OUT) {
   if (foreign) process.stdout.write(foreign + "\n");
   const vacuous = renderVacuousArms(report_);
   if (vacuous) process.stdout.write(vacuous + "\n");
+  const unreadable = renderUnreadableEvidence(report_);
+  if (unreadable) process.stdout.write(unreadable + "\n");
   if (PROVENANCE) process.stdout.write("\n" + renderProvenance(report_) + "\n");
   for (const [ruleId, digest] of digests) {
     const recorded = policy.document?.attestations?.[ruleId]?.reviewedAgainst?.digest;

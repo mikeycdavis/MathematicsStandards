@@ -8,15 +8,15 @@
 # manners — the rule would be satisfied by the act of naming a file. A pointer's existence is not
 # evidence; the content at the end of it is.
 #
-# As with the sibling fixture, problem.md carries a `###` heading so the rule passes at 03f44d6.
+# As with the sibling fixture, problem.md carries a `###` heading so the rule passes at 04ba60e.
 standardVersion: "1.0.0"
 project: "declared-pointer-empty"
+
+artifacts:
+  failedRoutes: "docs/FAILED_ATTEMPTS.md"
 
 mathematics:
   regimes:
     - informal
   claimsLedger: "artifacts/claims-ledger.md"
   openProblemMode: true
-  evidence:
-    lifecycle.failed-routes-preserved:
-      - "docs/FAILED_ATTEMPTS.md"

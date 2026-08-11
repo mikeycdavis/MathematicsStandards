@@ -1,0 +1,16 @@
+# RiemannHypothesis's shape: the same duty discharged at `Research/FAILED_APPROACHES.md`.
+#
+# The other half of the §0m acceptance pair. The two adopters keep the same kind of record under
+# different names in different directories, and the point of a semantic artifact key is that the
+# framework does not have to guess either one.
+standardVersion: "1.0.0"
+project: "artifact-key-approaches"
+
+artifacts:
+  failedRoutes: "Research/FAILED_APPROACHES.md"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  openProblemMode: true

@@ -286,17 +286,24 @@ test("C3 · the policy can name the artifact that discharges a rule", () => {
 });
 
 test("C3 · a declared artifact that does not resolve fails closed", () => {
+  // Amended at step 4, and the amendment is the substantive one. Step 1 wrote `failed` here on the
+  // reasoning that naming an artifact which is not there is a false claim, and a dedicated
+  // `unresolved-pointer` state to carry it. Both were wrong in the same direction: the framework
+  // could not reach the evidence, and absence of evidence access is not evidence of violation. The
+  // adopter may be compliant and have mistyped a path; `failed` asserts the framework knows which,
+  // and it does not.
+  //
+  // Fails closed still means fails closed — the rule cannot PASS. It lands on the status the
+  // framework already uses for "evaluation could not establish this", and the pointer's own
+  // classification (missing / unsupported / invalid) stays in the diagnostic rather than becoming a
+  // fourth verdict state. See test/evidence-pointers.test.mjs P3, and §11 of the design.
   const { envelope } = validate("declared-pointer-missing");
   const r = resultFor(envelope, "lifecycle.failed-routes-preserved");
 
-  assert.equal(
-    r.status,
-    "failed",
-    "the policy names docs/FAILED_ATTEMPTS.md and there is no such file. An adopter asserting an " +
-      "artifact that is not there is a stronger error than an adopter asserting nothing — the " +
-      "silence case is no-subject, this one is a false claim",
-  );
-  assert.equal(inspectedFor(envelope, "lifecycle.failed-routes-preserved").state, "unresolved-pointer");
+  assert.notEqual(r.status, "passed", "a pointer that does not resolve establishes nothing");
+  assert.equal(r.status, "skipped");
+  assert.equal(r.disposition, "not-evaluated");
+  assert.equal(inspectedFor(envelope, "lifecycle.failed-routes-preserved").state, "unresolved");
 });
 
 test("C3 · a declared artifact is read, not merely counted", () => {

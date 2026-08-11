@@ -1,0 +1,31 @@
+# An adopter carrying a drifted provenance record of its own.
+#
+# artifacts/provenance-digests.json here records a digest that does not match the file it names. That
+# is the exact condition `integrity.provenance-digest` exists to catch — and this fixture asserts
+# that the rule must NOT catch it, which is the opposite of the obvious reading and is the point.
+#
+# `integrity.provenance-digest` is a rule about the standards pack: its own catalog text is "the
+# SHA-256 of each file listed in artifacts/provenance-digests.json … matches the recorded digest",
+# meaning MathematicsStandards' source documents. An adopter does not own those documents and has no
+# rule catalog, so the §0h repair is not "read the adopter's root instead" — that would export the
+# framework's housekeeping as an adopter obligation. It is that the result must say whose property it
+# is about, and must not enter a score that purports to describe the adopter.
+#
+# Hence the pair, which together prove the subject separated rather than merely relocated:
+#
+#   this fixture        adopter's own record is drifted  → framework-subject result UNCHANGED
+#                                                          (an adopter cannot make the framework
+#                                                          fail its own integrity check)
+#   wrong-root-absent   adopter has no record at all     → result unchanged, and OUT of their score
+#                                                          (the framework's clean record cannot
+#                                                          flatter the adopter)
+#
+# Neither half is reachable by changing a path constant. The first requires the rule to ignore this
+# file; the second requires the score to know the difference.
+standardVersion: "1.0.0"
+project: "wrong-root-broken"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

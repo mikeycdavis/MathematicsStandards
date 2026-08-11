@@ -89,13 +89,33 @@ Three practices follow:
   observation is the tool fabricating certainty about its own output — the same error as presenting
   numerical evidence as proof, committed by the checker instead of the mathematician.
 
-## The pattern behind all three
+## 4. Named assertions over aggregate counts
+
+**No acceptance assertion may rely solely on an aggregate count when it can name the rule and the
+status directly.** A count may accompany a named assertion; it may never stand in for one.
+
+This one was earned late, during Tier 1. A test titled "the prose arm must not block" asserted that
+the run had zero blockers. It passed. It had been passing against a fixture with no
+`project-policy.yml`, so the run returned `NOT_EVALUATED` — and a verdict-less run has zero blockers
+for a reason that has nothing to do with prose arms. The assertion was true, and vacuous, and would
+have stayed both through any change to the thing it claimed to protect.
+
+A count is a projection. It collapses *which* rule and *what* status into a single number, and the
+collapse is exactly where a test loses contact with its own claim: the number can be right for the
+wrong reason, and it moves for reasons unrelated to the property under test. Naming the rule and the
+status makes the assertion falsifiable by the defect it exists to catch, and only by that defect.
+
+The rule generalizes past this suite. Any assertion of the form "N of them are X" should be asked
+what it would say if N were right and the membership were wrong.
+
+## The pattern behind all four
 
 Ordinary detector tests ask *does the check fire on a violation?* That question alone admits a
-framework that fires on everything, a framework whose guards cannot fail, and a framework whose
-coverage number describes ambition rather than capability.
+framework that fires on everything, a framework whose guards cannot fail, a framework whose
+coverage number describes ambition rather than capability, and a suite whose assertions are true of
+runs that never happened.
 
-The three questions worth asking instead:
+The four questions worth asking instead:
 
 1. Does an honest project survive evaluation unharmed?
 2. Does each guard actually fail when its protected defect is introduced?

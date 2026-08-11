@@ -1,0 +1,22 @@
+# An adopter that names a real artifact which does not discharge the duty.
+#
+# docs/FAILED_ATTEMPTS.md exists and is a placeholder: a title and a sentence saying nothing has been
+# abandoned yet. The pointer resolves; the target contains no record of an abandoned route.
+#
+# This is the specific thing §0m warns against on the other side. Replacing "guess the artifact from
+# its path" with "accept whatever the adopter declares" would reproduce the defect with better
+# manners — the rule would be satisfied by the act of naming a file. A pointer's existence is not
+# evidence; the content at the end of it is.
+#
+# As with the sibling fixture, problem.md carries a `###` heading so the rule passes at 03f44d6.
+standardVersion: "1.0.0"
+project: "declared-pointer-empty"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  openProblemMode: true
+  evidence:
+    lifecycle.failed-routes-preserved:
+      - "docs/FAILED_ATTEMPTS.md"

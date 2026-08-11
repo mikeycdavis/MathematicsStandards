@@ -1,0 +1,21 @@
+# An adopter that names the artifact discharging a duty, and names one that is not there.
+#
+# `mathematics.evidence` does not exist in the v1.0.0 schema. It is written here as v1.2 proposes it,
+# so the fixture states the claim rather than the current shape — at 03f44d6 this policy is rejected
+# by the schema (exit 2), which is the honest red for a claim the framework cannot yet express.
+#
+# The rule under test passes at 03f44d6 for an unrelated reason: problem.md below carries a `###`
+# heading, the framework's own thin proxy for a record of abandoned work. That is deliberate. A
+# fixture where the rule already fails would make this test green without the pointer ever being
+# followed.
+standardVersion: "1.0.0"
+project: "declared-pointer-missing"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  openProblemMode: true
+  evidence:
+    lifecycle.failed-routes-preserved:
+      - "docs/FAILED_ATTEMPTS.md"

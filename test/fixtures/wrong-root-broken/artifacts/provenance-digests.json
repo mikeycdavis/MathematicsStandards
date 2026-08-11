@@ -1,0 +1,9 @@
+{
+  "$comment": "Deliberately drifted. The digest below is not the sha256 of notes/method.md, and no edit to that file should make it so — the mismatch IS the fixture. A run that reports this project as clean read someone else's provenance record.",
+  "files": [
+    {
+      "path": "notes/method.md",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

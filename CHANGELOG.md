@@ -9,6 +9,29 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
+## Unreleased
+
+**§0a — unknown or invalid arguments fail closed. Correctness fix, no evaluator semantic change.**
+
+`--dry-run` was tested by exact presence, so `--dryrun`, `--dry_run` and `--dry-run=true` parsed as a
+bare `init` and **applied**. `--help` was recognised only as a subcommand, so `init --help` applied
+against a real repository. Both were produced independently by the two v1.0.0 field trials, and in
+both the command exited 0, so an operator who believed they were previewing had instead scaffolded.
+
+Every command now rejects an argument it does not recognise, before reading or writing anything, with
+exit 2 — the invocation-error code, unchanged. `--help` is accepted anywhere and does nothing else.
+
+The refusal is uniform across commands rather than confined to `init`, which is a decision and not an
+oversight: a flag silently ignored on a read-only command is how a CI job comes to believe it ran
+`--strict` when it did not. The three ways an argument can be wrong — unknown, misplaced, or given
+the wrong shape — are distinguished in the message, because the spelling that produced this defect
+was a near miss rather than a random string.
+
+The no-overwrite default is untouched. It is the guard that held when the argument parsing failed,
+and the existence of a second guard is not a reason to relax the first.
+
+Verdicts are unaffected: both frozen adopter specimens produce byte-identical results.
+
 ## 1.0.1
 
 **Interoperability metadata. No normative or evaluator semantic change.**

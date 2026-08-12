@@ -27,6 +27,7 @@ import { loadCatalog, assertBindings, coverage, resolve as resolveRule } from ".
 import { evaluate, envelope, isInvariant } from "./compliance.mjs";
 import { plan as planInit, apply as applyInit, render as renderInit } from "./init.mjs";
 import { parseYaml } from "./yaml.mjs";
+import { classifyArg } from "./invocation.mjs";
 import { validate as validateSchema } from "./jsonschema.mjs";
 import {
   STATUS_RANK,
@@ -322,6 +323,43 @@ if (!COMMANDS.has(subcommand)) {
   process.stderr.write(`math-standards: unknown subcommand '${subcommand}'\n\n`);
   usage();
   process.exit(EXIT_INVOCATION);
+}
+
+/**
+ * Unknown or invalid arguments fail closed, before anything is read and before anything is written.
+ *
+ * The defect this exists for: `--dry-run` was tested by exact presence, so `--dryrun`, `--dry_run`
+ * and `--dry-run=true` all parsed as a bare `init` and applied. `--help` was recognised only as a
+ * subcommand, so `init --help` applied against a real repository. In both cases an operator who
+ * believed they were previewing had instead scaffolded, and the command exited 0.
+ *
+ * The rule is deliberately uniform across commands rather than confined to `init`. A flag silently
+ * ignored on a read-only command is the same defect one step further from the damage: it is how a CI
+ * job comes to believe it ran `--strict` when it did not. Refusing loudly is the framework's own
+ * stated preference over quietly ignoring a construct — the vendored YAML reader argues exactly this
+ * in its header — and the cost of being wrong here is a rerun, against a mutation that cannot be
+ * undone.
+ *
+ * The contract itself is in scripts/invocation.mjs, so a test can enumerate it rather than restate
+ * it. The property worth pinning is not that one flag is refused by one command, but that no
+ * declared flag is ever silently ignored by any of them.
+ */
+for (const arg of argv.slice(1)) {
+  const detail = classifyArg(subcommand, arg);
+  if (!detail) continue;
+  process.stderr.write(
+    `math-standards ${subcommand}: ${detail}\n` +
+      `Nothing was read and nothing was written. Re-run with a correct invocation.\n\n`,
+  );
+  usage();
+  process.exit(EXIT_INVOCATION);
+}
+
+// `--help` anywhere, on any command, prints usage and does nothing else. This is the RH instance:
+// `init --help` parsed as a bare init with an ignored flag and applied.
+if (argv.includes("--help") || argv.includes("-h")) {
+  usage(process.stdout);
+  process.exit(EXIT_OK);
 }
 
 /**

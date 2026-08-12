@@ -15,8 +15,9 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Status | Items |
 | --- | ---: |
-| ○ Not started | 10 |
-| ◑ In progress | 3 |
+| ○ Not started | 5 |
+| ◑ In progress | 5 |
+| ◕ In review | 3 |
 | ● Complete | 50 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
@@ -41,7 +42,12 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 ## In flight
 
+- ◑ [EP-07](./items/EP-07.md) — Tier 2 — false assurance
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
+- ◕ [FE-17](./items/FE-17.md) — §0 — a detector with no subject must not report a pass
+- ◑ [FE-18](./items/FE-18.md) — §0e — attestations must not be silently permanently fresh
+- ◕ [FE-19](./items/FE-19.md) — §0h — a result must say whose property it is about
+- ◕ [FE-20](./items/FE-20.md) — §0m — a rule that accepts a pointer must be able to follow it
 - ◑ [IN-03](./items/IN-03.md) — v1.1 — fix what the field trials falsified
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
 
@@ -97,11 +103,11 @@ _Nothing marked ready._
         - ● **[ST-19](./items/ST-19.md)** The evidence ceiling, and cappedFrom where it fires
         - ● **[ST-20](./items/ST-20.md)** §0i — the defaulting obligation parse
       - ● **[FE-16](./items/FE-16.md)** Land Tier 1 and the §0a fix on main
-    - ○ **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(0/4)_
-      - ○ **[FE-17](./items/FE-17.md)** §0 — a detector with no subject must not report a pass
-      - ○ **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
-      - ○ **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
-      - ○ **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
+    - ◑ **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(0/4)_
+      - ◕ **[FE-17](./items/FE-17.md)** §0 — a detector with no subject must not report a pass
+      - ◑ **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
+      - ◕ **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
+      - ◕ **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
     - ○ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
       - ○ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
       - ○ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule

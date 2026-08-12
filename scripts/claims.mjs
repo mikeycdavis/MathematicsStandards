@@ -71,7 +71,13 @@ export function capsSupport(entry) {
   const rank = STATUS_RANK.get(entry.status);
   if (rank === undefined) return false;
   if (entry.status === "DEFINITION") {
-    return entry.obligations.some((o) => o.state === "open");
+    // Not `state === "open"`, because `unrecognised` was `open` before the parser stopped guessing,
+    // and narrowing this to recognised-open would quietly stop capping a definition whose obligation
+    // the grammar cannot read. The honest test is "not known to be discharged": an obligation whose
+    // state nobody established has not been met, and support propagation is the wrong place to give
+    // it the benefit of the doubt. The uncertainty is reported where it belongs, by
+    // proof.complete-with-open-obligations, which distinguishes the two.
+    return entry.obligations.some((o) => o.state !== "discharged");
   }
   return rank < PROVED_RANK;
 }
@@ -346,9 +352,31 @@ function applySubBullet(entry, field, textLine, lineNo) {
   }
 }
 
-/** `OB-1 base case n = 2 — discharged (proofs/x.md#base)` or `OB-4 degenerate case — open`. */
+/**
+ * `OB-1 base case n = 2 — discharged (proofs/x.md#base)` or `OB-4 degenerate case — open`.
+ *
+ * Three states, and the third one is the point. This used to read
+ *
+ *     const state = /\bdischarged\b/i.test(textLine) ? "discharged" : "open";
+ *
+ * which gave every line the parser did not understand the semantic state `open` — and `open`
+ * obligations on a proved-rank claim violate `proof.complete-with-open-obligations`, an invariant.
+ * So an obligation written in a spelling the grammar does not cover produced an unwaivable verdict
+ * about a proposition nobody had established. That is §0i, and it is §0b's defect reached through
+ * the parser instead of through a default argument: in both, a value nobody chose was treated as
+ * one somebody asserted.
+ *
+ * `unrecognised` is not a fourth kind of obligation. It is the parser declining to invent a state,
+ * and it is deliberately not an evidence label: this layer reports what it read, and the detector
+ * decides what that is worth. Keeping the evidence vocabulary out of the syntax layer is what stops
+ * the two from drifting into a single fuzzy notion of confidence.
+ */
 function parseObligation(textLine, lineNo) {
-  const state = /\bdischarged\b/i.test(textLine) ? "discharged" : "open";
+  const discharged = /\bdischarged\b/i.test(textLine);
+  const open = /\bopen\b/i.test(textLine);
+  // Both words, or neither, is not a state — it is a line this grammar cannot read. Reporting the
+  // ambiguity is cheap; guessing at it is what produced the defect.
+  const state = discharged === open ? "unrecognised" : discharged ? "discharged" : "open";
   const id = /^(OB-\d+)/i.exec(textLine)?.[1] ?? null;
   const dischargedBy = /\(([^)]+)\)\s*$/.exec(textLine)?.[1] ?? null;
   return { id, text: textLine, state, dischargedBy: state === "discharged" ? stripTicks(dischargedBy ?? "") : null, line: lineNo };

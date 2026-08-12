@@ -11,30 +11,10 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { readdirSync } from "node:fs";
 
 import { classifyArg, declaredFlags, COMMANDS } from "../scripts/invocation.mjs";
-
-const HOME = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CLI = path.join(HOME, "scripts/standards.mjs");
-
-function run(args) {
-  try {
-    const stdout = execFileSync(process.execPath, [CLI, ...args], { encoding: "utf8" });
-    return { code: 0, out: stdout };
-  } catch (error) {
-    return { code: error.status ?? 1, out: `${error.stdout ?? ""}${error.stderr ?? ""}` };
-  }
-}
-
-/** A fresh empty directory, so "wrote nothing" is checkable by counting entries. */
-function scratch() {
-  return mkdtempSync(path.join(tmpdir(), "ms-invocation-"));
-}
+import { HOME, MUTATING_COMMANDS, run, runMutating, withScratch } from "./helpers/cli.mjs";
 
 const EXIT_INVOCATION = 2;
 
@@ -42,52 +22,40 @@ const EXIT_INVOCATION = 2;
 
 for (const nearMiss of ["--dryrun", "--dry_run", "--dry-run=true", "--Dry-Run", "--no-such-flag"]) {
   test(`init ${nearMiss} refuses and writes nothing`, () => {
-    const dir = scratch();
-    try {
-      const { code, out } = run(["init", dir, nearMiss]);
+    withScratch((dir) => {
+      const { code, out } = runMutating(["init", dir, nearMiss]);
       assert.equal(code, EXIT_INVOCATION, "must exit on the invocation contract, not 0");
       assert.deepEqual(readdirSync(dir), [], "the target directory must be untouched");
       assert.match(out, /nothing was read and nothing was written/i);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    });
   });
 }
 
 test("init --help prints usage and writes nothing", () => {
-  const dir = scratch();
-  try {
-    const { code, out } = run(["init", dir, "--help"]);
+  withScratch((dir) => {
+    const { code, out } = runMutating(["init", dir, "--help"]);
     assert.equal(code, 0, "--help is a correct invocation");
     assert.deepEqual(readdirSync(dir), [], "the target directory must be untouched");
     assert.match(out, /Usage: math-standards/);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  });
 });
 
 // --- the guard must not have broken the invocations that work --------------------------------
 
 test("init --dry-run still previews and still writes nothing", () => {
-  const dir = scratch();
-  try {
-    const { code } = run(["init", dir, "--dry-run"]);
+  withScratch((dir) => {
+    const { code } = runMutating(["init", dir, "--dry-run"]);
     assert.equal(code, 0);
     assert.deepEqual(readdirSync(dir), [], "a dry run writes nothing");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  });
 });
 
 test("init with no flags still applies", () => {
-  const dir = scratch();
-  try {
-    const { code } = run(["init", dir]);
+  withScratch((dir) => {
+    const { code } = runMutating(["init", dir]);
     assert.equal(code, 0);
     assert.ok(readdirSync(dir).length > 0, "a bare init still scaffolds");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  });
 });
 
 test("the documented flags are still accepted where they belong", () => {
@@ -167,20 +135,20 @@ test("no declared flag is silently ignored by any command", () => {
 test("the classifier and the CLI agree, for every command and every declared flag", () => {
   const flags = declaredFlags();
   for (const command of COMMANDS) {
-    // NEVER point a command that can write at this repository. An earlier draft of this test swept
-    // `init` across `--dir=<HOME>` and scaffolded three files into the framework's own tree — which
-    // is the RiemannHypothesis operator error, committed by the test written to prevent it. The
-    // no-overwrite default is what stopped it being worse. Writing commands get a scratch directory,
-    // and the accepted case is exercised there.
-    const dir = command === "init" ? scratch() : HOME;
-    try {
+    // An earlier draft swept `init` across `--dir=<HOME>` and scaffolded three files into the
+    // framework's own tree. Writing commands now go through runMutating, which refuses any target
+    // outside a disposable directory — so this cannot recur even if the sweep is widened.
+    const writes = MUTATING_COMMANDS.has(command);
+    const invoke = writes ? runMutating : run;
+    withScratch((tmp) => {
+      const dir = writes ? tmp : HOME;
       for (const [name, { valued }] of flags) {
         if (name === "--help" || name === "-h") continue; // exits 0 by design, tested above
         const arg = valued ? `${name}=x` : name;
-        // A valued flag needs a real path for --dir, and a scratch one for anything that writes.
+        // A valued flag needs a real path for --dir, and a disposable one for anything that writes.
         const concrete = name === "--dir" ? `--dir=${dir}` : arg;
         const expected = classifyArg(command, concrete) === null;
-        const { code, out } = run([command, `--dir=${dir}`, concrete]);
+        const { code, out } = invoke([command, `--dir=${dir}`, concrete]);
         const rejected =
           code === EXIT_INVOCATION && /nothing was read and nothing was written/i.test(out);
         assert.equal(
@@ -189,8 +157,6 @@ test("the classifier and the CLI agree, for every command and every declared fla
           `${command} ${concrete}: CLI and classifier disagree about acceptance`,
         );
       }
-    } finally {
-      if (dir !== HOME) rmSync(dir, { recursive: true, force: true });
-    }
+    });
   }
 });

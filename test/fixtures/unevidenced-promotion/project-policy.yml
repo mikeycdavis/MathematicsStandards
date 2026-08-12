@@ -1,0 +1,10 @@
+standardVersion: "1.0.0"
+project: "unevidenced-promotion"
+
+# Minimal on purpose. This fixture exists to produce one verdict from one arm of one rule, so it
+# declares only what a verdict requires. Without a policy `evaluate` returns NOT_EVALUATED, and a
+# test asserting "this must not block" would pass against a run that never reached a verdict at all.
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

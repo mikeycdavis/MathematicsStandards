@@ -139,7 +139,33 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
 
     const exception = activeExceptions.get(rule.id);
     const outcome = level === "required" || level === "forbidden" ? RESULT.failed : RESULT.warning;
-    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message);
+    const label = strongestLabel(hits);
+    const result = base(rule, level, outcome, exception ? "excepted" : "evaluated", hits[0].message, label);
+
+    // The Tier 1 ceiling, and the only place in the engine that applies it.
+    //
+    // It lives on this branch and nowhere else on purpose: this is the branch that evaluates a
+    // detector finding, and a detector finding is the only kind of result that carries an
+    // evidentiary classification. Attestations, exceptions, skips and passes are built elsewhere
+    // and are not reached from here, so Tier 1 assigns no evidence meaning to result paths it did
+    // not create.
+    //
+    // The predicate is written positively — elevation requires OBSERVED — rather than as
+    // `label !== "OBSERVED"`. The two are equivalent on this branch and would not stay equivalent
+    // if the check ever moved: `null` is not a weak label, it is the absence of the concept, and a
+    // rejected attestation carrying `null` must keep blocking. Saying what earns the terminal
+    // verdict is also the honest statement of the rule. An unlabelled finding does not earn it,
+    // which is the acceptance rule for the whole milestone: no finding acquires evidentiary
+    // certainty through a default.
+    const mayElevateInvariant = result.invariant === true && label === "OBSERVED";
+    if (result.status === RESULT.failed && result.invariant === true && !mayElevateInvariant) {
+      // Explanatory metadata, not a second status. The result still fails, still counts toward
+      // NON_COMPLIANT, and is still reported in full; what is recorded is the one consequence the
+      // ceiling prevented. Absent whenever nothing was prevented — see summarise, which reads it
+      // only to decide whether this result blocks.
+      result.cappedFrom = STATUS.BLOCKED_BY_INVARIANT;
+    }
+
     result.evidence = hits.flatMap((h) => h.evidence ?? []);
     result.files = result.evidence;
     if (exception) {
@@ -164,6 +190,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       validationType: "configuration",
       assurance: "full",
       disposition: "rejected-exception",
+      label: null,
       message: `${entry.rule} is non-exemptible; the exception against it is rejected, not applied.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
@@ -184,6 +211,7 @@ export function evaluate({ catalog, policy, findings, evaluated, today, digests 
       validationType: "configuration",
       assurance: "full",
       disposition: "expired-exception",
+      label: null,
       message: `The exception for ${entry.rule} expired on ${entry.expires}.`,
       evidence: ["project-policy.yml"],
       files: ["project-policy.yml"],
@@ -212,6 +240,12 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     validationType: "configuration",
     assurance: "full",
     disposition,
+    // Not a detector finding, so there is no detector label to carry. See the note on `base`:
+    // `null` means "this result did not come from an evidence-labelled observation", which is a
+    // different thing from an observation whose basis is unknown. The distinction matters at the
+    // ceiling — a human's recorded review is not weaker evidence than a regex, and must not be
+    // capped as though it were.
+    label: null,
     message,
     evidence: ["project-policy.yml"],
     files: ["project-policy.yml"],
@@ -269,6 +303,7 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
     // the assurance breakdown is the honest home for it — never `automated`.
     assurance: "full",
     disposition: "attested",
+    label: null,
     message: `Attested by ${attestation.reviewedBy} on ${attestation.reviewedAt}: ${attestation.evidence}`,
     evidence: against?.paths ?? [],
     files: against?.paths ?? [],
@@ -283,7 +318,34 @@ function judgeAttestation(rule, attestation, hits, today, digests) {
   };
 }
 
-function base(rule, level, status, disposition, message) {
+/** The validated evidence labels of Standard 19 R5. */
+export const EVIDENCE_LABELS = ["OBSERVED", "INFERRED", "CONFIRMED_BY_OWNER", "UNKNOWN"];
+
+/**
+ * One rule can fire more than once in a run, and the arms need not agree — `claims.silent-promotion`
+ * has a prose arm and a ledger arm with genuinely different bases. The result takes the *strongest*
+ * label present, so a real observed violation is never masked by an inferred one sharing its rule.
+ * An unrecognised label counts for nothing rather than for something.
+ */
+export function strongestLabel(hits) {
+  const present = hits.map((h) => h.label).filter((l) => EVIDENCE_LABELS.includes(l));
+  if (present.length === 0) return null;
+  return present.includes("OBSERVED") ? "OBSERVED" : present[0];
+}
+
+/**
+ * `label` is the evidentiary classification the detector supplied, carried into the result.
+ *
+ * It was previously discarded here, and that is half of §0b: the finding's own statement of what it
+ * rests on reached the human render and never reached the verdict. Threading it through changes no
+ * behaviour on its own — nothing reads it yet — but it makes the classification a property of the
+ * result rather than something that exists only in the audit output.
+ *
+ * `null` on any result not derived from a finding. A rule that passed, was skipped, or was attested
+ * has no finding to classify, and giving it a label would be manufacturing certainty in the other
+ * direction.
+ */
+function base(rule, level, status, disposition, message, label = null) {
   return {
     ruleId: rule.id,
     status,
@@ -292,6 +354,7 @@ function base(rule, level, status, disposition, message) {
     validationType: rule.validationType,
     assurance: status === RESULT.skipped ? "none" : rule.assurance,
     disposition,
+    label,
     message,
     evidence: [],
     files: [],
@@ -334,7 +397,14 @@ function summarise(results, policy) {
   // actually failed an evaluation. `excepted` is deliberately not subtracted here: the exception
   // engine already rejects waivers on non-exemptible rules, and honouring one at this layer would
   // reintroduce the bypass through the back door.
-  const blocking = results.filter((r) => r.status === RESULT.failed && r.invariant === true);
+  //
+  // `cappedFrom` is subtracted, and it is not the same kind of subtraction. An exception is a
+  // request to disregard a rule; a cap is the engine declining to draw a conclusion its evidence
+  // does not support. The result still fails and still makes the run NON_COMPLIANT — the cap
+  // removes the terminal verdict, never the finding.
+  const blocking = results.filter(
+    (r) => r.status === RESULT.failed && r.invariant === true && r.cappedFrom === undefined,
+  );
 
   let status;
   if (!policy) status = STATUS.NOT_EVALUATED;

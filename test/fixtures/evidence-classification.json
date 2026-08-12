@@ -1,0 +1,574 @@
+{
+  "$comment": [
+    "Every report() call site in scripts/standards.mjs, with the evidence label it supplies and why.",
+    "",
+    "This is test data, not documentation: test/verdict-strength.test.mjs (M4) reads it and requires",
+    "that the set of sites here matches the set of sites in the source exactly, so a new detector",
+    "cannot be added without classifying it, and a classification cannot be left behind when a",
+    "detector is deleted.",
+    "",
+    "The classification rule, applied to the PROPOSITION each finding asserts and not to the data the",
+    "detector happened to read:",
+    "",
+    "  OBSERVED  the detector directly establishes the proposition it reports, from data whose",
+    "            authority for that proposition is not in question — a parsed field, a filesystem",
+    "            fact, a digest, or the tool's own output.",
+    "  INFERRED  it derives the proposition through heuristic, lexical, approximate, or incomplete",
+    "            interpretation. Determinism is not observation: a regex that deterministically",
+    "            matches a 48-character prose window is still an inference about what that prose",
+    "            means.",
+    "  UNKNOWN   the code does not provide enough basis to justify either. No site is classified this",
+    "            way by inference. proof.complete-with-open-obligations#2 uses it: a parser that",
+    "            could not read its input has somewhere honest to land.",
+    "  CONFIRMED_BY_OWNER  not emitted by any detector. Attestations carry human judgement, and they",
+    "            travel through the attestation path in compliance.mjs, not through report().",
+    "",
+    "`site` is `<rule expression as written>#<nth occurrence>` and is the key the test joins on; it",
+    "survives edits above it, and changes only when a detector is added or removed. `line` is for a",
+    "human opening the file; it is checked, but as its own separate failure.",
+    "`invariant` marks the rules where this classification is load-bearing: for those, and only for",
+    "those, the Tier 1 ceiling makes OBSERVED and INFERRED reach different verdicts."
+  ],
+  "sites": [
+    {
+      "rule": "claims.ledger-exists",
+      "arm": "absent",
+      "site": "claims.ledger-exists#1",
+      "line": 615,
+      "proposition": "This project has no claims ledger at the configured path.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "existsSync on the path the policy names. The absence of a file is a filesystem fact."
+    },
+    {
+      "rule": "claims.ledger-parse-valid",
+      "arm": "malformed-entries",
+      "site": "claims.ledger-parse-valid#1",
+      "line": 625,
+      "proposition": "N ledger entries are not parseable by this framework's ledger grammar, and are therefore invisible to every other claim rule.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "The parser is the authority on what this parser accepts, and the consequence reported — invisibility to downstream rules — is a fact about this run."
+    },
+    {
+      "rule": "claims.status-vocabulary",
+      "arm": "outside-vocabulary",
+      "site": "claims.status-vocabulary#1",
+      "line": 636,
+      "proposition": "N claims carry a status token outside the closed fifteen.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "A parsed field tested for membership in a closed set. No interpretation of the token's meaning is involved — only whether it is one of the fifteen."
+    },
+    {
+      "rule": "claims.history-complete",
+      "arm": "status-history-disagreement",
+      "site": "claims.history-complete#1",
+      "line": 658,
+      "proposition": "N claims hold a status that the claim's own recorded history does not end at.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Two parsed fields of the same entry compared to each other. The finding asserts the disagreement, not a diagnosis of how it arose."
+    },
+    {
+      "rule": "claims.definitions-first",
+      "arm": "definition-after-dependent",
+      "site": "claims.definitions-first#1",
+      "line": 679,
+      "proposition": "N claims declare a dependency on a DEFINITION entry that appears later in the ledger.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Parsed Depends field plus document order, both read directly from the ledger."
+    },
+    {
+      "rule": "claims.inline-label-consistency",
+      "arm": "unknown-reference",
+      "site": "claims.inline-label-consistency#1",
+      "line": 708,
+      "proposition": "N passages reference a claim the ledger does not define.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "The ledger side is observed, but reference-hood is not: findReferences treats any CLM-shaped token outside a code fence as a reference. A changelog line recording a deleted claim is a mention, not a reference, and this cannot tell them apart."
+    },
+    {
+      "rule": "claims.silent-promotion",
+      "arm": "prose",
+      "site": "claims.silent-promotion#1",
+      "line": 740,
+      "proposition": "N passages assert a status stronger than the one the ledger holds for that claim.",
+      "label": "INFERRED",
+      "invariant": true,
+      "basis": "The asserted status is read from a 48-character window of prose on either side of a claim identifier. 'The Cook-Levin theorem' near CLM-0004 is scored as asserting THEOREM about CLM-0004. This is the arm that blocked PvsNP, and the reason the arms must be labelled separately."
+    },
+    {
+      "rule": "claims.silent-promotion",
+      "arm": "ledger",
+      "site": "claims.silent-promotion#2",
+      "line": 747,
+      "proposition": "N claims reached proved rank on a history entry that records no evidence.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "Read entirely from the ledger's own parsed History block, which is the authoritative record of promotions by construction. This arm must keep blocking after the ceiling lands."
+    },
+    {
+      "rule": "claims.status-exceeds-support",
+      "arm": "closure-cap",
+      "site": "claims.status-exceeds-support#1",
+      "line": 803,
+      "proposition": "N claims at proved rank rest, through their declared dependency closure, on something not at proved rank.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "Computed over parsed Depends and Status fields. capsSupport encodes a rule of the framework applied to declared data, not an interpretation of what the claims mean."
+    },
+    {
+      "rule": "claims.conditional-as-unconditional",
+      "arm": "closure-cap",
+      "site": "claims.conditional-as-unconditional#1",
+      "line": 810,
+      "proposition": "N of those claims are stated at an unconditional proved status rather than CONDITIONAL_THEOREM.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "The same closure computation, narrowed by an exact status-token test."
+    },
+    {
+      "rule": "rigor.explicit-domain",
+      "arm": "field-missing",
+      "site": "rule#1",
+      "line": 835,
+      "proposition": "N claims at HYPOTHESIS rank or above state no Domain.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "A parsed field is empty or absent. The finding asserts that nothing was written, not that what was written is inadequate."
+    },
+    {
+      "rule": "rigor.explicit-quantifiers",
+      "arm": "field-missing",
+      "site": "rule#1",
+      "line": 835,
+      "proposition": "N claims at HYPOTHESIS rank or above state no Quantifiers.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Same call site as rigor.explicit-domain, same basis: an empty parsed field."
+    },
+    {
+      "rule": "rigor.explicit-assumptions",
+      "arm": "field-absent",
+      "site": "rigor.explicit-assumptions#1",
+      "line": 846,
+      "proposition": "N claims at HYPOTHESIS rank or above omit the Assumptions field entirely.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Field-key presence in the parsed entry. Deliberately distinct from 'none', and that distinction is itself observed."
+    },
+    {
+      "rule": "rigor.conjecture-registered",
+      "arm": "dangling-assumption",
+      "site": "rigor.conjecture-registered#1",
+      "line": 861,
+      "proposition": "N identifiers named in an Assumptions field resolve to no ledger entry and no reference.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Identifier resolution over parsed fields. The proposition is about resolution, not about whether the assumption is mathematically load-bearing."
+    },
+    {
+      "rule": "proof.obligations-enumerated",
+      "arm": "field-absent",
+      "site": "proof.obligations-enumerated#1",
+      "line": 876,
+      "proposition": "N claims at proved rank omit the Obligations field.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Field-key presence. Note that this asks only whether a list exists, which is why it is observed where the rule below is not."
+    },
+    {
+      "rule": "proof.complete-with-open-obligations",
+      "arm": "open-obligation",
+      "site": "proof.complete-with-open-obligations#1",
+      "line": 897,
+      "proposition": "N obligations on claims held at proved rank are recorded as OPEN.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "The ledger says 'open' in as many words, and parseObligation now returns that state only when it read it. Reading a field is not interpreting it. Before M3 this arm was the whole rule and was labelled INFERRED, because the parser defaulted every unreadable line to open; splitting the arms is what let the readable half be honestly observed."
+    },
+    {
+      "rule": "proof.complete-with-open-obligations",
+      "arm": "unrecognised-obligation",
+      "site": "proof.complete-with-open-obligations#2",
+      "line": 905,
+      "proposition": "N obligations on claims at proved rank state neither 'open' nor 'discharged' in a form this grammar reads, so whether the claim is complete is not established here.",
+      "label": "UNKNOWN",
+      "invariant": true,
+      "basis": "Not INFERRED: INFERRED would claim approximate grounds for believing the obligation is open, and there are none — the line could not be read. UNKNOWN is the label for exactly that, and it is why the vocabulary has four entries rather than two. The finding is still worth reporting, because a proved-rank claim whose completeness cannot be checked deserves a person's attention, but under the ceiling it cannot reach the terminal verdict."
+    },
+    {
+      "rule": "proof.dependency-traceability",
+      "arm": "dangling-dependency",
+      "site": "proof.dependency-traceability#1",
+      "line": 920,
+      "proposition": "N declared dependencies resolve to no ledger entry and no reference.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Identifier resolution over parsed Depends fields."
+    },
+    {
+      "rule": "proof.circular-dependency",
+      "arm": "cycle",
+      "site": "proof.circular-dependency#1",
+      "line": 928,
+      "proposition": "N cycles exist in the declared dependency graph.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "A graph property of parsed edges. The cycle either is or is not present in the declared graph, and the finding claims nothing beyond the declaration."
+    },
+    {
+      "rule": "proof.counterexample-search-recorded",
+      "arm": "universal-no-search",
+      "site": "proof.counterexample-search-recorded#1",
+      "line": 954,
+      "proposition": "N claims that quantify universally record no counterexample search.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Already INFERRED before this pass, correctly: looksUniversal reads universality out of informal statement text."
+    },
+    {
+      "rule": "computation.scope-declared",
+      "arm": "no-range-or-arithmetic",
+      "site": "computation.scope-declared#1",
+      "line": 1018,
+      "proposition": "N computational evidence entries do not record their range or their arithmetic.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Already INFERRED before this pass, correctly: both tests are keyword regexes over free-text evidence detail."
+    },
+    {
+      "rule": "computation.reproducible-runs",
+      "arm": "missing-artifact",
+      "site": "computation.reproducible-runs#1",
+      "line": 1025,
+      "proposition": "N cited computational artifacts are not present in the repository.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "existsSync on a path parsed from a backtick-delimited artifact citation."
+    },
+    {
+      "rule": "computation.float-as-exact",
+      "arm": "float-markers",
+      "site": "computation.float-as-exact#1",
+      "line": 1032,
+      "proposition": "N claims of exact arithmetic rest on a program that uses floating point.",
+      "label": "INFERRED",
+      "invariant": true,
+      "basis": "Already INFERRED before this pass, correctly: FLOAT_MARKERS includes a bare decimal-literal pattern, which a version string or a comment-stripped constant will match."
+    },
+    {
+      "rule": "computation.error-bounds-stated",
+      "arm": "approximation-unbounded",
+      "site": "computation.error-bounds-stated#1",
+      "line": 1039,
+      "proposition": "N approximate claims state no error bound.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Already INFERRED before this pass, correctly. Both approximation and boundedness are keyword regexes; asymptotic notation in an exact statement is scored as an approximation, which is the non-blocking finding PvsNP carries."
+    },
+    {
+      "rule": "computation.evidence-as-proof",
+      "arm": "ledger",
+      "site": "computation.evidence-as-proof#1",
+      "line": 1065,
+      "proposition": "N claims at proved rank cite evidence, none of it of a type that can establish a proof.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "Parsed evidence types tested against a closed set. The evidence-type ceiling is declared by the framework and recorded by the project; neither side is interpreted here."
+    },
+    {
+      "rule": "computation.finite-case-generalization",
+      "arm": "universal-on-bounded",
+      "site": "computation.finite-case-generalization#1",
+      "line": 1072,
+      "proposition": "N universally quantified claims rest on a bounded finite check.",
+      "label": "INFERRED",
+      "invariant": true,
+      "basis": "Already INFERRED before this pass, correctly: looksUniversal and looksBounded are both text heuristics."
+    },
+    {
+      "rule": "computation.evidence-as-proof",
+      "arm": "prose",
+      "site": "computation.evidence-as-proof#2",
+      "line": 1091,
+      "proposition": "N passages describe something as proved numerically or computationally.",
+      "label": "INFERRED",
+      "invariant": true,
+      "basis": "Already INFERRED before this pass, correctly, and already severity-overridden to warning. A prose phrase match is never an observation of what the project believes."
+    },
+    {
+      "rule": "literature.resolvable-identifiers",
+      "arm": "unresolved-reference",
+      "site": "literature.resolvable-identifiers#1",
+      "line": 1111,
+      "proposition": "N external references are used and never defined in the ledger's References section.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Identifier resolution between two parsed structures of the same document."
+    },
+    {
+      "rule": "literature.resolvable-identifiers",
+      "arm": "malformed-identifier",
+      "site": "literature.resolvable-identifiers#2",
+      "line": 1126,
+      "proposition": "N reference identifiers are malformed.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "The DOI and arXiv format tests are exact, but the identifier is extracted from free-text citation prose by a greedy non-space match. Trailing punctuation or a wrapping delimiter is captured as part of the identifier, so 'malformed' can be a statement about the extraction rather than about the citation."
+    },
+    {
+      "rule": "literature.unchecked-novelty",
+      "arm": "novelty-no-search",
+      "site": "literature.unchecked-novelty#1",
+      "line": 1146,
+      "proposition": "N claims assert novelty with no recorded prior-work search.",
+      "label": "INFERRED",
+      "invariant": true,
+      "basis": "Already INFERRED before this pass, correctly: novelty is read from statement prose by keyword."
+    },
+    {
+      "rule": "literature.known-result-comparison",
+      "arm": "no-citation-evidence",
+      "site": "literature.known-result-comparison#1",
+      "line": 1153,
+      "proposition": "N claims at proved rank record no evidence of a literature type.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Parsed evidence types against a closed set. The finding asserts the absence of a record, which is exactly what it read."
+    },
+    {
+      "rule": "formal.placeholder-inventory",
+      "arm": "placeholder-tokens",
+      "site": "formal.placeholder-inventory#1",
+      "line": 1227,
+      "proposition": "N proof-assistant files contain proof placeholders.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Per-assistant token patterns with word-boundary lookarounds, matched against comment- and string-stripped source, behind an extension map and a structural gate that keeps Verilog out of the Coq arm. In these languages the token is the placeholder; this is lexical observation of source, not interpretation of prose."
+    },
+    {
+      "rule": "formal.trusted-base-enlarged",
+      "arm": "trusted-base-constructs",
+      "site": "formal.trusted-base-enlarged#1",
+      "line": 1234,
+      "proposition": "N uses of constructs that enlarge the trusted computing base beyond the kernel.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Unlike PLACEHOLDERS, TRUSTED_BASE is not keyed by assistant: all four patterns run against every proof file, so Coq's /\\bExtraction\\b/ is tested against Lean sources where it matches an ordinary identifier. The finding asserts a use; the code observes a word."
+    },
+    {
+      "rule": "formal.status-declared",
+      "arm": "development-unclaimed",
+      "site": "formal.status-declared#1",
+      "line": 1247,
+      "proposition": "Proof-assistant files exist and no ledger claim declares formal status.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "File extensions on disk plus an exact status-token test over parsed entries. Both halves are counted, not interpreted."
+    },
+    {
+      "rule": "formal.trusted-chain-tracked",
+      "arm": "incomplete-formal-block",
+      "site": "formal.trusted-chain-tracked#1",
+      "line": 1284,
+      "proposition": "N formal claims omit one or more required keys from their Formal block.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Key presence and emptiness in a parsed block."
+    },
+    {
+      "rule": "formal.placeholder-in-chain",
+      "arm": "missing-or-placeholdered-artifact",
+      "site": "formal.placeholder-in-chain#1",
+      "line": 1291,
+      "proposition": "N claims assert formal certification over an artifact that is absent, unnamed, or contains a placeholder.",
+      "label": "OBSERVED",
+      "invariant": true,
+      "basis": "A parsed citation, existsSync, and the placeholder-inventory scan above — each observed. The message already states the limit of what a clean pass means, which is a disclosure of coverage, not of uncertainty about this finding."
+    },
+    {
+      "rule": "formal.axiom-disclosure",
+      "arm": "undisclosed-axiom",
+      "site": "formal.axiom-disclosure#1",
+      "line": 1305,
+      "proposition": "N axiom declarations in the proof sources are not listed in any Formal block.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Both sides are read directly, but they are joined by exact string equality between a name captured from a declaration and a comma-separated hand-written list. A qualified name on one side and a short name on the other are the same axiom and compare unequal, so non-disclosure is inferred from a name mismatch."
+    },
+    {
+      "rule": "formal.gap-inventory",
+      "arm": "field-absent",
+      "site": "formal.gap-inventory#1",
+      "line": 1315,
+      "proposition": "N claims at proved rank omit the Formal field.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Field-key presence in the parsed entry."
+    },
+    {
+      "rule": "problems.tracking-file",
+      "arm": "mode-declared-no-file",
+      "site": "problems.tracking-file#1",
+      "line": 1360,
+      "proposition": "The policy declares openProblemMode and no problem.md exists under the configured directory.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "A declared policy field and a directory listing."
+    },
+    {
+      "rule": "problems.*, lifecycle.stopping-criteria",
+      "arm": "required-section-missing-or-empty",
+      "site": "rule#2",
+      "line": 1382,
+      "proposition": "N required sections of an open-problem record are missing or present-but-empty.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Exact heading match and body emptiness. The framework defines the headings literally, so conformance to them is observed; this site reports against whichever of the seven section rules the missing heading belongs to."
+    },
+    {
+      "rule": "lifecycle.terminated-approaches",
+      "arm": "no-status-line",
+      "site": "lifecycle.terminated-approaches#1",
+      "line": 1402,
+      "proposition": "N terminated approaches record no Status line.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "An anchored line-start match for a structural marker the framework specifies."
+    },
+    {
+      "rule": "lifecycle.reopening-evidence",
+      "arm": "no-reopening-condition",
+      "site": "lifecycle.reopening-evidence#1",
+      "line": 1409,
+      "proposition": "N terminated approaches state no reopening condition.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Same structural basis as the Status line above."
+    },
+    {
+      "rule": "lifecycle.failed-routes-preserved",
+      "arm": "no-preserved-record",
+      "site": "lifecycle.failed-routes-preserved#1",
+      "line": 1427,
+      "proposition": "The project preserves no record of abandoned routes.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "Already INFERRED before this pass, correctly: preservation is inferred from directory names matching /abandoned|failed|dead-ends?|attempts?/ or from any H3 in a problem file."
+    },
+    {
+      "rule": "evidence.type-vocabulary",
+      "arm": "outside-vocabulary",
+      "site": "evidence.type-vocabulary#1",
+      "line": 1472,
+      "proposition": "N evidence entries use a type outside the closed vocabulary.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "A parsed field tested for membership in a closed set."
+    },
+    {
+      "rule": "evidence.artifact-linked",
+      "arm": "artifact-absent",
+      "site": "evidence.artifact-linked#1",
+      "line": 1479,
+      "proposition": "N evidence references point at an artifact that does not exist.",
+      "label": "INFERRED",
+      "invariant": false,
+      "basis": "existsSync is observation, but only for tokens isPathShaped decided were paths — a heuristic over slashes and short extensions. A citation such as 'Hardy & Wright, Thm 2.1' is not a path; whether a given token was meant as one is inferred."
+    },
+    {
+      "rule": "evidence.equivalence-direction-proved",
+      "arm": "unproved-equivalence",
+      "site": "evidence.equivalence-direction-proved#1",
+      "line": 1486,
+      "proposition": "N asserted iff-equivalences name nothing that proves them, or name something unresolvable or unproved.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Parsed direction and provedBy fields, resolved against parsed entries."
+    },
+    {
+      "rule": "evidence.applicability-declared",
+      "arm": "no-regimes",
+      "site": "evidence.applicability-declared#1",
+      "line": 1500,
+      "proposition": "project-policy.yml declares no mathematics.regimes.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "A key absent from a validated policy document."
+    },
+    {
+      "rule": "evidence.applicability-declared",
+      "arm": "unknown-regime",
+      "site": "evidence.applicability-declared#2",
+      "line": 1509,
+      "proposition": "The declared regimes include values outside the closed set.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Set membership over declared values."
+    },
+    {
+      "rule": "evidence.labels",
+      "arm": "invalid-label",
+      "site": "evidence.labels#1",
+      "line": 1525,
+      "proposition": "N findings this run produced carry no valid evidence label.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "The tool inspecting its own in-memory findings. There is no more authoritative artifact for a proposition about this run's output."
+    },
+    {
+      "rule": "agent.explainable-findings",
+      "arm": "missing-explanation",
+      "site": "agent.explainable-findings#1",
+      "line": 1537,
+      "proposition": "N findings this run produced lack a rule, standard reference, message, or remediation.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "The tool inspecting its own findings against its own catalog."
+    },
+    {
+      "rule": "integrity.provenance-digest",
+      "arm": "no-digest-file",
+      "site": "integrity.provenance-digest#1",
+      "line": 1551,
+      "proposition": "The framework records no provenance digests for its source documents.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "existsSync. Note the subject: this reads the framework's own HOME, not the audited project, and so reports the same result for every adopter. That misplacement is a separate defect, recorded in the milestone notes, not a reason to weaken the label."
+    },
+    {
+      "rule": "integrity.provenance-digest",
+      "arm": "digest-drift",
+      "site": "integrity.provenance-digest#2",
+      "line": 1572,
+      "proposition": "N source documents differ from the content their recorded digest was taken over.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "SHA-256 over normalised file content compared to a recorded digest. The strongest observation in the suite."
+    },
+    {
+      "rule": "integrity.rule-lifecycle-honest",
+      "arm": "inconsistent-lifecycle",
+      "site": "integrity.rule-lifecycle-honest#1",
+      "line": 1588,
+      "proposition": "N catalog rules declare removedIn without deprecatedIn, or supersededBy naming an undefined rule.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "The catalog inspected against itself. Same subject note as integrity.provenance-digest: this is a fact about the framework, reported into an adopter's verdict."
+    },
+    {
+      "rule": "evidence.skipped-never-passed",
+      "arm": "false-green",
+      "site": "evidence.skipped-never-passed#1",
+      "line": 1918,
+      "proposition": "N rules were reported as passing while nothing evaluated them.",
+      "label": "OBSERVED",
+      "invariant": false,
+      "basis": "Read off the first-pass verdict this run just computed. The message already states that this is a defect in the tool rather than the project."
+    }
+  ]
+}

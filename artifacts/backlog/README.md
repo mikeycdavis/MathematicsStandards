@@ -15,8 +15,9 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Status | Items |
 | --- | ---: |
-| ○ Not started | 5 |
+| ○ Not started | 2 |
 | ◑ In progress | 3 |
+| ◕ In review | 3 |
 | ● Complete | 55 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
@@ -42,6 +43,9 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 ## In flight
 
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
+- ◕ [FE-21](./items/FE-21.md) — §0c — a recognized representation of the evidence must not be read as its absence
+- ◕ [FE-22](./items/FE-22.md) — §0d — evidence types must mean the same thing to every rule
+- ◕ [FE-23](./items/FE-23.md) — A1 — epistemic strength and relevance-to-target are independent axes
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
 
@@ -103,9 +107,9 @@ _Nothing marked ready._
       - ● **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
       - ● **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
     - ○ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
-      - ○ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
-      - ○ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule
-      - ○ **[FE-23](./items/FE-23.md)** A1 — epistemic strength and relevance-to-target are independent axes
+      - ◕ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
+      - ◕ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule
+      - ◕ **[FE-23](./items/FE-23.md)** A1 — epistemic strength and relevance-to-target are independent axes
       - ◌ **[FE-24](./items/FE-24.md)** §0j — no state for 'a machine established this part; the judgement is outstanding'
       - ◌ **[FE-25](./items/FE-25.md)** §0k — applicability needs a third value
       - ◌ **[FE-26](./items/FE-26.md)** §0l — an attestation does not say what kind of reviewer made it

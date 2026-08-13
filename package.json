@@ -1,6 +1,6 @@
 {
   "name": "mathematics-standards",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Numbered standards for mathematical reasoning, proof, and theorem work, and the audit command that checks a research repository against them.",
   "type": "module",
   "bin": {

@@ -9,7 +9,11 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
-## Unreleased
+## 1.1.0 — 2026-08-12
+
+The first post-1.0 behavioural correction: two defects the field trials found in the verdict engine,
+and one in argument parsing. MINOR — the result envelope gains fields and no rule is added, removed,
+weakened, or reclassified.
 
 **§0b + §0i — a finding's evidence strength constrains the verdict it can produce. Evaluator
 semantic change; no rule added, removed, weakened, or reclassified.**

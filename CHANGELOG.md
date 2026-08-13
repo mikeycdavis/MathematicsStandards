@@ -9,7 +9,7 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
-## 1.2.0 — unreleased
+## 1.2.0 — 2026-08-12
 
 **Tier 2, evidence provenance: every result records what evidence surface it inspected and whose
 repository that evidence belongs to. Additive to the result envelope; no rule added, removed,

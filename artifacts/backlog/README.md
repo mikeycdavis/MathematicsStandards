@@ -5,10 +5,10 @@
 Work on this project classified with the Extended Agile Hierarchy. Every item is a file in
 [`items/`](./items/); its YAML frontmatter is the source of truth and this page is derived from it.
 
-**31 of 47 leaf items complete — 66%**
+**35 of 47 leaf items complete — 74%**
 
 ```
-██████████████████████████░░░░░░░░░░░░░░  66%
+██████████████████████████████░░░░░░░░░░  74%
 ```
 
 ## Status
@@ -17,8 +17,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | --- | ---: |
 | ○ Not started | 5 |
 | ◑ In progress | 3 |
-| ◕ In review | 5 |
-| ● Complete | 50 |
+| ● Complete | 55 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
 | **Total** | **77** |
@@ -38,16 +37,11 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Theme | Progress | Done | Remaining |
 | --- | --- | ---: | ---: |
-| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `█████████░░░░░` 66% | 31 | 16 |
+| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `██████████░░░░` 74% | 35 | 12 |
 
 ## In flight
 
-- ◕ [EP-07](./items/EP-07.md) — Tier 2 — false assurance
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
-- ◕ [FE-17](./items/FE-17.md) — §0 — a detector with no subject must not report a pass
-- ◕ [FE-18](./items/FE-18.md) — §0e — attestations must not be silently permanently fresh
-- ◕ [FE-19](./items/FE-19.md) — §0h — a result must say whose property it is about
-- ◕ [FE-20](./items/FE-20.md) — §0m — a rule that accepts a pointer must be able to follow it
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
 
@@ -57,7 +51,7 @@ _Nothing marked ready._
 
 ## Everything
 
-- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(31/47)_
+- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(35/47)_
   - ● **[IN-01](./items/IN-01.md)** A working policy-as-code pack for mathematical research _(9/9)_
     - ● **[EP-01](./items/EP-01.md)** The v1.0.0 framework _(6/6)_
       - ● **[FE-01](./items/FE-01.md)** Provenance, the derived spec, and the canonical inventory
@@ -90,7 +84,7 @@ _Nothing marked ready._
     - ● **[EP-05](./items/EP-05.md)** Disposition of the adoption evidence _(1/1)_
       - ● **[FE-12](./items/FE-12.md)** The v1.1 evidence disposition _(1/1)_
         - ● **[ST-13](./items/ST-13.md)** Dispose of the adoption evidence and retire first-unproved-bridge
-  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(12/28)_
+  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(16/28)_
     - ● **[EP-06](./items/EP-06.md)** Tier 1 — false invariant blocks _(8/8)_
       - ● **[FE-13](./items/FE-13.md)** The Tier 1 falsifier, written before any mechanism _(3/3)_
         - ● **[ST-14](./items/ST-14.md)** Pin the ceiling: evidence strength constrains the verdict
@@ -103,11 +97,11 @@ _Nothing marked ready._
         - ● **[ST-19](./items/ST-19.md)** The evidence ceiling, and cappedFrom where it fires
         - ● **[ST-20](./items/ST-20.md)** §0i — the defaulting obligation parse
       - ● **[FE-16](./items/FE-16.md)** Land Tier 1 and the §0a fix on main
-    - ◕ **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(0/4)_
-      - ◕ **[FE-17](./items/FE-17.md)** §0 — a detector with no subject must not report a pass
-      - ◕ **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
-      - ◕ **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
-      - ◕ **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
+    - ● **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(4/4)_
+      - ● **[FE-17](./items/FE-17.md)** §0 — a detector with no subject must not report a pass
+      - ● **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
+      - ● **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
+      - ● **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
     - ○ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
       - ○ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
       - ○ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule

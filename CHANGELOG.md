@@ -56,7 +56,11 @@ Neither status moves. RiemannHypothesis's point is lost entirely to five rules i
 measured on leaving the denominator — the correction, not a regression. A milestone about false
 assurance that made either repository look more compliant would have failed.
 
-## 1.1.0 — unreleased
+## 1.1.0 — 2026-08-12
+
+The first post-1.0 behavioural correction: two defects the field trials found in the verdict engine,
+and one in argument parsing. MINOR — the result envelope gains fields and no rule is added, removed,
+weakened, or reclassified.
 
 **§0b + §0i — a finding's evidence strength constrains the verdict it can produce. Evaluator
 semantic change; no rule added, removed, weakened, or reclassified.**

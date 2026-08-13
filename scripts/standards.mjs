@@ -60,7 +60,8 @@ const SCHEMA_VERSION = "1.0.0";
 
 /** The rules this evaluator examines. Defined in its own module — see the comment there. */
 import { EVALUATED_RULES } from "./evaluated.mjs";
-
+import { assertSurfacesKnown, inspectionFor, resolved, unresolved, SUBJECT } from "./surfaces.mjs";
+import { POINTER, resolveEvidencePointer } from "./pointers.mjs";
 // ---------------------------------------------------------------------------
 // Standard references
 // ---------------------------------------------------------------------------
@@ -274,6 +275,7 @@ const argv = process.argv.slice(2);
 const subcommand = argv[0];
 const JSON_OUT = argv.includes("--json");
 const STRICT = argv.includes("--strict");
+const PROVENANCE = argv.includes("--provenance");
 const dirFlag = argv.find((a) => a.startsWith("--dir="))?.slice("--dir=".length);
 const positional = argv.slice(1).find((a) => !a.startsWith("--"));
 
@@ -601,6 +603,16 @@ const OPEN_PROBLEMS_DIR = mathPolicy.openProblemsDir ?? "artifacts/open-problems
 // The YAML reader returns every scalar as a string by design, so `openProblemMode: true` arrives as
 // "true". Both spellings are accepted here so a programmatically-supplied policy object works too.
 const OPEN_PROBLEM_MODE = mathPolicy.openProblemMode === true || mathPolicy.openProblemMode === "true";
+/**
+ * The artifact this project says records its abandoned routes, or null if it says nothing.
+ *
+ * Optional by construction. An adopter that declares nothing keeps exactly the behaviour it had at
+ * 04ba60e — both frozen adopters do, and step 4 must not move them — while an adopter that declares
+ * something gets its own artifact read instead of the framework's guess about where such a thing
+ * lives. `artifacts.` rather than `mathematics.` because this is a fact about the repository's
+ * layout, not about its mathematics.
+ */
+const DECLARED_FAILED_ROUTES = policy.document?.artifacts?.failedRoutes ?? null;
 
 const ledgerFile = path.join(root, LEDGER_PATH);
 const ledgerText = existsSync(ledgerFile) ? await readText(ledgerFile) : null;
@@ -1417,8 +1429,67 @@ function detectOpenProblems() {
 
 const ABANDONED = /(^|\/)(abandoned|failed|dead-ends?|attempts?)(\/|$)/i;
 
+/**
+ * Does this text record any abandoned route, or is it a placeholder?
+ *
+ * Deliberately weak, and the weakness is declared rather than hidden. Nothing in a document proves
+ * that what it describes was really tried and really abandoned; the catalog says so itself — "It
+ * cannot detect a deletion". What is checkable is whether the artifact has ENTRIES: a heading below
+ * the title, or a list. A file whose whole content is "Nothing has been abandoned yet" has none, and
+ * that is the case worth catching, because it is what a pointer added to satisfy a checker looks
+ * like.
+ */
+function recordsRoutes(text) {
+  const body = text.replace(/^#\s+.*$/m, "");
+  return /^#{2,6}\s+\S/m.test(body) || /^\s*[-*+]\s+\S/m.test(body) || /^\s*\d+\.\s+\S/m.test(body);
+}
+
+/**
+ * Where the declared record of abandoned routes resolved to, computed once.
+ *
+ * Null when the project declared nothing. Otherwise the pointer's resolution, whatever it says — the
+ * detector and the evidence surface must agree about it, and computing it twice is how they would
+ * come to disagree.
+ */
+const declaredRoutes = DECLARED_FAILED_ROUTES
+  ? resolveEvidencePointer(root, DECLARED_FAILED_ROUTES)
+  : null;
+
 function detectFailedRoutes() {
   if (!OPEN_PROBLEM_MODE) return;
+
+  if (declaredRoutes) {
+    // A declaration is the subject once it exists. The heuristic below is not consulted as a
+    // fallback, and that ordering is the point: letting the framework's guess rescue a declaration
+    // that did not resolve would mean the project's own statement about its evidence could only ever
+    // improve its verdict, never expose a problem with it.
+    if (declaredRoutes.status !== POINTER.resolved) {
+      // No finding. The framework could not read the evidence, which is not an observation that the
+      // project violated anything — the rule's required surface is unresolved and the engine turns
+      // that into `skipped / not-evaluated`, which is what "we could not establish this" means here.
+      return;
+    }
+    // Matched on resolved absolute paths rather than on the map key, because the key's spelling is
+    // the walker's business: a lookup that assumed one separator or one normalisation would return
+    // undefined on the other platform and report "records none" about a file full of records.
+    const target = path.resolve(root, declaredRoutes.target);
+    const texts = [...contents]
+      .filter(([f]) => {
+        const abs = path.resolve(f);
+        if (declaredRoutes.kind === "file") return abs === target;
+        const inside = path.relative(target, abs);
+        return inside !== "" && !inside.startsWith("..") && !path.isAbsolute(inside);
+      })
+      .map(([, text]) => text);
+    if (texts.some((t) => recordsRoutes(t))) return;
+    report("lifecycle.failed-routes-preserved", {
+      message: `${declaredRoutes.target} is declared as this project's record of abandoned routes and records none. A pointer's existence is not evidence; the content at the end of it is.`,
+      evidence: [declaredRoutes.target],
+      label: "OBSERVED",
+    });
+    return;
+  }
+
   const preserved = files.some((f) => ABANDONED.test(rel(f)));
   const inProblemFile = files.some(
     (f) => path.basename(f) === "problem.md" && /^###\s+/m.test(contents.get(f) ?? ""),
@@ -1600,6 +1671,25 @@ const references = ledger ? scanReferences() : [];
 const dangling = ledger ? danglingEdges(ledger.entries, ledger.references) : [];
 const proofs = proofFiles();
 
+// Framework-subject detectors read the installed standards pack, not the adopter. These paths are
+// relative to HOME deliberately: `inspected.subject` supplies the root they belong to.
+// Read from disk, not listed. A hand-maintained file list is a fact about someone's memory — the
+// same objection design/testing-principles.md raises against a hand-maintained coverage count — and
+// a rules file added tomorrow would silently stop being named among what was inspected. The list
+// happened to be complete when written, which is exactly how this class of drift stays invisible.
+const frameworkRulePaths = (await readdir(path.join(HOME, "rules")).catch(() => []))
+  .filter((name) => name.endsWith(".json"))
+  .map((name) => `rules/${name}`)
+  .sort();
+const frameworkInspectionPaths = ["artifacts/provenance-digests.json", ...frameworkRulePaths];
+try {
+  const provenance = JSON.parse(await readFile(path.join(HOME, "artifacts/provenance-digests.json"), "utf8"));
+  for (const entry of provenance.files ?? []) frameworkInspectionPaths.push(entry.path);
+} catch {
+  // The provenance detector reports the missing or malformed record; the surface still records the
+  // path it attempted to inspect.
+}
+
 detectLedgerPresence();
 detectLedgerParse();
 detectStatusVocabulary();
@@ -1679,6 +1769,158 @@ function renderHuman(fileCount) {
   return lines.join("\n");
 }
 
+/**
+ * Where every evaluated rule looked, and what it found there to inspect.
+ *
+ * Strictly observational. Nothing here computes a status, a score, or an exit code — it prints what
+ * the run already established, on the surface a person reads, in the same terms the JSON uses.
+ *
+ * Two rules govern the format, and both are consequences of the step-2 measurement.
+ *
+ * A surface is named by WHAT IT COUNTS, not by where it lives. `resolvable identifiers: 0` is a fact
+ * about the project; `artifacts/claims-ledger.md` is a fact about the filesystem, and only the first
+ * tells a reader that the rule which checks DOI and arXiv format examined none.
+ *
+ * An empty surface is printed. Listing only non-empty ones would delete the observation this whole
+ * milestone exists to surface: PvsNP has sixteen references and zero identifiers, and the zero is
+ * the finding. Absence is evidence here, and a renderer that omits zeros is a renderer that reports
+ * "inspected: references" about a rule that inspected no identifier.
+ */
+function renderProvenance(report) {
+  const out = [];
+  out.push("Evidence provenance");
+  out.push("  What each evaluated rule read, and what it found there. This states scope, not quality:");
+  out.push("  a rule can read the right file and still apply a poor check.");
+  out.push("");
+
+  for (const result of report.results) {
+    const inspected = result.inspected;
+    if (!inspected || inspected.state === "no-detector") continue;
+    out.push(result.ruleId);
+    out.push(`  Subject: ${inspected.subject}`);
+    if (inspected.subject === SUBJECT.framework) {
+      out.push("    A property of MathematicsStandards itself, not of this project.");
+    } else if (inspected.subject === SUBJECT.run) {
+      out.push("    A property of this evaluation's own conduct, not of this project.");
+    }
+    out.push("  Inspected:");
+    for (const surface of inspected.surfaces) {
+      const note =
+        surface.state === "unresolved"
+          ? `  — not resolved: ${surface.reason ?? "no reason recorded"}`
+          : surface.count === 0
+            ? "  — nothing of this kind was present"
+            : "";
+      out.push(`    ${surface.label}: ${surface.count}${note}`);
+    }
+    if (inspected.state === "no-subject") {
+      out.push("  Nothing to inspect, so the rule was not evaluated. This is not a failure.");
+    } else if (inspected.state === "unresolved") {
+      out.push("  At least one surface could not be resolved, which is not the same as finding nothing.");
+    }
+    out.push(`  Result: ${result.status}`);
+    out.push("");
+  }
+  return out.join("\n");
+}
+
+/**
+ * The rows in an adopter's report that are not about the adopter.
+ *
+ * §0h, at the one place it actually misleads: a reader scanning a compliance report sees
+ * `integrity.provenance-digest — passed` beside their own rules and has no way to know it certifies
+ * MathematicsStandards' source documents rather than anything of theirs. Behind `--provenance` this
+ * would still be true for every reader who does not pass the flag, so it is in the ordinary render.
+ */
+function renderForeignSubjects(report) {
+  const foreign = report.results.filter(
+    (r) => r.inspected && r.inspected.subject !== SUBJECT.project && r.inspected.state !== "no-detector",
+  );
+  if (foreign.length === 0) return "";
+  const out = ["", "  Not about this project"];
+  out.push("  These rows are evaluated during your run and are not statements about your repository.");
+  for (const r of foreign) {
+    const whose =
+      r.inspected.subject === SUBJECT.framework
+        ? "about the framework"
+        : "about this evaluation's own conduct";
+    out.push(`    ${r.ruleId} — ${r.status}, ${whose}`);
+    // The sharpest case of the confusion, and the only one where the adopter has a file of the same
+    // name. A project that keeps its own artifacts/provenance-digests.json has made an assertion
+    // about its own source documents, and this row is not about it. Saying which paths were read is
+    // the §0 answer; saying which same-named path was NOT read is the §0h one, and without it a
+    // reader with such a file will reasonably assume this row covers it.
+    //
+    // Framework-subject only. A run-subject rule's surfaces resolve to the ADOPTER's files — that is
+    // what `run-findings` is — so the same test there reports every file the run touched as "not
+    // inspected", which is both false and the exact opposite of what the row means. Caught by the
+    // note firing on four of RiemannHypothesis's own documents.
+    const shadowed =
+      r.inspected.subject !== SUBJECT.framework
+        ? []
+        : r.inspected.surfaces.flatMap((s) => s.paths).filter((p) => existsSync(path.join(root, p)));
+    for (const p of shadowed) {
+      out.push(`      your ${p} was not inspected; this row read the framework's copy`);
+    }
+  }
+  return out.join("\n");
+}
+
+/**
+ * Passes over a surface that held nothing of the kind the rule checks.
+ *
+ * The pass is not being contradicted here — whether it is legitimate is a verdict question and this
+ * step does not touch verdicts. What is refused is the pass being *silent*. PvsNP's
+ * `literature.resolvable-identifiers` passes over sixteen references containing zero identifiers,
+ * and a reader of the ordinary report must not have to pass a flag to find that out.
+ */
+function renderVacuousArms(report) {
+  const vacuous = report.results.filter(
+    (r) =>
+      r.status === "passed" &&
+      r.disposition === "evaluated" &&
+      // `!s.declared`: an adopter-declared surface that is empty means the adopter declared
+      // nothing, which is a fact about the policy and not a check that examined nothing. Listing it
+      // here would put a line under this heading for every project that has not opted in, and a
+      // heading that fires on everyone stops being read.
+      r.inspected?.surfaces.some((s) => s.count === 0 && !s.declared),
+  );
+  if (vacuous.length === 0) return "";
+  const out = ["", "  Passed, having examined nothing of some kind it checks"];
+  out.push("  Each of these read at least one surface and found it empty. The pass stands; what it");
+  out.push("  rests on is stated so it cannot be read as a check that was performed and came back clean.");
+  for (const r of vacuous) {
+    const empty = r.inspected.surfaces.filter((s) => s.count === 0).map((s) => `${s.label}: 0`);
+    const full = r.inspected.surfaces.filter((s) => s.count > 0).map((s) => `${s.label}: ${s.count}`);
+    out.push(`    ${r.ruleId} — ${[...full, ...empty].join(", ")}`);
+  }
+  return out.join("\n");
+}
+
+/**
+ * Rules whose evidence the framework was pointed at and could not read.
+ *
+ * Unconditional, like the other two, and for a sharper reason. These rows are `skipped` — the
+ * quietest status the report has — and the thing being reported is that the PROJECT said where its
+ * evidence was and the framework failed to reach it. A reader who has to pass a flag to discover
+ * that their declared artifact is being ignored is a reader for whom the declaration silently does
+ * nothing, which is the shape of §0m rather than its repair.
+ */
+function renderUnreadableEvidence(report) {
+  const blocked = report.results.filter((r) => r.inspected?.blocked === true);
+  if (blocked.length === 0) return "";
+  const out = ["", "  Could not be evaluated — declared evidence did not resolve"];
+  out.push("  These rules neither passed nor failed. The project named an artifact, the framework could");
+  out.push("  not read it, and being unable to look is not a finding about what would have been seen.");
+  for (const r of blocked) {
+    out.push(`    ${r.ruleId}`);
+    for (const s of r.inspected.surfaces.filter((x) => r.inspected.unresolved.includes(x.surface))) {
+      out.push(`      ${s.label} — ${s.reason}`);
+    }
+  }
+  return out.join("\n");
+}
+
 function renderVerdict(report, policyState) {
   const out = [];
   out.push("Compliance");
@@ -1698,10 +1940,36 @@ function renderVerdict(report, policyState) {
   const s = report.summary;
   const a = report.assurance;
   out.push(`  Status: ${report.status}`);
-  out.push(`  Score:  ${report.score === null ? "n/a" : report.score + "%"}  (${report.denominator.basis}: ${report.denominator.scored})`);
+  // The full basis sentence lives in the JSON. Here it is the short form plus the itemised
+  // `Outside:` line below, which says more than the sentence did and fits on a terminal.
+  out.push(`  Score:  ${report.score === null ? "n/a" : report.score + "%"}  (over ${report.denominator.scored} required rule(s) about this project)`);
   out.push(`  Rules:  ${s.passed} passed, ${s.failed} failed, ${s.warnings} warning(s), ${s.skipped} skipped`);
   out.push(`  Cover:  ${a.automated} automated, ${a.manualReview} manual-review, ${a.notEvaluated} not-evaluated`);
+  // What the score left out, and why — one line, itemised. "34 of 82" invites the reader to assume
+  // the other 48 were merely unimplemented; they are five different things, and two of them
+  // (someone else's property, evidence we could not read) are the ones §0h and §0m are about.
+  const d = report.denominator;
+  const excluded = [
+    [d.frameworkSubject, "about the framework"],
+    [d.runSubject, "about this run"],
+    [d.noSubject, "nothing to inspect"],
+    [d.noDetector, "no check implemented"],
+    [d.staleAttestation, "review no longer current"],
+    [d.expiredAttestation, "attestation expired"],
+  ].filter(([n]) => n > 0);
+  if (excluded.length) out.push(`  Outside: ${excluded.map(([n, why]) => `${n} ${why}`).join(", ")}`);
+  if (d.unresolvedRequired > 0) {
+    out.push(`  Unearned: ${d.unresolvedRequired} in the score and unearnable — declared evidence could not be read`);
+  }
   out.push("");
+
+  if (report.foreignFailures?.length) {
+    out.push("  Failures that are not this project's");
+    out.push("  Real, and excluded from the status and score above because they are not about this");
+    out.push("  repository. A run-subject failure means this tool misreported something.");
+    for (const f of report.foreignFailures) out.push(`    ${f.rule} (${f.subject}) — ${f.message}`);
+    out.push("");
+  }
 
   if (report.blockedBy?.length) {
     out.push("  BLOCKED BY INVARIANT — stop, do not work around this:");
@@ -1740,7 +2008,9 @@ function renderVerdict(report, policyState) {
   const attested = report.results.filter((r) => r.disposition === "attested");
   if (attested.length) {
     out.push("  Attested (human review):");
-    for (const r of attested) out.push(`    ${r.ruleId} — ${r.attestation.reviewedBy}, ${r.attestation.reviewedAt}`);
+    for (const r of attested) {
+      out.push(`    ${r.ruleId} — ${r.attestation.reviewedBy}, ${r.attestation.reviewedAt} · ${currencyPhrase(r)}`);
+    }
     out.push("");
   }
   const na = report.results.filter((r) => r.disposition === "not-applicable");
@@ -1765,6 +2035,30 @@ function renderVerdict(report, policyState) {
   return out.join("\n");
 }
 
+/**
+ * §0e. One reading of an attestation's currency, shared by every surface that reports one.
+ *
+ * The defect being repaired was never that the framework did not know. It computed the current
+ * digest on every run, correctly, and emitted it on the human render alone — so an operator reading
+ * `--json` saw fourteen attestations with nothing to distinguish "reviewed against a recorded digest
+ * that still matches" from "reviewed once, against nothing recorded, and unfalsifiable ever after".
+ * Both halves matter: deriving the phrase in one place is what stops the three surfaces drifting
+ * apart again, and stating `unknown` as a word is what stops a reader inferring freshness from a
+ * null field. An attestation of unknown currency is not fresh; it is unmeasured.
+ */
+function currencyPhrase(result) {
+  return result.attestation?.reviewedAgainst?.currency === "verified-current"
+    ? "currency verified against the recorded digest"
+    : "currency unknown — no reviewedAgainst.digest recorded";
+}
+
+/** Attested results whose currency has never been established. */
+function unknownCurrency(report) {
+  return report.results.filter(
+    (r) => r.disposition === "attested" && r.attestation?.reviewedAgainst?.currency !== "verified-current",
+  );
+}
+
 function renderStatus(report, policyState) {
   if (!policyState.document) return renderVerdict(report, policyState);
   const c = report.frameworkCoverage;
@@ -1775,6 +2069,14 @@ function renderStatus(report, policyState) {
     `  ${s.passed} passed · ${s.failed} failed · ${s.warnings} warning · ${s.skipped} skipped`,
     `  coverage ${c ? `${c.evaluatedRules}/${c.cataloguedRules} rules have a detector; ${c.fullyMachineRepresentedStandards}/${c.standards ?? "?"} standards fully machine-represented` : "unknown"}`,
   ];
+  // §0e. Unconditional on this surface too. `status` is the one-screen summary an agent reads before
+  // deciding whether a human review still stands, which makes it the worst place to leave currency
+  // out: a human-reviewed pass that nobody can date reads here as an ordinary pass.
+  const unknown = unknownCurrency(report);
+  if (unknown.length) {
+    const attested = report.results.filter((r) => r.disposition === "attested").length;
+    lines.push(`  attestation currency: ${unknown.length} of ${attested} unknown — ${unknown.map((r) => r.ruleId).join(", ")}`);
+  }
   if (report.blockedBy?.length) {
     lines.push(`  BLOCKED: ${report.blockedBy.map((b) => b.rule).join(", ")}`);
   }
@@ -1864,7 +2166,27 @@ if (!VALIDATING) {
   if (JSON_OUT) {
     process.stdout.write(
       JSON.stringify(
-        { schemaVersion: SCHEMA_VERSION, repo: root.split(path.sep).join("/"), auditedAt: new Date().toISOString(), findings },
+        {
+          schemaVersion: SCHEMA_VERSION,
+          repo: root.split(path.sep).join("/"),
+          auditedAt: new Date().toISOString(),
+          // The findings-only contract, stated where a program can read it.
+          //
+          // `audit` emitting no verdict is intentional and stays: separating observation from
+          // conclusion is a distinction this framework exists to draw, and collapsing it to match
+          // `validate` would undo that. The defect is that the intent was stated only in the human
+          // render, which ends "This is evidence, not a verdict." A consumer receiving this JSON had
+          // no field distinguishing *audited, no verdict* from *evaluated, nothing to report*, so an
+          // empty `findings` array read as a clean bill of health.
+          //
+          // Deliberately not a `status` key holding a neutral token. A status field present on both
+          // commands invites a consumer to compare its values, and the point is that one of these
+          // commands does not produce one.
+          verdictComputed: false,
+          verdict: null,
+          note: "Audit only — no compliance verdict was computed. Run `validate` for one.",
+          findings,
+        },
         null,
         2,
       ) + "\n",
@@ -1903,7 +2225,131 @@ async function attestationDigests(document, repoRoot) {
 
 const digests = await attestationDigests(policy.document, root);
 const today = new Date().toISOString().slice(0, 10);
-const evaluateArgs = { catalog: CATALOG, policy: policy.document, findings, evaluated: EVALUATED_RULES, today, digests };
+assertSurfacesKnown();
+const relativeFiles = files.map(rel);
+const relativeFileSet = new Set(relativeFiles);
+const problemPaths = relativeFiles.filter(
+  (p) => p.startsWith(`${OPEN_PROBLEMS_DIR.replace(/\/$/, "")}/`) && p.endsWith("/problem.md"),
+);
+const citedPaths = new Set();
+if (ledger) {
+  for (const entry of ledger.entries.values()) {
+    for (const item of entry.evidence ?? []) {
+      // `artifacts`, and only that. The parser builds each evidence item as
+      // `{ type, detail, artifacts, text }` (claims.mjs:405) — there is no `path`, `file`,
+      // `artifact` or `value` key on it, so a chain of fallbacks across those four names resolves
+      // to undefined for every entry in every repository and this surface reports empty forever.
+      // A surface that silently resolves to nothing is the §0 defect wearing the fix's clothes:
+      // the field would say "inspected no artifacts" about a ledger citing dozens.
+      for (const artifact of item.artifacts ?? []) {
+        const bare = String(artifact).split("#")[0];
+        if (isPathShaped(bare) && relativeFileSet.has(bare)) citedPaths.add(bare);
+      }
+    }
+    const formalFile = entry.formal?.file;
+    if (typeof formalFile === "string" && relativeFileSet.has(formalFile)) citedPaths.add(formalFile);
+  }
+}
+/**
+ * The results of the previous evaluation pass, or null before one has run.
+ *
+ * `evidence.skipped-never-passed` reads the result set, which does not exist until the engine has
+ * produced it. Resolving its surface to a placeholder would be the `cited-artifacts` mistake again —
+ * a number that looks like an observation and is not one — so the first pass reports it honestly as
+ * unresolved and the second reports what is actually there. `evaluate` is pure over in-memory data,
+ * so the second pass costs nothing and cannot diverge for any other reason.
+ */
+let runOutcome = null;
+
+const resolveSurface = (surface) => {
+  switch (surface) {
+    case "claims-ledger-location":
+      // Always resolvable, and that is the point: claims.ledger-exists is the one rule whose subject
+      // is the ledger's ABSENCE. Resolving it against the ledger's contents would make it no-subject
+      // in exactly the situation it exists to report.
+      return resolved([LEDGER_PATH]);
+    case "claims-ledger":
+      return resolved(ledgerText === null ? [] : [LEDGER_PATH]);
+
+    // Locators, not files: `<ledger>#<slug>` names the thing inspected at the granularity the rule
+    // reads it. Both frozen adopters resolve `reference-identifiers` to zero — PvsNP with sixteen
+    // references and RH with none — which is §0's second instance made visible.
+    case "references":
+      return resolved(ledger ? [...ledger.references.keys()].sort().map((s) => `${LEDGER_PATH}#${s}`) : []);
+    case "reference-identifiers":
+      return resolved(
+        ledger
+          ? [...ledger.references]
+              .filter(([, citation]) => /\b10\.\d{4,9}\/\S+|\barXiv:/i.test(citation))
+              .map(([slug]) => `${LEDGER_PATH}#${slug}`)
+              .sort()
+          : [],
+      );
+
+    case "cited-artifacts":
+      return resolved([...citedPaths].sort());
+    case "prose":
+      // Empty without a ledger because the prose detectors themselves return early without one:
+      // there are no registered claims for a reference scan to seek. Observed empty, not a failure.
+      return resolved(
+        ledger ? [...contents.keys()].map(rel).filter((p) => /\.(?:md|txt|ya?ml|json)$/i.test(p)).sort() : [],
+      );
+    case "proof-sources":
+      return resolved(proofs.map((p) => rel(p.file)).sort());
+    case "open-problems":
+      return resolved(problemPaths);
+    case "repository-paths":
+      return resolved(relativeFiles);
+    case "declared-failed-routes":
+      // The three answers this surface can give are the three states the tri-state exists for, and
+      // no other surface produces all three. Nothing declared is observed-empty — a real
+      // observation, and the one both frozen adopters produce, which is why they do not move.
+      // Declared and resolved is the artifact itself. Declared and unresolvable is `unresolved`,
+      // and it is the only surface any rule REQUIRES, so it is the only one that can stop a pass.
+      if (!declaredRoutes) return resolved([]);
+      if (declaredRoutes.status === POINTER.resolved) return resolved([declaredRoutes.target]);
+      return unresolved(`${declaredRoutes.status}: ${declaredRoutes.reason}`);
+    case "project-policy":
+      return resolved(relativeFileSet.has("project-policy.yml") ? ["project-policy.yml"] : []);
+
+    case "run-findings":
+      return resolved([
+        ...new Set(
+          findings
+            .flatMap((f) => f.evidence ?? [])
+            .map((e) => String(e).split(":")[0])
+            .filter((p) => relativeFileSet.has(p)),
+        ),
+      ].sort());
+    case "run-results":
+      if (runOutcome === null) {
+        return unresolved("the results of this run do not exist until the first evaluation pass completes");
+      }
+      return resolved(runOutcome);
+
+    case "framework-home":
+      return resolved(frameworkInspectionPaths);
+    case "framework-catalog":
+      return resolved(frameworkInspectionPaths.filter((p) => p.startsWith("rules/")));
+
+    default:
+      // Not `resolved([])`. An unknown surface is a programming error, and reporting it as observed
+      // emptiness would skip the rule while looking like a finding about the project.
+      throw new Error(`unknown evidence surface '${surface}'`);
+  }
+};
+
+const buildInspections = () => new Map(EVALUATED_RULES.map((id) => [id, inspectionFor(id, resolveSurface)]));
+let inspections = buildInspections();
+const evaluateArgs = {
+  catalog: CATALOG,
+  policy: policy.document,
+  findings,
+  evaluated: EVALUATED_RULES,
+  inspections,
+  today,
+  digests,
+};
 
 /**
  * Two passes, and the reason is worth stating: evidence.skipped-never-passed is a rule about the
@@ -1913,6 +2359,12 @@ const evaluateArgs = { catalog: CATALOG, policy: policy.document, findings, eval
  * costs nothing and cannot diverge from the first for any other reason.
  */
 let verdict = evaluate(evaluateArgs);
+
+// The result set now exists, so the one surface that reads it can stop saying it cannot be resolved
+// and start saying what is in it. The second pass is unconditional for that reason: previously it
+// ran only when the false-green invariant had been violated, which left the common case reporting
+// `unresolved` in the output of every clean run.
+runOutcome = verdict.results.map((r) => `${r.ruleId}:${r.status}`);
 const falseGreen = verdict.results.filter((r) => r.status === "passed" && r.disposition === "not-evaluated");
 if (falseGreen.length > 0) {
   report("evidence.skipped-never-passed", {
@@ -1920,8 +2372,9 @@ if (falseGreen.length > 0) {
     evidence: falseGreen.map((r) => r.ruleId),
     label: "OBSERVED",
   });
-  verdict = evaluate(evaluateArgs);
 }
+evaluateArgs.inspections = buildInspections();
+verdict = evaluate(evaluateArgs);
 
 const report_ = envelope({
   verdict,
@@ -1937,8 +2390,19 @@ if (JSON_OUT) {
   process.stdout.write(JSON.stringify({ ...report_, findings }, null, 2) + "\n");
 } else if (STATUS_ONLY) {
   process.stdout.write(renderStatus(report_, policy) + "\n");
+  if (PROVENANCE) process.stdout.write("\n" + renderProvenance(report_) + "\n");
 } else {
   process.stdout.write(renderVerdict(report_, policy) + "\n");
+  // Both in the ordinary render, both unconditional. A reader who does not pass --provenance is
+  // exactly the reader these two protect: one is told which rows are not about their repository,
+  // the other which passes examined nothing of the kind they check.
+  const foreign = renderForeignSubjects(report_);
+  if (foreign) process.stdout.write(foreign + "\n");
+  const vacuous = renderVacuousArms(report_);
+  if (vacuous) process.stdout.write(vacuous + "\n");
+  const unreadable = renderUnreadableEvidence(report_);
+  if (unreadable) process.stdout.write(unreadable + "\n");
+  if (PROVENANCE) process.stdout.write("\n" + renderProvenance(report_) + "\n");
   for (const [ruleId, digest] of digests) {
     const recorded = policy.document?.attestations?.[ruleId]?.reviewedAgainst?.digest;
     if (!recorded) {

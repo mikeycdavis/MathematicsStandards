@@ -1,0 +1,13 @@
+# A project that has adopted the standards and has not yet written a claims ledger.
+#
+# This is not a badly-configured repository. It is the ordinary state of a research project between
+# adopting the framework and curating its first claim, and §0 says explicitly that such a project
+# must see "nobody checked" rather than a red build. Every claim rule here has a detector and no
+# subject, which is precisely the pair v1.0 cannot distinguish from a clean run.
+standardVersion: "1.0.0"
+project: "no-subject"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

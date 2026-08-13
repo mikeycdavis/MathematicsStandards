@@ -1,0 +1,19 @@
+# The BEFORE half of the escape-hatch pair: one honest failure and nothing else.
+#
+# The repository keeps no record of abandoned routes and does not pretend to, so
+# `lifecycle.failed-routes-preserved` fails and the verdict is NON_COMPLIANT. The sibling fixture
+# `escape-hatch-declared` is byte-identical apart from an `artifacts.failedRoutes` pointer at a file
+# that does not exist. The pair exists to pin one property:
+#
+#     declaring an artifact that is not there must never improve the score or the terminal status.
+#
+# Everything else is declared not-applicable so the pair discriminates. With other failures present
+# both halves would be NON_COMPLIANT for unrelated reasons and the test would pass without the
+# property ever holding.
+standardVersion: "1.0.0"
+project: "escape-hatch-undeclared"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

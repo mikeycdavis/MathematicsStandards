@@ -1,0 +1,23 @@
+# The third adopter state: a provenance record of its own that is CORRECT.
+#
+# The discriminating fixture for step 6's architectural question. `wrong-root-broken` shows that an
+# adopter's drifted record does not make the framework's integrity rule fail; this one shows the
+# other half, which is the half that would flatter rather than punish: an adopter's intact record
+# does not make it pass either.
+#
+# Together the three states — record absent, record drifted, record intact — settle the question a
+# single fixture cannot:
+#
+#   framework-ownership reading   the result is IDENTICAL across all three. The adopter's file is
+#                                 not the subject, and nothing the adopter does to it registers.
+#   adopter-root reading          the result VARIES with all three, and enters the adopter's score.
+#
+# Invariance across the three is a property no path constant can fake, and it is what the test
+# asserts. See design/v1.2-evidence-provenance.md §13.
+standardVersion: "1.0.0"
+project: "wrong-root-clean"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

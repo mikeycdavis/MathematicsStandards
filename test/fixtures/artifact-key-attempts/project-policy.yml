@@ -1,0 +1,18 @@
+# PvsNP's shape: a real record of abandoned work at `docs/FAILED_ATTEMPTS.md`.
+#
+# Half of the §0m acceptance pair. The sibling fixture keeps the same duty at
+# `Research/FAILED_APPROACHES.md`, RiemannHypothesis's real path. Neither filename is a bare
+# `failed` or `attempts` path segment, so the path-shape heuristic matches nothing in either — and
+# neither fixture carries a `###` heading in problem.md, which is the heuristic's other arm. A pass
+# here can only have come from following the declared pointer.
+standardVersion: "1.0.0"
+project: "artifact-key-attempts"
+
+artifacts:
+  failedRoutes: "docs/FAILED_ATTEMPTS.md"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  openProblemMode: true

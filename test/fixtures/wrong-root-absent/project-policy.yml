@@ -1,0 +1,19 @@
+# An adopter with no provenance evidence of its own.
+#
+# At 03f44d6 `integrity.provenance-digest` passes here, and what it certifies is that
+# MathematicsStandards' source documents are unmodified — a true statement about the framework,
+# counted inside this project's compliance score. Every adopter gets the same row for the same
+# reason, and none of them can affect it.
+#
+# The claim: the result stays (the framework auditing itself during an adopter's run is useful, and
+# §0h says so explicitly), it says `subject: framework`, and it leaves the adopter's score. A number
+# describing this project must be computed only from rules about this project.
+#
+# See wrong-root-broken/project-policy.yml for the other half of the pair.
+standardVersion: "1.0.0"
+project: "wrong-root-absent"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

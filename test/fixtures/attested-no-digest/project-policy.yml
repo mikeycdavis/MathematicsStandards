@@ -1,0 +1,28 @@
+# An attestation written the way the schema tells an operator to write one.
+#
+# The schema's guidance on reviewedAgainst.digest: "Omit it on a first pass — the validator reports
+# the current digest so it can be recorded." This policy follows that instruction exactly.
+#
+# At 03f44d6 the digest IS computed and IS printed — 14 of 14 for the frozen RiemannHypothesis
+# specimen — in the human render, and nowhere else. RH read `--json`, saw nothing, and recorded in
+# its own policy that the validator does not report it. The observation was right for the surface
+# used; the mechanism inferred from it was not. The consequence is identical either way: an
+# attestation with no digest is permanently fresh, and nothing in the machine-readable output says
+# so or offers the value that would fix it.
+standardVersion: "1.0.0"
+project: "attested-no-digest"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+
+attestations:
+  evidence.discarded-failures:
+    status: approved
+    reviewedBy: "A. Reviewer"
+    reviewedAt: "2026-06-01"
+    evidence: "Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped; nothing was removed after the fact."
+    reviewedAgainst:
+      paths:
+        - "notes/abandoned.md"

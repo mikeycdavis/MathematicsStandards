@@ -1,0 +1,24 @@
+# An adopter that names the artifact discharging a duty, and names one that is not there.
+#
+# `artifacts.failedRoutes` is a semantic key, not a detector-specific one: it says what class of
+# artifact this is, so any rule that needs a record of abandoned routes can ask for it and no rule
+# has to guess a filename. The alternative spelling —
+# `lifecycleFailedRoutesPreservedPath:` — would tie the adopter's vocabulary to the framework's
+# current rule ids, which are the framework's business and not the project's.
+#
+# The rule under test passes at 04ba60e for an unrelated reason: problem.md below carries a `###`
+# heading, the framework's own thin proxy for a record of abandoned work. That is deliberate. A
+# fixture where the rule already fails would make its test green without the pointer ever being
+# followed. It also pins the ordering rule that matters here — a declaration is the subject once it
+# exists, and the proxy must not rescue a declaration that does not resolve.
+standardVersion: "1.0.0"
+project: "declared-pointer-missing"
+
+artifacts:
+  failedRoutes: "docs/FAILED_ATTEMPTS.md"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  openProblemMode: true

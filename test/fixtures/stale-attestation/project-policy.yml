@@ -1,0 +1,35 @@
+# An attestation that HAS a digest, and whose digest no longer matches what is there.
+#
+# The reviewer looked, wrote down what they looked at, and recorded the digest of it — the whole
+# mechanism working as designed. Then the file changed. The engine is right to stop honouring the
+# attestation: what was reviewed is not what is there now.
+#
+# What it does with it is the defect this fixture pins. A stale attestation returns the rule to
+# not-evaluated, and at 6eadfe0 that is indistinguishable in the output from a rule nobody ever
+# attested. Three different situations —
+#
+#     nobody reviewed this            (never attested)
+#     nothing was there to inspect    (no-subject)
+#     somebody reviewed something else (stale)
+#
+# — arrive at the same `skipped / not-evaluated` with the same message, and only the last one names
+# a person who did work that has since expired. A reader who cannot tell them apart cannot tell
+# which one they are supposed to act on.
+standardVersion: "1.0.0"
+project: "stale-attestation"
+
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+
+attestations:
+  evidence.discarded-failures:
+    status: approved
+    reviewedBy: "A. Reviewer"
+    reviewedAt: "2026-06-01"
+    evidence: "Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped."
+    reviewedAgainst:
+      paths:
+        - "notes/abandoned.md"
+      digest: "00000000000000000000000000000000"

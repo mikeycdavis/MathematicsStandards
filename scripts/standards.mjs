@@ -2008,7 +2008,9 @@ function renderVerdict(report, policyState) {
   const attested = report.results.filter((r) => r.disposition === "attested");
   if (attested.length) {
     out.push("  Attested (human review):");
-    for (const r of attested) out.push(`    ${r.ruleId} — ${r.attestation.reviewedBy}, ${r.attestation.reviewedAt}`);
+    for (const r of attested) {
+      out.push(`    ${r.ruleId} — ${r.attestation.reviewedBy}, ${r.attestation.reviewedAt} · ${currencyPhrase(r)}`);
+    }
     out.push("");
   }
   const na = report.results.filter((r) => r.disposition === "not-applicable");
@@ -2033,6 +2035,30 @@ function renderVerdict(report, policyState) {
   return out.join("\n");
 }
 
+/**
+ * §0e. One reading of an attestation's currency, shared by every surface that reports one.
+ *
+ * The defect being repaired was never that the framework did not know. It computed the current
+ * digest on every run, correctly, and emitted it on the human render alone — so an operator reading
+ * `--json` saw fourteen attestations with nothing to distinguish "reviewed against a recorded digest
+ * that still matches" from "reviewed once, against nothing recorded, and unfalsifiable ever after".
+ * Both halves matter: deriving the phrase in one place is what stops the three surfaces drifting
+ * apart again, and stating `unknown` as a word is what stops a reader inferring freshness from a
+ * null field. An attestation of unknown currency is not fresh; it is unmeasured.
+ */
+function currencyPhrase(result) {
+  return result.attestation?.reviewedAgainst?.currency === "verified-current"
+    ? "currency verified against the recorded digest"
+    : "currency unknown — no reviewedAgainst.digest recorded";
+}
+
+/** Attested results whose currency has never been established. */
+function unknownCurrency(report) {
+  return report.results.filter(
+    (r) => r.disposition === "attested" && r.attestation?.reviewedAgainst?.currency !== "verified-current",
+  );
+}
+
 function renderStatus(report, policyState) {
   if (!policyState.document) return renderVerdict(report, policyState);
   const c = report.frameworkCoverage;
@@ -2043,6 +2069,14 @@ function renderStatus(report, policyState) {
     `  ${s.passed} passed · ${s.failed} failed · ${s.warnings} warning · ${s.skipped} skipped`,
     `  coverage ${c ? `${c.evaluatedRules}/${c.cataloguedRules} rules have a detector; ${c.fullyMachineRepresentedStandards}/${c.standards ?? "?"} standards fully machine-represented` : "unknown"}`,
   ];
+  // §0e. Unconditional on this surface too. `status` is the one-screen summary an agent reads before
+  // deciding whether a human review still stands, which makes it the worst place to leave currency
+  // out: a human-reviewed pass that nobody can date reads here as an ordinary pass.
+  const unknown = unknownCurrency(report);
+  if (unknown.length) {
+    const attested = report.results.filter((r) => r.disposition === "attested").length;
+    lines.push(`  attestation currency: ${unknown.length} of ${attested} unknown — ${unknown.map((r) => r.ruleId).join(", ")}`);
+  }
   if (report.blockedBy?.length) {
     lines.push(`  BLOCKED: ${report.blockedBy.map((b) => b.rule).join(", ")}`);
   }

@@ -9,7 +9,54 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
-## Unreleased
+## 1.2.0 — unreleased
+
+**Tier 2, evidence provenance: every result records what evidence surface it inspected and whose
+repository that evidence belongs to. Additive to the result envelope; no rule added, removed,
+weakened, or reclassified, so MINOR under the rule above.**
+
+Tier 1 asked how strong a finding's evidence was. This asks the prior question: was there any
+evidence at all, and was it the adopter's? Measured across both frozen field trials at the Tier 1
+endpoint, **not one machine-produced pass in either repository named a single file** — 99 of the 111
+passes were unsourced, and the only ones that said what they rested on were the twelve a human had
+written out by hand. `§0`, `§0e`, `§0h` and `§0m` are four ways of exploiting that one gap, so the
+substrate is the fix and the four repairs are its consumers.
+
+Every result now carries `inspected: { subject, state, surfaces }`. `subject` is `project`, `run` or
+`framework`; `state` is derived, never authored.
+
+- **`§0` — a detector with no subject does not pass.** Every surface resolving empty makes the rule
+  `skipped / not-evaluated`, with a reason distinguishing it from *no detector exists*. It leaves the
+  score's denominator, exactly as `not-evaluated` already did.
+- **`§0e` — an attestation's currency is stated on every supported output surface.** The recorded
+  cause was wrong and is corrected here: the current digest was never missing, it was emitted on the
+  human render for all fourteen of RiemannHypothesis's attestations and on neither machine surface.
+  An attestation carries `currency: verified-current | unknown`, and the human render, `status` and
+  `--json` each say so in their own idiom. An attestation of unknown currency is not fresh; it is
+  unmeasured, and it no longer reads as an ordinary pass on the surface an agent is most likely to
+  read.
+- **`§0h` — a result says whose property it is about.** Framework- and run-subject rules leave the
+  adopter's score and are named in the render rather than dropped silently. Ownership was settled
+  from the catalog: `integrity.provenance-digest` is asserted invariant across an adopter whose own
+  `artifacts/provenance-digests.json` is absent, drifted, or correct, so an adopter can be neither
+  punished nor flattered by a rule that is not theirs.
+- **`§0m` — a declared artifact is followed, and read.** `resolveEvidencePointer` is a primitive
+  rather than a repair inside one rule. A declared artifact that does not resolve **fails closed**:
+  measured before it was closed, a fixture declaring an unresolvable artifact scored `COMPLIANT` /
+  100 and now scores `NON_COMPLIANT` / 97.
+
+The envelope gains `scoreBasis: { id, version, since, note }`, and the contract is narrow on purpose:
+**two scores are comparable when their `scoreBasis.version` agrees, and not otherwise.** Historical
+numbers are not restated under the new basis, because the code that produced them no longer exists
+and a migration would have to guess.
+
+Effect on the two frozen field trials, predicted before implementation and measured after:
+**RiemannHypothesis stays `BLOCKED_BY_INVARIANT`, 89 → 88; PvsNP stays `NON_COMPLIANT` at 97.**
+Neither status moves. RiemannHypothesis's point is lost entirely to five rules it was never being
+measured on leaving the denominator — the correction, not a regression. A milestone about false
+assurance that made either repository look more compliant would have failed.
+
+## 1.1.0 — unreleased
 
 **§0b + §0i — a finding's evidence strength constrains the verdict it can produce. Evaluator
 semantic change; no rule added, removed, weakened, or reclassified.**

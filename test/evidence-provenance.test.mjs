@@ -512,3 +512,71 @@ test("§0e · an attestation without a recorded digest reports its current one i
     );
   }
 });
+
+/**
+ * §0e, the acceptance property rather than the mechanism.
+ *
+ * Knowing the currency internally is not the repair. The defect was a correct value emitted on one
+ * supported surface of three, so the endpoint is every supported surface, and the falsifier has to
+ * be one test over all of them: three separate tests would let a surface be dropped and the suite
+ * stay green everywhere except in a file nobody edited. They need not render alike — JSON carries a
+ * field, the two text surfaces carry a phrase — but none may let an attestation of unknown currency
+ * read as a current one. Deleting the currency from any single surface fails this.
+ */
+test("§0e · every supported output surface states an attestation's currency", () => {
+  const dir = fixture("attested-no-digest");
+  const RULE = "evidence.discarded-failures";
+
+  const json = validate("attested-no-digest");
+  const attested = (json.envelope?.results ?? []).filter((r) => r.disposition === "attested");
+  assert.deepEqual(
+    attested.map((r) => r.ruleId),
+    [RULE],
+    "the fixture's one attestation must be honoured, or every surface below is asserting about nothing",
+  );
+  assert.equal(
+    attested[0].attestation.reviewedAgainst.currency,
+    "unknown",
+    "the fixture records no digest, so its currency has never been established",
+  );
+
+  /** Each surface reports currency in its own idiom; each probe returns the text that says so. */
+  const surfaces = [
+    {
+      name: "validate --json",
+      probe: () => {
+        const r = json.envelope.results.find((x) => x.ruleId === RULE);
+        return r?.attestation?.reviewedAgainst?.currency ?? null;
+      },
+    },
+    {
+      name: "validate (human render)",
+      probe: () => {
+        const { out } = run(["validate", `--dir=${dir}`]);
+        return out.split("\n").find((l) => l.includes(RULE) && /currency/i.test(l)) ?? null;
+      },
+    },
+    {
+      name: "status",
+      probe: () => {
+        const { out } = run(["status", `--dir=${dir}`]);
+        return out.split("\n").find((l) => l.includes(RULE) && /currency/i.test(l)) ?? null;
+      },
+    },
+  ];
+
+  for (const surface of surfaces) {
+    const said = surface.probe();
+    assert.ok(
+      said,
+      `${surface.name} says nothing about ${RULE}'s currency. A human-reviewed pass whose review ` +
+        `cannot be dated reads on this surface as an ordinary pass, which is §0e exactly.`,
+    );
+    assert.match(
+      said,
+      /unknown/i,
+      `${surface.name} reports ${RULE} without saying its currency is unknown, so a reader of this ` +
+        `surface alone would take an unmeasured attestation for a current one`,
+    );
+  }
+});

@@ -224,6 +224,55 @@ passes for as long as nobody happens to have written the coupling yet.
 
 ---
 
+## 4a. The red phase, as measured against `3bc38fa`
+
+Fourteen tests: nine red, five green. Run before any production behaviour was changed.
+
+| Test | At v1.2.0 | The reason it gave |
+| --- | --- | --- |
+| C1 asymptotic | **red** | `CLM-0001` reported as an approximation with no stated bound |
+| C1′ unbounded approximation | green | reported, as it must be |
+| C1 table invariant | **red** | `scripts/markers.mjs` does not exist — there is no declaration to check |
+| C2 preposition | **red** | `CLM-0003` reported; it approximates nothing |
+| C2 word forms | **red** | `CLM-0004` reported; it says `bounds` |
+| C2′ quantitative *about* | green | reported, as it must be |
+| C3 citation | **red** | `CLM-0001` proved by citation and told citation records no search |
+| C3′ numerical only | green | reported, as it must be |
+| C3 consumers agree | **red** | the inline literal array is present |
+| C4 no private lists | **red** | **8 sites, 4 detectors** — see below |
+| C5 relevance carried | **red** | nothing in the envelope carries the ledger's claims |
+| C5 scale expressible | **red** | exit 2: the policy is rejected outright |
+| C6 relevance changes nothing | green | vacuously — nothing reads the field |
+| C6 ranking cannot read relevance | green | vacuously — the field does not exist |
+
+Every red gave the reason recorded against it in §1, and no red was caused by a malformed fixture:
+the three true positives run through the same fixtures and the same rules and are green.
+
+### C4 found more than `§0d` reported
+
+`§0d` was recorded from one disagreement — `citation` in `PROOF_EVIDENCE` and absent from
+`detectCounterexampleSearch`'s inline list. The contract test finds **eight** literal evidence-type
+tokens across **four** detectors:
+
+```
+standards.mjs:962   counterexample-search, computational, formal   (counterexample search)
+standards.mjs:991   computational, numerical                       (computation evidence)
+standards.mjs:1325  formal                                         (formal chain)
+standards.mjs:1565  computational, formal                          (evidence surfaces)
+```
+
+Only one of these was known to have drifted. The rest are, at v1.2.0, second opinions that happen to
+agree — which is the state the counterexample list was in for `computational` until this fixture
+asked. This is the shared-discipline argument of §2 confirmed by measurement rather than asserted:
+the defect the adopters found was one instance of a pattern with eight sites.
+
+It also enlarges the repair. `§0d` as recorded is one list; the guarantee as written is that no
+detector holds a private list, and satisfying it means routing all eight through the declaration.
+That is more work than the backlog item describes, and it is the work the item's own guarantee
+implies. Recorded here rather than quietly scoped down or quietly expanded.
+
+---
+
 ## 5. Sequence
 
 1. Red tests for C1–C6, each failing at `3bc38fa` for its stated reason.

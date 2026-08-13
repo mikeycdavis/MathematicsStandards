@@ -1,0 +1,8 @@
+standardVersion: "1.0.0"
+project: "evidence-capabilities"
+
+mathematics:
+  regimes:
+    - informal
+    - computational
+  claimsLedger: "artifacts/claims-ledger.md"

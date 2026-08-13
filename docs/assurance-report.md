@@ -12,8 +12,8 @@ rule catalog, so it cannot claim coverage the rules do not declare.
 
 | Figure | Value |
 | --- | --- |
-| Rules in the catalog | 82 |
-| Rules with a detector | 53 |
+| Rules in the catalog | 83 |
+| Rules with a detector | 54 |
 | Rules with no detector (report not-evaluated, never passed) | 29 |
 | Prohibitions (`forbidden` + `nonExemptible`) | 37 |
 | Standards carrying at least one rule | 22 of 22 |
@@ -53,6 +53,14 @@ A claims ledger exists at artifacts/claims-ledger.md, or at the path project-pol
 Every claim heading matches CLM-NNNN, no identifier is duplicated, and every entry carries the mandatory Status, Statement, and History fields.
 
 **What the check does not establish.** Exact over the file's syntax. It says nothing about whether the field values are true.
+
+### `claims.relevance-vocabulary`
+
+[Standard 2](../standards/02-claim-hierarchy.md) · required · error · structural
+
+When a project declares mathematics.relevanceScale, every Relevance value in the claims ledger is a member of it. A project that declares no scale is not evaluated by this rule.
+
+**What the check does not establish.** Establishes that a declared value is in the declared set. It does not establish that the value is true: whether a claim really is off-target is a mathematical judgement about its content, and nothing here reads it. Silent by construction for any project that declares no scale.
 
 ### `claims.status-vocabulary`
 

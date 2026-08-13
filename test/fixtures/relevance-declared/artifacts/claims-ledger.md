@@ -11,6 +11,14 @@ the property under test is that a claim can be as strong as the evidence gets an
 Its pair is `relevance-shifted`, which is this file with the two relevance values exchanged and
 nothing else altered. Neither run may differ from the other in any status, rank, verdict or score.
 
+**Both entries deliberately fail a rule**, and that is what makes the pair sensitive. Each is a
+THEOREM supported only by a bounded numerical check, so each is reported as owing a counterexample
+search. An earlier draft gave them proof evidence and nothing fired at all — which meant a coupling
+that made relevance change a per-claim outcome had no outcome to change, and the mutation written to
+break the independence guard passed it instead. A pair where nothing happens cannot detect a
+difference in what happens.
+
+
 ## CLM-0001 — The target statement
 
 - **Status:** THEOREM
@@ -23,8 +31,7 @@ nothing else altered. Neither run may differ from the other in any status, rank,
 - **Obligations:** none
 - **Equivalences:** none
 - **Evidence:**
-  - proof — `proofs/target.md`
-  - counterexample-search — `proofs/target.md`
+  - numerical — checked up to 10^6 in exact integer arithmetic, `proofs/target.md`
 - **Formal:** none
 - **History:**
   - 2026-05-01 → THEOREM (proved, `proofs/target.md`)
@@ -41,8 +48,7 @@ nothing else altered. Neither run may differ from the other in any status, rank,
 - **Obligations:** none
 - **Equivalences:** none
 - **Evidence:**
-  - proof — `proofs/auxiliary.md`
-  - counterexample-search — `proofs/auxiliary.md`
+  - numerical — checked up to 10^6 in exact integer arithmetic, `proofs/auxiliary.md`
 - **Formal:** none
 - **History:**
   - 2026-05-01 → THEOREM (proved, `proofs/auxiliary.md`)

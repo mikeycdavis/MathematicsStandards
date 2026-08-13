@@ -93,6 +93,12 @@
           "description": "Repository-relative directory holding <slug>/problem.md records. Defaults to artifacts/open-problems.",
           "type": "string",
           "minLength": 1
+        },
+        "relevanceScale": {
+          "description": "The values this project's claims may declare in their Relevance field: what a claim bears on, as distinct from how strongly it is supported. A SET, not a ladder. Nothing reads one member as worth more than another, and no member affects any status, rank, verdict or score — an ordering here would smuggle the epistemic ladder back in through the axis added to keep it out. The framework supplies no default scale on purpose: both field trials kept this axis and encoded it differently, one as a numbered category key and one as prose about the target, so shipping either encoding would generalize one project's apparatus. Omit the key and a declared relevance is still recorded, just never checked.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
         }
       }
     }

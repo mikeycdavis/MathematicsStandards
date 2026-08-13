@@ -300,6 +300,54 @@ Written before implementation, recorded so the measurement can falsify them.
 | Either adopter's score | **may rise**, and this is the uncomfortable one. Tier 2's movement was downward and easy to defend. Here a false positive leaving is a rule going from failed to passed, which looks like grade inflation and is not — each must be shown to be a case the framework was wrong about |
 | Relevance | **no change anywhere.** Neither adopter declares a scale, so C5 holds trivially on both, and the specimens cannot be the evidence that the axis works. Its evidence is the fixtures |
 
+### 6a. Measured — and every removal is named
+
+Full suite 187 passing, gate green, both specimens rerun. Neither verdict moved.
+
+| | v1.2.0 | after | |
+| --- | --- | --- | --- |
+| RiemannHypothesis | `BLOCKED_BY_INVARIANT` / 88 | `BLOCKED_BY_INVARIANT` / **92** | 7 failures → 5 |
+| PvsNP | `NON_COMPLIANT` / 97 | `NON_COMPLIANT` / **100** | 2 failures → 1 |
+
+**Three findings were removed and no finding was added.** One-to-one, against the statement that
+produced each:
+
+| Removed | Claim | The statement, and which repair removed it |
+| --- | --- | --- |
+| `computation.error-bounds-stated` | RH `CLM-0004` | `c_n = O(n^{-3/4+ε})` — §0c, asymptotic arm. The `O` is the bound |
+| `computation.error-bounds-stated` | RH `CLM-0005` | `RH holds if and only if c_n = O(n^{-3/4+ε})` — the same arm |
+| `computation.error-bounds-stated` | PvsNP `CLM-0021` | "the counting **bounds** proved … are **about** a different object" — §0c, *both* PvsNP arms in one sentence: the plural the suppressor could not match, and the preposition the trigger should never have matched |
+| `proof.counterexample-search-recorded` | RH `CLM-0005` | evidence is `citation — Báez-Duarte, … 2005` — §0d, and this is literally the published theorem the disposition recorded |
+
+Nothing else moved. The score rise is those three removals plus one denominator entry:
+`claims.relevance-vocabulary` is evaluated and passes in both, neither adopter having declared a
+scale, so it enters as a pass. RH 48 → 49 evaluated required rules, PvsNP 34 → 35.
+
+**The rise is not evidence that anything improved.** It is evidence that four findings the framework
+had no business making are gone, and each is here with the sentence that produced it so the claim can
+be checked rather than trusted. If any of the four had been a real defect this milestone would have
+concealed one, which is why the removals are enumerated and not counted.
+
+### 6b. Two defects found in this milestone's own instruments
+
+Recorded because both are the failure modes this tier is about, committed by the work repairing them.
+
+**The C4 falsifier over-reported by 60%.** Its first form flagged eight evidence-token spellings; three
+were the ledger field `formal` and the applicability regimes `computational`/`formal` — three
+vocabularies, one spelling, recognised without the context that says which. That is §0c, inside the
+test written to prove §0d. The scan now requires the literal to sit where evidence data is
+interrogated, which is the same qualification `requiresQuantity` makes for `about`. Five sites were
+genuine and all five are migrated.
+
+**The C6 independence guard was passing a mutation it should have failed.** The relevance pair is
+symmetric by construction, so a coupling that penalised off-target claims penalised exactly one claim
+in each run and left the per-rule multiset identical. The guard now compares which claims are named,
+and the fixtures were changed to fail a rule on purpose — an earlier draft gave both entries proof
+evidence, so nothing fired, and a pair where nothing happens cannot detect a difference in what
+happens.
+
+---
+
 The last row is a limit on what this milestone can claim: `A1` is the one accepted *addition*, both
 adopters wanted it, and neither frozen specimen can demonstrate it, because both froze before the
 field existed. That is a gap in the evidence, not a gap in the design, and it is stated here rather

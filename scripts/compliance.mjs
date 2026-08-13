@@ -635,11 +635,20 @@ function summarise(results, policy) {
 }
 
 /** The Standard 25 envelope. `schemaVersion` versions this format, independent of the others. */
-export function envelope({ verdict, project, standardVersion, auditedAt, repo, frameworkCoverage }) {
+export function envelope({ verdict, project, standardVersion, auditedAt, repo, frameworkCoverage, claims }) {
   return {
     schemaVersion: "1.0",
     standardVersion: standardVersion ?? null,
     project: project ?? repo ?? null,
+    /**
+     * A1. The claim-level facts that are not about compliance.
+     *
+     * Relevance lives here rather than on a result because it is not the outcome of a rule: it is
+     * something the project declared about its own work, and no rule reads it for anything but
+     * membership. Putting it on results would invite a consumer to correlate it with a status, which
+     * is the coupling this axis exists to prevent. Absent when the ledger is.
+     */
+    claims: claims ?? null,
     // The other half of `audit`'s declaration. A field that appears on one command and is absent on
     // the other is read as "this build does not emit it" — the declaration only distinguishes if
     // both commands make it.

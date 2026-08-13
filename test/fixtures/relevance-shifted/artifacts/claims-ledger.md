@@ -18,8 +18,7 @@ axis is independent, because a single ledger cannot distinguish "relevance chang
 - **Obligations:** none
 - **Equivalences:** none
 - **Evidence:**
-  - proof — `proofs/target.md`
-  - counterexample-search — `proofs/target.md`
+  - numerical — checked up to 10^6 in exact integer arithmetic, `proofs/target.md`
 - **Formal:** none
 - **History:**
   - 2026-05-01 → THEOREM (proved, `proofs/target.md`)
@@ -36,8 +35,7 @@ axis is independent, because a single ledger cannot distinguish "relevance chang
 - **Obligations:** none
 - **Equivalences:** none
 - **Evidence:**
-  - proof — `proofs/auxiliary.md`
-  - counterexample-search — `proofs/auxiliary.md`
+  - numerical — checked up to 10^6 in exact integer arithmetic, `proofs/auxiliary.md`
 - **Formal:** none
 - **History:**
   - 2026-05-01 → THEOREM (proved, `proofs/auxiliary.md`)

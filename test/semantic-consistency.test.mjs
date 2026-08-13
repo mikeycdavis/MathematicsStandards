@@ -231,11 +231,28 @@ test("C4 · no detector holds a private list of evidence types", () => {
     "citation",
     "formal",
   ];
+  // THE FALSIFIER HAD THE DEFECT IT WAS WRITTEN TO CATCH, AND THAT IS RECORDED RATHER THAN QUIETLY
+  // CORRECTED. Its first form flagged any evidence-token spelling anywhere in the file and found
+  // eight sites. Three were not evidence-type lists at all:
+  //
+  //     standards.mjs  !e.fields.has("formal")                        the LEDGER FIELD named formal
+  //     standards.mjs  REGIMES = new Set([… "computational", "formal" …])   APPLICABILITY REGIMES
+  //
+  // Three vocabularies, one spelling. Recognising a token without the context that says which
+  // vocabulary it belongs to is §0c — the defect this milestone exists to repair — committed by the
+  // test written to prove §0d. So the scan now requires the literal to sit where evidence data is
+  // being interrogated, which is the same qualification `requiresQuantity` makes for `about`.
+  //
+  // Five sites were genuine and all five are migrated. The eight-versus-five correction is in the
+  // design record; a falsifier that over-reports is as much a defect as one that under-reports,
+  // and this one over-reported by 60%.
+  const INTERROGATES_EVIDENCE = /\.type\b|\btypes\b|\bevidence\b/;
   const offenders = [];
   const lines = detectorSource.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue; // a comment naming a type is mention, not use
+    if (!INTERROGATES_EVIDENCE.test(line)) continue;
     for (const token of EVIDENCE_TOKENS) {
       if (line.includes(`"${token}"`)) offenders.push(`standards.mjs:${i + 1} ${token}`);
     }
@@ -304,6 +321,25 @@ test("C6 · relevance changes no status, rank, verdict or score", () => {
   const shape = (env) =>
     env.results.map((r) => `${r.ruleId}:${r.status}:${r.disposition}`).sort();
   assert.deepEqual(shape(a.envelope), shape(b.envelope), "a per-rule outcome moved with relevance alone");
+
+  // STRENGTHENED BY ITS OWN MUTATION TEST, AND THIS IS WHY. The per-rule shape above compares a
+  // multiset of outcomes, and the pair is symmetric: A declares CLM-0001 target and CLM-0002
+  // off-target, B is the mirror. So a coupling that penalised off-target claims would penalise
+  // exactly one claim in each run and produce the same multiset — invisible here, and the mutation
+  // that should have failed this test passed it.
+  //
+  // Which claim is named is the part that moves. Comparing the findings themselves catches it, and
+  // the fixtures are identical apart from the two relevance values, so there is nothing else the
+  // comparison could legitimately be reporting.
+  const claimsNamed = (env) =>
+    (env.findings ?? [])
+      .flatMap((f) => (f.evidence ?? []).map((e) => `${f.rule} ${e.replace(/^.*?(CLM-\d{4})/, "$1")}`))
+      .sort();
+  assert.deepEqual(
+    claimsNamed(a.envelope),
+    claimsNamed(b.envelope),
+    "the same rules fired, but about different claims, which is relevance reaching a per-claim outcome",
+  );
 });
 
 test("C6 · the ranking cannot read relevance", () => {

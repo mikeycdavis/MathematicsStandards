@@ -46,7 +46,10 @@ import {
   looksUniversal,
   looksBounded,
   isPathShaped,
+  evidenceCan,
+  hasFormalBlock,
 } from "./claims.mjs";
+import { undischargedAssertions } from "./markers.mjs";
 
 /**
  * This file names the very tokens it searches for — `sorry`, `Admitted`, `native_decide`. Scanning
@@ -713,6 +716,38 @@ function scanReferences() {
   return hits;
 }
 
+/**
+ * A1. The only thing the framework checks about relevance: that a declared value is a member of the
+ * scale the project declared. Membership, and nothing else.
+ *
+ * No ordering is imposed or inferred. `target` is not worth more than `off-target`, and a detector
+ * that read one as stronger would have rebuilt the epistemic ladder inside the axis introduced to
+ * keep the two apart — which is precisely what both field trials refused to do by hand, one keeping
+ * a MACHINE_CHECKED_PROOF at category 2 and the other keeping one that "constrains nothing about
+ * P/poly" at full strength.
+ *
+ * Silent when the project declares no scale. An adopter with one target and nothing off it does not
+ * need a second axis, and inventing a default scale would generalize one project's encoding.
+ */
+function detectRelevance() {
+  if (!ledger) return;
+  const scale = policy.document?.mathematics?.relevanceScale;
+  if (!Array.isArray(scale) || scale.length === 0) return;
+  const declared = new Set(scale);
+  const offScale = [];
+  for (const entry of ledger.entries.values()) {
+    if (entry.relevance === null || entry.relevance === undefined) continue;
+    if (declared.has(entry.relevance)) continue;
+    offScale.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — relevance '${entry.relevance}' is not in the declared scale`);
+  }
+  if (offScale.length === 0) return;
+  report("claims.relevance-vocabulary", {
+    message: `${offScale.length} claim(s) declare a relevance outside mathematics.relevanceScale. A value nobody declared is a second vocabulary, which is how the first one stopped meaning anything.`,
+    evidence: offScale,
+    label: "OBSERVED", // a parsed field compared against a declared list; nothing is inferred
+  });
+}
+
 function detectInlineLabels(references) {
   if (!ledger) return;
   const unknown = references.filter((r) => !ledger.entries.has(r.id));
@@ -959,7 +994,10 @@ function detectCounterexampleSearch() {
     if (entry.status === "COMPUTATIONAL_VERIFICATION") continue;
     if (!looksUniversal(entry)) continue;
     const types = new Set(entry.evidence.map((e) => e.type));
-    if (["counterexample-search", "proof", "formal", "computational"].some((t) => types.has(t))) continue;
+    // §0d. The question this rule asks is its own; what answers it is not. Asking the declaration
+    // is what stops this list drifting from PROOF_EVIDENCE again — the drift that had a published
+    // 2005 theorem searching for counterexamples to itself.
+    if ([...types].some((t) => evidenceCan(t, "discharges-counterexample-search"))) continue;
     missing.push(`${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) — universal statement, no recorded search or proof`);
   }
   if (missing.length === 0) return;
@@ -988,7 +1026,7 @@ function detectComputationEvidence() {
 
   for (const entry of ledger.entries.values()) {
     for (const item of entry.evidence) {
-      const computational = item.type === "computational" || item.type === "numerical";
+      const computational = evidenceCan(item.type, "is-computation");
       if (computational) {
         const hasRange = looksBounded(item.detail) || /\ball\b|\bsample|\brandom|\bexhaustive/i.test(item.detail);
         const hasArithmetic = /\b(exact|integer|rational|interval|floating[- ]point|float)\b/i.test(item.detail);
@@ -1017,11 +1055,13 @@ function detectComputationEvidence() {
       }
     }
 
-    const approximate = /≈|~=|\bapproximately\b|\babout\b|\bO\(|\bo\(|\bΘ\(|\bΩ\(|\btruncat/i.test(entry.statement);
-    const bounded = /\berror\b|\bbound\b|\binterval\b|\bwithin\b|\bat most\b|\bprecision\b/i.test(
+    // §0c. One table, one pass, one text. The two regex literals this replaces were evaluated over
+    // two different strings, so a marker could assert over the statement and be unable to discharge
+    // over the statement-plus-evidence. Everything a reader would consider goes in once.
+    const undischarged = undischargedAssertions(
       `${entry.statement} ${entry.evidence.map((e) => e.detail).join(" ")}`,
     );
-    if (approximate && !bounded) {
+    if (undischarged.includes("approximation")) {
       noBounds.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — approximation with no stated error bound`);
     }
   }
@@ -1322,7 +1362,7 @@ function detectFormal(proofs) {
   }
 
   if (ledger) {
-    const noField = [...ledger.entries.values()].filter((e) => (rankOf(e.status) ?? -99) >= PROVED_RANK && !e.fields.has("formal"));
+    const noField = [...ledger.entries.values()].filter((e) => (rankOf(e.status) ?? -99) >= PROVED_RANK && !hasFormalBlock(e));
     if (noField.length > 0) {
       report("formal.gap-inventory", {
         message: `${noField.length} claim(s) at proved rank omit the Formal field. Without it, 'we have a Lean development' reads as 'the results are machine-checked'.`,
@@ -1695,6 +1735,7 @@ detectLedgerParse();
 detectStatusVocabulary();
 detectHistoryComplete();
 detectDefinitionsFirst();
+detectRelevance();
 detectInlineLabels(references);
 detectSilentPromotion(references);
 detectStatusExceedsSupport();
@@ -2383,6 +2424,14 @@ const report_ = envelope({
   auditedAt: new Date().toISOString(),
   repo: root.split(path.sep).join("/"),
   frameworkCoverage: coverage(CATALOG, { evaluated: EVALUATED_RULES, totalStandards: TOTAL_STANDARDS }),
+  // A1. Status and relevance side by side, both as the ledger declares them, neither derived from
+  // the other. A consumer that wants to know what a claim bears on can read it here instead of
+  // parsing prose, which is what both field trials were reduced to.
+  claims: ledger
+    ? Object.fromEntries(
+        [...ledger.entries.values()].map((e) => [e.id, { status: e.status, relevance: e.relevance ?? null }]),
+      )
+    : null,
 });
 
 if (JSON_OUT) {

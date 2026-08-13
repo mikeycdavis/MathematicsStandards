@@ -115,6 +115,10 @@ export const RULE_SURFACES = new Map([
   ["claims.history-complete", { subject: P, surfaces: ["claims-ledger"] }],
   ["claims.definitions-first", { subject: P, surfaces: ["claims-ledger"] }],
   ["claims.inline-label-consistency", { subject: P, surfaces: ["claims-ledger", "prose"] }],
+  // Both surfaces are load-bearing: the ledger supplies the declared values, the policy supplies the
+  // scale they are checked against. With no scale the rule has nothing to compare, which is a
+  // project that declared no second axis rather than a project that failed one.
+  ["claims.relevance-vocabulary", { subject: P, surfaces: ["claims-ledger", "project-policy"] }],
   // Two arms with genuinely different surfaces, and Tier 1 already gave them different labels: the
   // ledger arm reads the History block (OBSERVED), the prose arm scores a text window (INFERRED).
   ["claims.silent-promotion", { subject: P, surfaces: ["claims-ledger", "prose"] }],

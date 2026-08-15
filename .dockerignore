@@ -1,0 +1,27 @@
+# What must not enter the CI image.
+#
+# The first entry is the important one. Without it the build context carries the whole history, the
+# image gets a .git directory, and any check could quietly start asking git questions instead of
+# examining the tree it was given. The commit identity is supposed to arrive as CI_COMMIT, resolved
+# on the host and re-verified after the run — see scripts/submit-pr.mjs. Leaving .git out is what
+# keeps that the only route.
+.git
+
+# .gitignore is deliberately NOT excluded. It was, briefly, on the reflex that anything starting
+# with ".git" is history — and the pipeline went red, because a check reads it. It is tree content,
+# committed and reviewed like any other file, and a check is entitled to ask what it says.
+
+# Evidence from previous runs. Copying it in would mean a stale receipt could survive into a fresh
+# image and be mistaken for this run's result.
+artifacts/local-ci
+
+# Developer-machine state. None of this exists in this repository today; the entries are here so
+# that the day one of them appears, it does not silently join the build context.
+node_modules
+.env
+.env.*
+*.log
+.vscode
+.idea
+.DS_Store
+Thumbs.db

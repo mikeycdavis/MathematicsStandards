@@ -1,0 +1,82 @@
+# The ephemeral CI environment.
+#
+# Never run this file by hand. `scripts/ci.mjs` is the entry point, and it supplies the two things
+# that make a run safe: a unique project name, so concurrent runs and unrelated developer containers
+# cannot collide, and a teardown that happens even when the pipeline fails. Invoking compose directly
+# with the default project name would put this repository's CI containers in the same namespace as
+# whatever else is running from this directory.
+#
+# Interpolated by scripts/ci.mjs; the defaults exist so a hand-run degrades to something sensible
+# rather than something wrong:
+#   CI_CONTEXT  build context. Normally a throwaway git worktree containing exactly the commit under
+#               verification, so the image holds that tree and not the developer's edits.
+#   CI_OUT      host directory that receives the evidence file.
+#   CI_COMMIT / CI_BRANCH / CI_ENV  recorded verbatim in the evidence file.
+
+services:
+  ci:
+    build:
+      context: ${CI_CONTEXT:-.}
+      dockerfile: Dockerfile.ci
+    init: true
+
+    # No network. Not a hardening gesture — an assertion.
+    #
+    # This repository has zero runtime dependencies and its checks read only the tree they were
+    # given. If any of that stops being true, the pipeline fails here rather than succeeding by
+    # quietly reaching the internet, which is the same reason the workflow has never run `npm ci`.
+    # It also means CI cannot exfiltrate anything, which matters when the thing being executed is
+    # whatever a branch says it is.
+    network_mode: none
+
+    # The single writable path, and the only place host and container meet. The source went in at
+    # build time; nothing bind-mounts the working tree, so nothing the pipeline does can reach the
+    # developer's checkout.
+    volumes:
+      - ${CI_OUT:-./artifacts/local-ci}:/ci-out
+
+    environment:
+      CI_COMMIT: ${CI_COMMIT:-unknown}
+      CI_BRANCH: ${CI_BRANCH:-unknown}
+      CI_ENV: ${CI_ENV:-docker}
+
+    # Read-only root filesystem with writable scratch. The pipeline needs somewhere for npm's cache
+    # and for the temp directories the init and policy tests create; it needs nothing else writable,
+    # and saying so here means an accidental write to the source copy fails loudly.
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+
+# WHERE A DATABASE WOULD GO, AND WHY THERE ISN'T ONE.
+#
+# This repository has no database and no service dependency of any kind. Its state is files in git —
+# a markdown claims ledger, a JSON rule catalog, a YAML policy — and every check is a pure function
+# of the tree. Standing up a database to satisfy the shape of a CI template would be inventing a
+# dependency in order to isolate it.
+#
+# For a sibling repository that does need one, the shape is:
+#
+#   services:
+#     db:
+#       image: mcr.microsoft.com/mssql/server:2022-latest   # pinned by digest, as above
+#       environment:
+#         SA_PASSWORD: ${CI_DB_PASSWORD:?set a throwaway password in the environment, never here}
+#         ACCEPT_EULA: "Y"
+#       healthcheck:
+#         test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1'"]
+#         interval: 3s
+#         timeout: 5s
+#         retries: 20
+#         start_period: 10s
+#     ci:
+#       depends_on:
+#         db: {condition: service_healthy}
+#       network_mode: !reset null        # a service that talks to a database cannot have none
+#       networks: [ci]
+#
+# scripts/ci.mjs already implements the rest: it reads this file, finds every service that is not
+# `ci`, and brings them up with `--wait`, which blocks on the declared healthcheck and never on a
+# timer. The database container and its anonymous volume live and die inside the run's unique
+# compose project, so a developer's own database is not reachable, let alone reset. The password
+# comes from the environment; it is a throwaway for a container that is destroyed minutes later, and
+# it does not belong in a committed file.

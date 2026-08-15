@@ -1,0 +1,16 @@
+# Local CI evidence. Written by scripts/run-stages.mjs on every run, pass or fail.
+#
+# Not committed, and the distinction matters. This repository does retain evidence deliberately —
+# the assurance report is generated and committed, and backlog items carry commit SHAs — but that is
+# evidence about the standards, reviewed when it changes. A verification receipt is about one run on
+# one machine at one moment. Committing it would put a file in history that says PASS for a commit
+# that no longer exists, and make every branch conflict on it.
+#
+# The durable record of a verified submission is the PR body, which carries the same facts to the
+# place where they are actually read.
+artifacts/local-ci/
+
+# Node never installs anything here — this repository has zero dependencies and CI runs no install
+# step, which is what enforces that. The entry exists so a stray `npm install` cannot quietly commit
+# a tree.
+node_modules/

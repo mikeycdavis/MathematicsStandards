@@ -1,0 +1,50 @@
+# The CI environment. Nothing in it comes from the developer's machine except the source tree.
+#
+# Pinned by digest, not by tag. `node:20-alpine` is a moving target, and a pipeline whose base image
+# can change underneath it cannot answer "why did this commit pass on Tuesday and fail on Thursday".
+# To move to a newer Node, change both the tag and the digest here in one commit, so the bump is a
+# reviewable event rather than something that happened.
+#
+# Node 20 because that is what .github/workflows/ci.yml has always used. `engines` permits >=18; this
+# is not the place to discover that a newer runtime behaves differently.
+FROM node:20.19-alpine@sha256:658d0f63e501824d6c23e06d4bb95c71e7d704537c9d9272f488ac03a370d448
+
+# THERE IS NO DEPENDENCY INSTALL STEP, AND ITS ABSENCE IS THE ENFORCEMENT.
+#
+# This repository has zero runtime dependencies. The GitHub workflow has never run `npm ci`, so
+# adding a dependency makes the code fail to run in CI rather than quietly succeed. The container
+# keeps that guarantee and makes it stronger: `compose.ci.yml` runs this image with no network at
+# all, so an added dependency cannot be reached even if something tries to fetch it at runtime. A
+# lint rule could be turned off; this cannot.
+
+WORKDIR /repo
+
+# npm wants somewhere to put its cache and logs and will fail noisily if HOME is not writable.
+# /tmp is a tmpfs owned by the run, which is the correct lifetime for both.
+ENV NPM_CONFIG_CACHE=/tmp/.npm \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    CI=true
+
+# The source is COPIED, not bind-mounted. Two reasons, both load-bearing:
+#
+#   1. The image is a sealed snapshot of one tree. Nothing the pipeline does can reach back and
+#      modify the host checkout, which is what makes `--with-mutation-check` — a suite that
+#      deliberately edits tracked files — safe to offer at all.
+#   2. It removes the developer's working directory from the result. A bind mount would let an
+#      uncommitted edit, an editor swap file, or a stray build artifact take part in the run, and
+#      the commit that passed would not be the tree that was tested.
+#
+# .dockerignore keeps .git and previous evidence out, so the image holds the tree and nothing about
+# the history. The identity of the commit arrives separately, as CI_COMMIT.
+COPY --chown=node:node . /repo
+
+# Drop root. The pipeline is untrusted code execution by policy — it runs whatever the branch says —
+# and there is nothing here that needs to be root to read.
+USER node
+
+# Results are written to a directory the host binds in. The default in run-stages.mjs points inside
+# /repo, which is deliberately not where this image wants them: /repo is a copy that dies with the
+# container, so the run is told explicitly to write somewhere that outlives it.
+CMD ["node", "scripts/run-stages.mjs", "--out=/ci-out"]

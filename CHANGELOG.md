@@ -9,6 +9,33 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
+## Unreleased
+
+**Local Docker CI and verified PR submission. No rule added, removed, weakened, or reclassified —
+this changes how the repository is built and reviewed, not what it requires of anyone.**
+
+The gate now runs in a container on the developer's machine before a branch is pushed, and a PR can
+only be opened for a commit that passed it. `scripts/ci.mjs` runs the pipeline in a disposable,
+network-less container; `scripts/submit-pr.mjs` resolves `HEAD` before and after the run, refuses to
+continue if it moved, and pushes the verified SHA by name. See `docs/local-ci.md`.
+
+The eight gates are unchanged and none was dropped. What changed is where they are declared: the
+list moved out of `.github/workflows/ci.yml` into `scripts/ci-stages.mjs`, and both the container
+and the workflow now execute that one list. A test fails if the workflow goes back to naming the
+commands itself.
+
+Two defects surfaced, both from running the pipeline somewhere other than a developer's machine for
+the first time:
+
+- **`npm test` did not work on Node 20**, which is the version the workflow pins. The script quoted
+  its glob, which stops the shell expanding it and hands the literal pattern to node — which only
+  learned to expand it itself in v21. The quotes are gone; the same 193 tests now run on 20 and 24
+  alike, and the unquoted form is pinned by a test.
+- **GitHub-hosted Actions have never executed a job on this repository.** Every run is stopped at
+  the account's billing gate before reaching a step, which is why the above went unnoticed. The
+  workflow is kept and refactored rather than deleted, and local CI is deliberately independent of
+  it.
+
 ## 1.2.0 — 2026-08-12
 
 **Tier 2, evidence provenance: every result records what evidence surface it inspected and whose

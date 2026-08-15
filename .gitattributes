@@ -1,0 +1,12 @@
+# Shell scripts must check out with LF, on every platform.
+#
+# Development here happens on Windows, where git's autocrlf would hand `scripts/ci.sh` a CRLF line
+# ending — including on the shebang line, where `#!/usr/bin/env sh\r` names an interpreter called
+# "sh\r" and the script dies with a message that does not mention line endings. Nothing in this
+# repository runs those scripts today, so the failure would wait until the first Linux checkout: a
+# self-hosted runner, a colleague, or a container invoking ./scripts/ci.sh instead of node directly.
+*.sh text eol=lf
+
+# The Dockerfile and compose file are read by tooling that is happier with LF and never needs CRLF.
+Dockerfile* text eol=lf
+*.yml text eol=lf

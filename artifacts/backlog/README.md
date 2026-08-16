@@ -15,8 +15,8 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Status | Items |
 | --- | ---: |
-| ○ Not started | 2 |
-| ◑ In progress | 4 |
+| ○ Not started | 1 |
+| ◑ In progress | 5 |
 | ◕ In review | 3 |
 | ● Complete | 57 |
 | ◌ Deferred | 8 |
@@ -42,6 +42,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 ## In flight
 
+- ◑ [EP-08](./items/EP-08.md) — Tier 3 — semantic inconsistency and representation
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
 - ◕ [FE-21](./items/FE-21.md) — §0c — a recognized representation of the evidence must not be read as its absence
 - ◕ [FE-22](./items/FE-22.md) — §0d — evidence types must mean the same thing to every rule
@@ -107,7 +108,7 @@ _Nothing marked ready._
       - ● **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
       - ● **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
       - ● **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
-    - ○ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
+    - ◑ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
       - ◕ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
       - ◕ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule
       - ◕ **[FE-23](./items/FE-23.md)** A1 — epistemic strength and relevance-to-target are independent axes

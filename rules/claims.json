@@ -122,6 +122,26 @@
       "$assuranceNote": "Finds references written in the CLM-NNNN convention. Prose that discusses a claim without naming its identifier is invisible, and no check can connect an English sentence to a ledger row."
     },
     {
+      "id": "claims.relevance-vocabulary",
+      "title": "A declared relevance is a member of the declared scale",
+      "standard": 2,
+      "category": "claims",
+      "level": "required",
+      "severity": "error",
+      "validationType": "structural",
+      "assurance": "full",
+      "nonExemptible": false,
+      "introducedIn": "1.3.0",
+      "description": "When a project declares mathematics.relevanceScale, every Relevance value in the claims ledger is a member of it. A project that declares no scale is not evaluated by this rule.",
+      "rationale": "Epistemic strength and relevance to the target are independent axes, and both field trials had to record the second in prose because no field took it: one kept a machine-checked proof at an off-target category, the other a machine-checked proof that constrains nothing about its target, and neither demoted a status to say so. A field whose vocabulary nobody declared is a second vocabulary, which is how the first stops meaning anything. Membership is the whole of the check — the scale is a set and never an ordering, because a ranked relevance would rebuild the epistemic ladder inside the axis added to keep the two apart.",
+      "remediation": "Add the value to mathematics.relevanceScale if it belongs there, or correct the ledger entry. Do not express relevance by adjusting a claim's Status.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Establishes that a declared value is in the declared set. It does not establish that the value is true: whether a claim really is off-target is a mathematical judgement about its content, and nothing here reads it. Silent by construction for any project that declares no scale."
+    },
+    {
       "id": "claims.silent-promotion",
       "title": "A claim never moves up the hierarchy without a record",
       "standard": 2,

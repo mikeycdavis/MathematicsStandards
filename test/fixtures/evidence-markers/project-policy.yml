@@ -1,0 +1,11 @@
+standardVersion: "1.0.0"
+project: "evidence-markers"
+
+# Minimal on purpose: this fixture exists to produce the findings of one rule, so it declares only
+# what a verdict requires. Without a policy `evaluate` returns NOT_EVALUATED, and a test asserting
+# "this must not be reported" would pass against a run that never evaluated anything.
+mathematics:
+  regimes:
+    - informal
+    - computational
+  claimsLedger: "artifacts/claims-ledger.md"

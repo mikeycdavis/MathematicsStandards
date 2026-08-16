@@ -1,0 +1,13 @@
+standardVersion: "1.0.0"
+project: "relevance-declared"
+
+# No relevanceScale here, deliberately, and its pair `relevance-shifted` matches it line for line
+# apart from the project name. Recording a relevance is unconditional; validating one against a
+# declared scale is not. Keeping the scale out of this pair means both runs reach a verdict at
+# v1.2.0, so the independence comparison is answerable against the baseline as well as after the
+# change — a comparison that could only be run on one side of the repair would prove nothing about
+# what the repair did.
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

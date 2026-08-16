@@ -1,0 +1,20 @@
+standardVersion: "1.0.0"
+project: "relevance-off-scale"
+
+# The only fixture that declares a scale. At v1.2.0 this policy does not merely fail to check the
+# ledger's relevance values — `mathematics` is `additionalProperties: false`, so the whole policy is
+# rejected and the run reaches no verdict at all. That is the sharpest statement of A1's absence:
+# the format cannot express the axis, never mind evaluate it.
+#
+# The scale is a set and not an order. Nothing may read `target` as worth more than `off-target`;
+# ranking the members would smuggle the epistemic ladder back in through the axis added to keep it
+# out, which is the one thing both adopters refused to do by hand.
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"
+  relevanceScale:
+    - target
+    - equivalent
+    - instrument
+    - off-target

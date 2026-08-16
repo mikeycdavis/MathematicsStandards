@@ -1,0 +1,9 @@
+standardVersion: "1.0.0"
+project: "relevance-shifted"
+
+# Identical to `relevance-declared` apart from the project name above. Any other difference would
+# make the pair unable to attribute a divergence to the relevance values.
+mathematics:
+  regimes:
+    - informal
+  claimsLedger: "artifacts/claims-ledger.md"

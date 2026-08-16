@@ -24,6 +24,7 @@ export const EVALUATED_RULES = [
   "claims.history-complete",
   "claims.definitions-first",
   "claims.inline-label-consistency",
+  "claims.relevance-vocabulary",
   "claims.silent-promotion",
   "claims.status-exceeds-support",
   "claims.conditional-as-unconditional",

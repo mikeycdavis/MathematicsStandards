@@ -128,11 +128,67 @@ export const EVIDENCE_CEILING = new Map([
   ["heuristic", 2],
 ]);
 
-/** Evidence types that record a prior-work check (Standard 14 R1), whether or not they prove anything. */
-export const LITERATURE_EVIDENCE = new Set(["citation", "literature-search"]);
+/**
+ * §0d — what an evidence type is worth, declared once, for every rule that asks.
+ *
+ * THE DEFECT THIS REPLACES. `PROOF_EVIDENCE` used to be a hand-written set beside this comment, and
+ * `detectCounterexampleSearch` re-decided the same question with an inline array of its own. They
+ * disagreed in both directions: `citation` carried a claim to proved rank here and answered nothing
+ * there, so RiemannHypothesis's theorem — published, with a proof, in 2005 — was asked to search for
+ * counterexamples; and `computational` answered the search question there while being no proof here,
+ * which is correct and was correct by accident, in a list that did not know this one existed.
+ *
+ * A capability is a question a rule asks of a type, not a rank. Ranks already exist, in
+ * EVIDENCE_CEILING, and they answer "how far up the ladder can this carry a claim" — a different
+ * question from "does this discharge that obligation", which is why one cannot be derived from the
+ * other. `counterexample-search` discharges the search obligation completely and carries nothing.
+ *
+ * Detectors keep their own domain questions. What they may not keep is a private opinion about what
+ * a declared type means; they ask here.
+ */
+export const EVIDENCE_CAPABILITIES = new Map([
+  ["proof", ["establishes-proof", "discharges-counterexample-search"]],
+  ["formal", ["establishes-proof", "discharges-counterexample-search"]],
+  // Records prior work AND proves: a citation to a published proof is both the literature check and
+  // the proof. Standard 14 R1 wants the first; Standard 7 wants the second; one token does both and
+  // splitting it would make an adopter cite the same paper twice.
+  ["citation", ["establishes-proof", "discharges-counterexample-search", "records-prior-work"]],
+  ["literature-search", ["records-prior-work"]],
+  // Answers the search question exactly, and nothing else. This is the type whose whole meaning is
+  // one capability, and the reason capabilities are not derivable from EVIDENCE_CEILING's ranks.
+  ["counterexample-search", ["discharges-counterexample-search"]],
+  // A scan that found no counterexample is a counterexample search under another name. It proves
+  // nothing beyond its range, which is what `bounded-range-only` records.
+  ["computational", ["discharges-counterexample-search", "is-computation", "bounded-range-only"]],
+  ["numerical", ["is-computation", "bounded-range-only"]],
+  ["symbolic", []],
+  ["proof-sketch", []],
+  ["heuristic", []],
+]);
 
-/** Evidence types that can carry a claim to proved rank on their own. */
-export const PROOF_EVIDENCE = new Set(["proof", "formal", "citation"]);
+/** Does this declared evidence type answer this question? The only way a detector may ask. */
+export const evidenceCan = (type, capability) =>
+  (EVIDENCE_CAPABILITIES.get(type) ?? []).includes(capability);
+
+/** Every declared type that answers this question. */
+export const evidenceTypesThatCan = (capability) =>
+  new Set([...EVIDENCE_CAPABILITIES].filter(([, caps]) => caps.includes(capability)).map(([type]) => type));
+
+/**
+ * Evidence types that record a prior-work check (Standard 14 R1), whether or not they prove anything.
+ * A view, not a second source: the moment this is written out by hand again it can disagree.
+ */
+export const LITERATURE_EVIDENCE = evidenceTypesThatCan("records-prior-work");
+
+/** Evidence types that can carry a claim to proved rank on their own. A view, for the same reason. */
+export const PROOF_EVIDENCE = evidenceTypesThatCan("establishes-proof");
+
+/**
+ * Does this entry carry a Formal block? The field is named `formal` and so is an evidence type and
+ * so is an applicability regime; three vocabularies, one spelling. Encapsulated here so a reader —
+ * and the contract test that forbids private evidence-type lists — can tell which one is meant.
+ */
+export const hasFormalBlock = (entry) => entry.fields.has("formal");
 
 export const CLAIM_ID = /^CLM-\d{4}$/;
 const CLAIM_ID_ANYWHERE = /CLM-\d{4}/g;
@@ -240,6 +296,9 @@ export function parseLedger(text) {
         statement: "",
         domain: "",
         quantifiers: "",
+        // null rather than "" — absent and "declared as nothing in particular" are different, and
+        // an adopter that declares no scale must not be told its claims are unassessed.
+        relevance: null,
         assumptions: [],
         depends: [],
         obligations: [],
@@ -298,6 +357,14 @@ function applyField(entry, name, value) {
       break;
     case "quantifiers":
       entry.quantifiers = value;
+      break;
+    // A1. Read, carried, and read by nothing that ranks. Both frozen adopters recorded this axis in
+    // prose beside a status that could not express it — RiemannHypothesis's CLM-0009 is a
+    // MACHINE_CHECKED_PROOF that is "correct, unconditional, irrelevant to RH"; PvsNP's CLM-0011 is
+    // a MACHINE_CHECKED_PROOF that "constrains nothing about P/poly". Neither demoted the status to
+    // say so, and this field exists so neither has to.
+    case "relevance":
+      entry.relevance = isNone(value) ? null : stripTicks(value);
       break;
     case "assumptions":
       entry.assumptions = idList(value);

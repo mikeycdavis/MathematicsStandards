@@ -133,6 +133,9 @@ test/            unit tests, plus fixture research repositories
 docs/            architecture, diagrams, and the generated assurance report
 design/          concept and CLI design reasoning, testing principles, v1.1 candidates
 artifacts/       the source prompts, their digests, the derived spec, the inventory, ADRs
+
+compose.ci.yml   the ephemeral CI environment — no network, no services, disposable
+Dockerfile.ci    the CI image, pinned by digest
 ```
 
 ## Development
@@ -150,6 +153,26 @@ npm run assurance   # regenerate docs/assurance-report.md
 npm run mutation-check   # attack each gate with the defect it exists to catch
 ```
 
+### Local Docker CI and verified PRs
+
+The whole gate runs in a container before anything is pushed:
+
+```bash
+node scripts/ci.mjs      # the full pipeline, in Docker. scripts/ci.ps1 and scripts/ci.sh do the same
+node scripts/submit-pr.mjs   # run it, then push and open the PR only if the exact commit passed
+```
+
+The invariant `submit-pr` enforces is that **the commit pushed for a PR is exactly the commit that
+passed the complete local Docker CI pipeline** — not merely a commit on a branch whose CI was green
+recently. It refuses a dirty tree, resolves `HEAD` before and after the run, and pushes the verified
+SHA by name rather than pushing `HEAD`.
+
+The stage list lives in [`scripts/ci-stages.mjs`](scripts/ci-stages.mjs) and is the single
+authoritative definition: the container and `.github/workflows/ci.yml` both execute it rather than
+each restating the commands. GitHub Actions remains enabled as a second opinion and is not the PR
+gate. Full detail — isolation model, cleanup, debugging, evidence — is in
+[docs/local-ci.md](docs/local-ci.md).
+
 `mutation-check` is not part of `npm test` because it writes to tracked files, restoring them
 immediately. Run it after changing a gate, a detector, or the comment-stripping logic. It has already
 found a bug no ordinary test could: `'` was treated as a string delimiter in Lean sources, so the
@@ -158,7 +181,9 @@ of the structural view and the placeholder detector reported clean. Every existi
 something did *not* fire, which the bug satisfied perfectly.
 
 CI runs all of them, in that order, with no install step — the absence of `npm ci` is what makes the
-zero-dependency rule structural rather than aspirational.
+zero-dependency rule structural rather than aspirational. In the container the same rule is enforced
+a second way: the pipeline runs with no network, so a dependency could not be fetched even if
+something tried.
 
 ## Adopting it
 

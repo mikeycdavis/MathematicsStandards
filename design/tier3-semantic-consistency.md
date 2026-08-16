@@ -309,8 +309,10 @@ Full suite 187 passing, gate green, both specimens rerun. Neither verdict moved.
 | RiemannHypothesis | `BLOCKED_BY_INVARIANT` / 88 | `BLOCKED_BY_INVARIANT` / **92** | 7 failures → 5 |
 | PvsNP | `NON_COMPLIANT` / 97 | `NON_COMPLIANT` / **100** | 2 failures → 1 |
 
-**Three findings were removed and no finding was added.** One-to-one, against the statement that
-produced each:
+**Three finding objects were removed, covering four claim-level false positives, and no finding was
+added.** The two units are worth separating because they differ here: a finding aggregates every
+claim that tripped one rule in one repository, so RH's `computation.error-bounds-stated` finding
+carries `CLM-0004` and `CLM-0005` together. One-to-one, against the statement that produced each:
 
 | Removed | Claim | The statement, and which repair removed it |
 | --- | --- | --- |
@@ -319,7 +321,7 @@ produced each:
 | `computation.error-bounds-stated` | PvsNP `CLM-0021` | "the counting **bounds** proved … are **about** a different object" — §0c, *both* PvsNP arms in one sentence: the plural the suppressor could not match, and the preposition the trigger should never have matched |
 | `proof.counterexample-search-recorded` | RH `CLM-0005` | evidence is `citation — Báez-Duarte, … 2005` — §0d, and this is literally the published theorem the disposition recorded |
 
-Nothing else moved. The score rise is those three removals plus one denominator entry:
+Nothing else moved. The score rise is those removals plus one denominator entry:
 `claims.relevance-vocabulary` is evaluated and passes in both, neither adopter having declared a
 scale, so it enters as a pass. RH 48 → 49 evaluated required rules, PvsNP 34 → 35.
 
@@ -352,3 +354,25 @@ The last row is a limit on what this milestone can claim: `A1` is the one accept
 adopters wanted it, and neither frozen specimen can demonstrate it, because both froze before the
 field existed. That is a gap in the evidence, not a gap in the design, and it is stated here rather
 than left for a reader to notice.
+
+### 6c. Reproduced independently, and again after integration
+
+Measured twice more on 2026-08-16, both times against the same frozen controls — RiemannHypothesis
+at `ec543d2` and PvsNP at `2185937`, checked out into disposable worktrees rather than read from
+those repositories' working trees, which have since moved on and were dirty.
+
+**First**, against `d054363` from a separate checkout of the framework, with `3bc38fa` re-run as the
+baseline in the same session rather than quoted from this document. Every number above reproduced
+exactly: RH `BLOCKED_BY_INVARIANT` 88 → 92 with 7 failures → 5 and the denominator 48 → 49, PvsNP
+`NON_COMPLIANT` 97 → 100 with 2 → 1 and 34 → 35. The removed findings were diffed mechanically and
+matched the table above at the same ledger lines, `CLM-0004`:99, `CLM-0005`:121, `CLM-0021`:503.
+Nothing was added in either repository.
+
+**Second**, against `3400341`, this branch after `main` was merged in — nine commits of unrelated
+development, including the whole local Docker CI mechanism. The comparison that matters is not
+against v1.2.0 but against `d054363`: **every rule state is identical, in both repositories.** Same
+verdicts, same scores, same denominators, same three finding objects, none added, none removed. The
+integration changed nothing this milestone measures, which is a result rather than an assumption —
+a green suite alone would not have shown it, since the suite does not evaluate the frozen adopters.
+
+Full suite after integration: 214 passing, 187 from this milestone and 27 from the CI mechanism.

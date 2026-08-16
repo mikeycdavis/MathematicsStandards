@@ -5,10 +5,10 @@
 Work on this project classified with the Extended Agile Hierarchy. Every item is a file in
 [`items/`](./items/); its YAML frontmatter is the source of truth and this page is derived from it.
 
-**36 of 48 leaf items complete — 75%**
+**39 of 48 leaf items complete — 81%**
 
 ```
-██████████████████████████████░░░░░░░░░░  75%
+████████████████████████████████░░░░░░░░  81%
 ```
 
 ## Status
@@ -17,8 +17,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | --- | ---: |
 | ○ Not started | 1 |
 | ◑ In progress | 5 |
-| ◕ In review | 3 |
-| ● Complete | 57 |
+| ● Complete | 60 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
 | **Total** | **80** |
@@ -38,15 +37,12 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Theme | Progress | Done | Remaining |
 | --- | --- | ---: | ---: |
-| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 75% | 36 | 12 |
+| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 81% | 39 | 9 |
 
 ## In flight
 
 - ◑ [EP-08](./items/EP-08.md) — Tier 3 — semantic inconsistency and representation
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
-- ◕ [FE-21](./items/FE-21.md) — §0c — a recognized representation of the evidence must not be read as its absence
-- ◕ [FE-22](./items/FE-22.md) — §0d — evidence types must mean the same thing to every rule
-- ◕ [FE-23](./items/FE-23.md) — A1 — epistemic strength and relevance-to-target are independent axes
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [IN-04](./items/IN-04.md) — This repository's own verification is executed, not asserted
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
@@ -57,7 +53,7 @@ _Nothing marked ready._
 
 ## Everything
 
-- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(36/48)_
+- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(39/48)_
   - ● **[IN-01](./items/IN-01.md)** A working policy-as-code pack for mathematical research _(9/9)_
     - ● **[EP-01](./items/EP-01.md)** The v1.0.0 framework _(6/6)_
       - ● **[FE-01](./items/FE-01.md)** Provenance, the derived spec, and the canonical inventory
@@ -90,7 +86,7 @@ _Nothing marked ready._
     - ● **[EP-05](./items/EP-05.md)** Disposition of the adoption evidence _(1/1)_
       - ● **[FE-12](./items/FE-12.md)** The v1.1 evidence disposition _(1/1)_
         - ● **[ST-13](./items/ST-13.md)** Dispose of the adoption evidence and retire first-unproved-bridge
-  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(16/28)_
+  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(19/28)_
     - ● **[EP-06](./items/EP-06.md)** Tier 1 — false invariant blocks _(8/8)_
       - ● **[FE-13](./items/FE-13.md)** The Tier 1 falsifier, written before any mechanism _(3/3)_
         - ● **[ST-14](./items/ST-14.md)** Pin the ceiling: evidence strength constrains the verdict
@@ -108,10 +104,10 @@ _Nothing marked ready._
       - ● **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
       - ● **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
       - ● **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
-    - ◑ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(0/10)_
-      - ◕ **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
-      - ◕ **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule
-      - ◕ **[FE-23](./items/FE-23.md)** A1 — epistemic strength and relevance-to-target are independent axes
+    - ◑ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(3/10)_
+      - ● **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
+      - ● **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule
+      - ● **[FE-23](./items/FE-23.md)** A1 — epistemic strength and relevance-to-target are independent axes
       - ◌ **[FE-24](./items/FE-24.md)** §0j — no state for 'a machine established this part; the judgement is outstanding'
       - ◌ **[FE-25](./items/FE-25.md)** §0k — applicability needs a third value
       - ◌ **[FE-26](./items/FE-26.md)** §0l — an attestation does not say what kind of reviewer made it

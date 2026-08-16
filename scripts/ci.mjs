@@ -190,6 +190,7 @@ async function main() {
     CI_COMMIT: target.commit,
     CI_BRANCH: target.branch,
     CI_ENV: "docker",
+    CI_REPO: path.basename(ROOT),
   };
   const composeRun = (args, opts = {}) =>
     spawnSync("docker", [...compose, ...args], {

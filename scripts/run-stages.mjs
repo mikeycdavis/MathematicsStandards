@@ -24,6 +24,8 @@
  *   CI_COMMIT   Full SHA of the commit being verified. Recorded verbatim.
  *   CI_BRANCH   Branch name being verified. Recorded verbatim.
  *   CI_ENV      Label for where this ran (default "docker"). Recorded verbatim.
+ *   CI_REPO     Repository name. Defaults to the checkout's directory name, which inside the
+ *               container is always "repo" — hence the override.
  *
  * Exit 0 when every stage passed, 1 when any stage failed, 2 on invocation error.
  */
@@ -104,6 +106,12 @@ async function main() {
   const commit = process.env.CI_COMMIT || "unknown";
   const branch = process.env.CI_BRANCH || "unknown";
   const environment = process.env.CI_ENV || "docker";
+
+  // The repository name comes from the host for the same reason the commit does: inside the
+  // container the checkout lives at /repo, so the directory name would report every repository in
+  // the world as "repo". Falling back to the directory name is right when this runs outside a
+  // container, which is how the GitHub workflow uses it.
+  const repository = process.env.CI_REPO || path.basename(ROOT);
   const startedAt = nowIso();
 
   console.log(`Pipeline: ${stages.length} stages · commit ${commit} · branch ${branch} · env ${environment}`);
@@ -129,6 +137,7 @@ async function main() {
   // cannot be used to find out what went wrong, and the absence of a file is indistinguishable from
   // a run that never happened.
   const evidence = {
+    repository,
     commit,
     branch,
     result: passed ? "passed" : "failed",
@@ -152,7 +161,7 @@ async function main() {
 
   console.log("");
   console.log("──────────────────────────────────────────────────────────────");
-  console.log(`Repository:  ${path.basename(ROOT)}`);
+  console.log(`Repository:  ${repository}`);
   console.log(`Branch:      ${branch}`);
   console.log(`Commit:      ${commit}`);
   console.log(`Environment: ${environment}`);

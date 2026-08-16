@@ -46,6 +46,7 @@ jobs:
           CI_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           CI_BRANCH: ${{ github.head_ref || github.ref_name }}
           CI_ENV: github-hosted
+          CI_REPO: ${{ github.repository }}
 
       # The same evidence file the local pipeline writes, kept as a run artifact rather than
       # committed. Useful when comparing a hosted result against a local one.

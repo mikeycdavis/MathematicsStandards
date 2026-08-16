@@ -39,6 +39,7 @@ services:
       CI_COMMIT: ${CI_COMMIT:-unknown}
       CI_BRANCH: ${CI_BRANCH:-unknown}
       CI_ENV: ${CI_ENV:-docker}
+      CI_REPO: ${CI_REPO:-}
 
     # Read-only root filesystem with writable scratch. The pipeline needs somewhere for npm's cache
     # and for the temp directories the init and policy tests create; it needs nothing else writable,

@@ -238,6 +238,7 @@ exists when things went well cannot be used to find out what went wrong.
 
 ```json
 {
+  "repository": "MathematicsStandards",
   "commit": "fca046148aff1c7193a39f6ba8e549b73456b009",
   "branch": "local-docker-ci",
   "result": "passed",

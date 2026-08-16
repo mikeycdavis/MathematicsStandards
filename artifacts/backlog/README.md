@@ -5,10 +5,10 @@
 Work on this project classified with the Extended Agile Hierarchy. Every item is a file in
 [`items/`](./items/); its YAML frontmatter is the source of truth and this page is derived from it.
 
-**35 of 47 leaf items complete — 74%**
+**36 of 48 leaf items complete — 75%**
 
 ```
-██████████████████████████████░░░░░░░░░░  74%
+██████████████████████████████░░░░░░░░░░  75%
 ```
 
 ## Status
@@ -16,21 +16,21 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Status | Items |
 | --- | ---: |
 | ○ Not started | 2 |
-| ◑ In progress | 3 |
+| ◑ In progress | 4 |
 | ◕ In review | 3 |
-| ● Complete | 55 |
+| ● Complete | 57 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
-| **Total** | **77** |
+| **Total** | **80** |
 
 ## The hierarchy
 
 | Level | Prefix | Count | Answers |
 | --- | --- | ---: | --- |
 | Theme | `TH-` | 1 | Which enduring area of value is this? |
-| Initiative | `IN-` | 3 | What outcome are we pursuing there? |
-| Epic | `EP-` | 10 | What large body of work delivers it? |
-| Feature | `FE-` | 39 | What shippable slice of that epic? |
+| Initiative | `IN-` | 4 | What outcome are we pursuing there? |
+| Epic | `EP-` | 11 | What large body of work delivers it? |
+| Feature | `FE-` | 40 | What shippable slice of that epic? |
 | Story | `ST-` | 24 | What user-visible change, roughly one PR? |
 | Task | `TA-` | 0 | What technical step inside a story? |
 
@@ -38,7 +38,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Theme | Progress | Done | Remaining |
 | --- | --- | ---: | ---: |
-| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `██████████░░░░` 74% | 35 | 12 |
+| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 75% | 36 | 12 |
 
 ## In flight
 
@@ -47,6 +47,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 - ◕ [FE-22](./items/FE-22.md) — §0d — evidence types must mean the same thing to every rule
 - ◕ [FE-23](./items/FE-23.md) — A1 — epistemic strength and relevance-to-target are independent axes
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
+- ◑ [IN-04](./items/IN-04.md) — This repository's own verification is executed, not asserted
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
 
 ## Ready to pick up
@@ -55,7 +56,7 @@ _Nothing marked ready._
 
 ## Everything
 
-- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(35/47)_
+- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(36/48)_
   - ● **[IN-01](./items/IN-01.md)** A working policy-as-code pack for mathematical research _(9/9)_
     - ● **[EP-01](./items/EP-01.md)** The v1.0.0 framework _(6/6)_
       - ● **[FE-01](./items/FE-01.md)** Provenance, the derived spec, and the canonical inventory
@@ -132,6 +133,9 @@ _Nothing marked ready._
       - — **[FE-37](./items/FE-37.md)** More standards beyond the 22
       - — **[FE-38](./items/FE-38.md)** Network-backed citation checking
       - — **[FE-39](./items/FE-39.md)** A profile mechanism
+  - ◑ **[IN-04](./items/IN-04.md)** This repository's own verification is executed, not asserted _(1/1)_
+    - ● **[EP-11](./items/EP-11.md)** Local Docker CI and verified PR submission _(1/1)_
+      - ● **[FE-40](./items/FE-40.md)** The containerized gate, and a submission path that cannot outrun it
 
 ## Decided against
 

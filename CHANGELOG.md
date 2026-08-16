@@ -9,10 +9,92 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
-## Unreleased
+## 2.0.0 — 2026-08-16
+
+**Tier 3, semantic consistency and representation: what counts as the evidence is declared once and
+read, and how strong a claim is and what it bears on become two facts rather than one. MAJOR,
+because `claims.relevance-vocabulary` is a new `required` rule.**
+
+The MAJOR was chosen from what the rule is, not from how large the change feels. A `required` rule
+is one every adopter must now answer, and the versioning rule above does not have an exception for
+rules that are easy to satisfy.
+
+### The behavioural break
+
+**`claims.relevance-vocabulary` is required.** A project may declare a relevance scale in
+`project-policy.yml`; if it does, every relevance value in its ledger must come from that scale. A
+project that declares no scale passes — relevance is optional to *use* and mandatory to *use
+correctly* — but the rule enters the score's denominator either way, so an adopter's denominator
+grows by one and a previously-recorded score is not comparable to a new one without saying so.
+
+**Relevance is an axis, not a status.** Both field-trial adopters had written the same sentence in
+prose because no field held it: how strong a claim's evidence is and what the claim bears on are
+independent, and a correct, unconditional, off-target result is not demoted for being off-target.
+`Relevance` is now a ledger field with an enforced independence invariant — the ranking cannot read
+it, and no relevance value changes a status, rank, verdict or score.
+
+### The two corrections
+
+- **`§0c` — a recognized representation of the evidence is no longer read as its absence.** A
+  marker's meaning had been split across a trigger list and a suppressor list, authored separately,
+  with nothing holding them to each other. `\bO\(` sat in the *approximate* list, so an asymptotic
+  statement was reported as an approximation missing its bound when the `O` **is** the bound;
+  `\bbound\b` did not match **bounds**; `\babout\b` matched the English preposition. Markers are now
+  declared once with what they are — what each asserts and what each carries — and the property *no
+  marker may satisfy the trigger for an obligation it discharges* is checked over the table rather
+  than per marker, so a marker added later cannot reintroduce it.
+- **`§0d` — an evidence type means the same thing to every rule.** `PROOF_EVIDENCE` and an inline
+  list inside `detectCounterexampleSearch` disagreed about what `citation` is worth, in both
+  directions. A published 2005 theorem was therefore asked to search for counterexamples to itself.
+  Capabilities are declared once and asked; the inline list is deleted; and a contract test forbids
+  any detector holding a private list of evidence types, which is the part that stops the third
+  instance rather than the second.
+
+A negative result is recorded rather than quietly discarded: the disposition predicted `§0c` and
+`§0d` would share an evidence-recognition primitive. They do not. A recognizer over free prose and a
+capability table over a closed nine-token vocabulary are different mechanisms, and forcing them
+together would have produced a union type pretending to be a model. What they share is a discipline
+— the framework's notion of what counts as the evidence had been written down more than once and
+the copies drifted — and the contract test is that discipline made executable.
+
+### Measured, and what the score movement means
+
+Against the frozen field-trial specimens, RiemannHypothesis at `ec543d2` and PvsNP at `2185937`:
+
+| | 1.2.0 | 2.0.0 |
+| --- | --- | --- |
+| RiemannHypothesis | `BLOCKED_BY_INVARIANT` / 88 | `BLOCKED_BY_INVARIANT` / **92** |
+| PvsNP | `NON_COMPLIANT` / 97 | `NON_COMPLIANT` / **100** |
+
+**Neither verdict moved.** Three finding objects were removed, covering four claim-level false
+positives, and nothing was added in either repository. Each removal is named in
+`design/tier3-semantic-consistency.md` §6a against the sentence that produced it.
+
+**The scores rose, and that is an assurance correction rather than relaxed rigor.** Every point of
+it is either a finding the framework had no business making — an asymptotic statement, a preposition,
+a plural the suppressor could not match, a published theorem asked to disprove itself — or the new
+required rule entering the denominator as a pass. No rule was weakened, none was removed, no
+threshold moved, and nothing became easier to satisfy. A framework that removes its own false
+positives will look more permissive on a fixed specimen; the removals are enumerated one by one
+precisely so the claim can be checked instead of trusted.
+
+Measured three times: on the branch, independently from a separate checkout with the 1.2.0 baseline
+re-run in the same session, and again on the merge commit after `main` was integrated. Comparing the
+integrated result against the pre-integration one, every rule state in both repositories is
+identical.
+
+### Not in this release
+
+EP-08 remains open. Its seven deferred features are deferred for want of an accepted model, not for
+want of confirmation, and sharing an epic with three finished items is not a reason to release them.
+This version delivers `§0c`, `§0d` and `A1`; it does not close the epic that contains them.
+
+### Also in this release, changing nothing for adopters
 
 **Local Docker CI and verified PR submission. No rule added, removed, weakened, or reclassified —
-this changes how the repository is built and reviewed, not what it requires of anyone.**
+this changes how the repository is built and reviewed, not what it requires of anyone.** It shipped
+between 1.2.0 and this version and is recorded here rather than left under an "Unreleased" heading
+it has outgrown.
 
 The gate now runs in a container on the developer's machine before a branch is pushed, and a PR can
 only be opened for a commit that passed it. `scripts/ci.mjs` runs the pipeline in a disposable,
@@ -29,7 +111,7 @@ the first time:
 
 - **`npm test` did not work on Node 20**, which is the version the workflow pins. The script quoted
   its glob, which stops the shell expanding it and hands the literal pattern to node — which only
-  learned to expand it itself in v21. The quotes are gone; the same 193 tests now run on 20 and 24
+  learned to expand it itself in v21. The quotes are gone; the same tests now run on 20 and 24
   alike, and the unquoted form is pinned by a test.
 - **GitHub-hosted Actions have never executed a job on this repository.** Every run is stopped at
   the account's billing gate before reaching a step, which is why the above went unnoticed. The

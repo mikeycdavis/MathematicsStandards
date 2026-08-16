@@ -3,6 +3,25 @@ name: CI
 # There is deliberately no dependency-install step. This repository has zero runtime dependencies,
 # and the absence of `npm ci` here is what enforces that: adding a dependency would make the code
 # fail to run in CI rather than quietly succeed. A lint rule could be turned off; this cannot.
+#
+# WHAT CHANGED, AND WHY THE STEPS DISAPPEARED.
+#
+# This workflow used to name all eight gates itself. It no longer does, because the same list is now
+# also executed by a container on a developer's machine (`scripts/ci.mjs`) and could later be
+# executed by a self-hosted runner, and a pipeline written out once per executor is a pipeline that
+# agrees with itself only until someone edits one copy. The list moved to `scripts/ci-stages.mjs`,
+# which is now the single authoritative definition, and every executor reads it from there. The
+# rationale that used to live in the comments beside each step moved with it, into each stage's `why`
+# — where it is also printed beside a failure, which is more use than a comment in a YAML file the
+# failing developer is not reading.
+#
+# `test/local-ci.test.mjs` fails if this workflow goes back to naming the commands itself.
+#
+# THIS WORKFLOW IS NOT THE GATE FOR A PULL REQUEST. Local Docker CI is, and it runs before the push:
+# see docs/local-ci.md. This job is a second opinion on neutral hardware and remains useful for
+# exactly that. It is also not required to be running: if GitHub-hosted Actions are unavailable for
+# account or billing reasons, local CI is unaffected, because it shares no infrastructure with this
+# file — only the stage list.
 
 on:
   push:
@@ -19,41 +38,28 @@ jobs:
         with:
           node-version: "20"
 
-      # Order matters. Each gate assumes the previous one held, and a failure names itself rather
-      # than surfacing as a confusing downstream error.
+      # The whole pipeline, in the declared order, failing at the first gate that does not hold.
+      # Stage order is load-bearing and lives in scripts/ci-stages.mjs, not here.
+      - name: Pipeline
+        run: node scripts/run-stages.mjs --verbose
+        env:
+          CI_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_ENV: github-hosted
+          CI_REPO: ${{ github.repository }}
 
-      # 1. The standards series has not silently changed shape.
-      - name: Inventory
-        run: npm run inventory
+      # The same evidence file the local pipeline writes, kept as a run artifact rather than
+      # committed. Useful when comparing a hosted result against a local one.
+      - name: Verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-ci-evidence
+          path: artifacts/local-ci/latest.json
+          if-no-files-found: warn
 
-      # 2. Every block a standard claims is verbatim source actually is.
-      - name: Fidelity
-        run: npm run fidelity
-
-      # 3. This repository's own policy is well-formed and internally consistent.
-      - name: Policy
-        run: npm run policy
-
-      # 4. Every .mmd matches the copy embedded in the documentation.
-      - name: Diagrams
-        run: npm run diagrams
-
-      # 5. The generated assurance report matches the catalog it is generated from.
-      - name: Assurance report is current
-        run: node scripts/assurance.mjs --check
-
-      # 6. Unit and fixture tests, including the self-audit and every detector asserted in both
-      #    directions.
-      - name: Tests
-        run: npm test
-
-      # 7. Evidence discovery. Deliberately NOT --strict: the error gate is the self-audit assertion
-      #    in test/audit.test.mjs, which knows which findings this repository's policy has answered.
-      #    Gating on --strict here would fail the build for the missing claims ledger that the policy
-      #    correctly declares not-applicable.
-      - name: Audit
-        run: npm run audit
-
-      # 8. The verdict. This is the gate.
-      - name: Validate
-        run: npm run validate
+  # A self-hosted runner would add a job here that runs `./scripts/ci.sh` instead of
+  # `node scripts/run-stages.mjs`, giving it the container boundary as well as the stage list. That
+  # requires no change to the pipeline: ci.sh, ci.mjs, compose.ci.yml and Dockerfile.ci are already
+  # the whole story, and none of them assume a developer's machine. It is deliberately not enabled
+  # here, because this repository does not use a self-hosted runner today.

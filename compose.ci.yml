@@ -47,6 +47,11 @@ services:
     read_only: true
     tmpfs:
       - /tmp:mode=1777
+      # A tree the pipeline is allowed to damage. `--with-mutation-check` copies /repo here and runs
+      # from the copy, because mutation-check edits tracked files and /repo is read-only — as it
+      # should be. Being tmpfs, the copy cannot outlive the container, which is the property that
+      # makes running a deliberately-destructive suite in CI reasonable at all.
+      - /work:mode=0777
 
 # WHERE A DATABASE WOULD GO, AND WHY THERE ISN'T ONE.
 #

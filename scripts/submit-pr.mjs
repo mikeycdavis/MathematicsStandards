@@ -164,11 +164,28 @@ function run(command, args, { capture = true, cwd = ROOT } = {}) {
 
 const git = (args) => run("git", args);
 
+/**
+ * Turn `refs/remotes/origin/<branch>` into `<branch>`.
+ *
+ * FROM REVIEW. This took the last path component, which is right until a default branch contains a
+ * slash — `refs/remotes/origin/release/main` gave `main`. Branch names with slashes are ordinary,
+ * and the damage was not limited to a wrong `--base`: `checkBranchSubmittable` compares the base
+ * against `git rev-parse --abbrev-ref HEAD`, which reports the full `release/main`, so the guard
+ * that refuses to open a PR from the base branch onto itself would have stopped recognising it.
+ *
+ * @param {string} ref
+ * @returns {string|null}
+ */
+export function branchFromRemoteRef(ref) {
+  const match = /^refs\/remotes\/[^/]+\/(.+)$/.exec((ref ?? "").trim());
+  return match ? match[1] : null;
+}
+
 /** The remote's default branch, so `--base` has a correct default without hardcoding a name. */
 function defaultBranch() {
   const symbolic = git(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"]);
   if (symbolic.code === EXIT_OK) {
-    const name = symbolic.stdout.trim().split("/").pop();
+    const name = branchFromRemoteRef(symbolic.stdout);
     if (name) return name;
   }
   return "main";
@@ -335,6 +352,33 @@ async function main() {
       : "GitHub CLI is not installed, so no PR was created.");
     console.log("Authenticate with `gh auth login`, then open the PR yourself. Verification stands.");
     return EXIT_OK;
+  }
+
+  // An open PR for this branch already exists when a review asked for changes. Pushing the verified
+  // commit is the whole update — a PR tracks a branch — so creating a second one is neither possible
+  // nor wanted. Without this, `gh pr create` failed after a successful push and the run reported a
+  // refusal for work that had actually succeeded.
+  const existing = run("gh", ["pr", "view", branch, "--json", "url,number,state"]);
+  if (existing.code === EXIT_OK) {
+    try {
+      const pr = JSON.parse(existing.stdout);
+      if (pr.state === "OPEN") {
+        console.log("");
+        console.log("──────────────────────────────────────────────────────────────");
+        console.log(`Repository:      ${path.basename(ROOT)}`);
+        console.log(`Branch:          ${branch}`);
+        console.log(`Verified commit: ${verified}`);
+        console.log("Pipeline result: PASS");
+        console.log(`Stages:          ${(evidence.checks ?? []).join(", ")}`);
+        console.log("Environment:     Docker (local, not GitHub Actions)");
+        console.log(`Completed:       ${new Date().toISOString()}`);
+        console.log(`Pull request:    ${pr.url}  (existing PR #${pr.number} updated, not recreated)`);
+        console.log("──────────────────────────────────────────────────────────────");
+        return EXIT_OK;
+      }
+    } catch {
+      // Unparseable output. Fall through and let `pr create` speak for itself.
+    }
   }
 
   const ghArgs = ["pr", "create", "--base", base, "--head", branch, "--title", title, "--body", body];

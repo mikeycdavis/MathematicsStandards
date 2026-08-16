@@ -22,9 +22,11 @@ import {
   checkBranchSubmittable,
   checkEvidenceMatches,
   composePrBody,
+  branchFromRemoteRef,
   CI_FAILED_MESSAGE,
   SHA_CHANGED_MESSAGE,
 } from "../scripts/submit-pr.mjs";
+import { checkOutDir } from "../scripts/ci.mjs";
 import { parseYaml } from "../scripts/yaml.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -180,9 +182,78 @@ test("verification evidence is not committed", () => {
   assert.match(read(".gitignore"), /^artifacts\/local-ci\/$/m);
 });
 
+test("the mutation stage gets a writable tree, because the container root is read-only", () => {
+  // FROM REVIEW. `--with-mutation-check` could never pass: mutation-check writes to tracked files
+  // and read_only covers /repo, so it died on the first edit with EROFS having exercised no gate.
+  // The fix is a tmpfs the pipeline may damage, not a relaxation of read_only.
+  const compose = parseYaml(read("compose.ci.yml"));
+  const tmpfs = (compose.services.ci.tmpfs ?? []).map(String);
+  assert.ok(tmpfs.some((m) => m.startsWith("/work")), `no writable /work in ${tmpfs.join(", ")}`);
+  assert.match(read("scripts/ci.mjs"), /cp -r \/repo\/\. \/work\//);
+});
+
+// ---------------------------------------------------------------------------
+// The evidence mount decides what the container can reach on the host.
+// ---------------------------------------------------------------------------
+
+test("the evidence directory may not be one that contains the checkout", () => {
+  // FROM REVIEW. `--out` was unrestricted and becomes a read-write bind mount, so `--out=.` — or
+  // the mistyped `--out=`, which resolves to the current directory — handed branch-controlled code
+  // write access to the working tree it is supposed to be isolated from.
+  const root = path.join(ROOT, "test", "fixtures", "imaginary-repo");
+  const home = path.join(ROOT, "test", "fixtures", "imaginary-home");
+
+  for (const bad of [root, path.dirname(root), path.parse(root).root, home]) {
+    const refusal = checkOutDir(bad, root, home);
+    assert.ok(refusal, `accepted ${bad} as an evidence directory`);
+  }
+  assert.match(checkOutDir(root, root, home), /contains the repository checkout/);
+});
+
+test("inside the repository, only the evidence directory is accepted", () => {
+  const root = path.join(ROOT, "test", "fixtures", "imaginary-repo");
+  const home = path.join(ROOT, "test", "fixtures", "imaginary-home");
+
+  assert.equal(checkOutDir(path.join(root, "artifacts", "local-ci"), root, home), null);
+  assert.equal(checkOutDir(path.join(root, "artifacts", "local-ci", "run-7"), root, home), null);
+
+  // scripts/ would let a run write the code the next run executes.
+  assert.match(checkOutDir(path.join(root, "scripts"), root, home), /only artifacts\/local-ci/);
+});
+
+test("outside the repository, a directory holding unrelated data is refused", () => {
+  const home = path.join(ROOT, "test", "fixtures", "imaginary-home");
+  const root = path.join(ROOT, "test", "fixtures", "imaginary-repo");
+
+  // Does not exist yet: fine, nothing of the host's is behind it.
+  assert.equal(checkOutDir(path.join(ROOT, "test", "fixtures", "nope-not-here"), root, home), null);
+
+  // A populated directory is someone's data, not an evidence directory.
+  assert.match(checkOutDir(path.join(ROOT, "scripts"), root, home), /is not empty/);
+});
+
+test("the real default evidence directory is accepted", () => {
+  assert.equal(checkOutDir(path.join(ROOT, "artifacts", "local-ci")), null);
+});
+
 // ---------------------------------------------------------------------------
 // The invariant: the commit pushed is the commit that passed.
 // ---------------------------------------------------------------------------
+
+test("a default branch containing a slash keeps its full name", () => {
+  // FROM REVIEW. This took the last path component, so `release/main` became `main` — wrong base,
+  // and the guard that refuses to submit the base branch onto itself stopped recognising it.
+  assert.equal(branchFromRemoteRef("refs/remotes/origin/release/main"), "release/main");
+  assert.equal(branchFromRemoteRef("refs/remotes/origin/main"), "main");
+  assert.equal(branchFromRemoteRef("refs/remotes/upstream/team/v2/main"), "team/v2/main");
+  assert.equal(branchFromRemoteRef("  refs/remotes/origin/main\n"), "main");
+  assert.equal(branchFromRemoteRef("not-a-ref"), null);
+  assert.equal(branchFromRemoteRef(""), null);
+
+  // The whole point: the base is compared against `rev-parse --abbrev-ref HEAD`, which reports the
+  // full name, so a truncated base breaks the base-branch refusal.
+  assert.equal(checkBranchSubmittable("release/main", branchFromRemoteRef("refs/remotes/origin/release/main")).ok, false);
+});
 
 test("submission proceeds when the commit did not move", () => {
   assert.deepEqual(checkCommitUnchanged(A, A), { ok: true, message: null });

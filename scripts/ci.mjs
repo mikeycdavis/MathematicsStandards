@@ -30,7 +30,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
@@ -51,6 +51,60 @@ const CI_SERVICE = "ci";
 
 /** Docker wants forward slashes in bind paths, including on Windows. */
 const dockerPath = (p) => p.replace(/\\/g, "/");
+
+/** Is `child` the same path as `parent`, or inside it? */
+function isWithin(parent, child) {
+  const rel = path.relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+/**
+ * The evidence directory becomes a read-write bind mount, so it decides what the container can
+ * reach on the host. Validate it before it becomes one.
+ *
+ * FROM REVIEW OF THIS FILE. `--out` was unrestricted, and `--out=.` — or the easily mistyped
+ * `--out=`, which resolves to the current directory — would have mounted the checkout itself as
+ * writable. Every stage runs whatever the branch says, so that hands branch-controlled code write
+ * access to the working tree, the scripts it will run next time, and anything else under that
+ * directory. It contradicted the boundary this file spends its comments claiming.
+ *
+ * The rule is that the mount must be a *dedicated evidence directory*: inside the repository, only
+ * the evidence directory itself; outside it, only somewhere that is empty or already holds nothing
+ * but our own receipt. Both cases refuse anything that contains the checkout.
+ *
+ * @returns {string|null} refusal reason, or null when the path is acceptable
+ */
+export function checkOutDir(out, root = ROOT, home = os.homedir()) {
+  const resolved = path.resolve(out);
+  const evidenceHome = path.join(root, "artifacts", "local-ci");
+
+  if (resolved === path.parse(resolved).root) return "the filesystem root cannot be the evidence directory";
+  if (home && resolved === path.resolve(home)) return "your home directory cannot be the evidence directory";
+
+  // Anything containing the checkout would give branch-controlled code write access to it.
+  if (isWithin(resolved, root)) {
+    return `${resolved} contains the repository checkout. The pipeline runs untrusted code and this directory is mounted writable.`;
+  }
+
+  if (isWithin(root, resolved)) {
+    return isWithin(evidenceHome, resolved)
+      ? null
+      : `inside the repository, only ${path.relative(root, evidenceHome).replace(/\\/g, "/")} may be used as the evidence directory.`;
+  }
+
+  // Outside the repository: it must not be somewhere that already holds unrelated host data.
+  try {
+    if (!statSync(resolved).isDirectory()) return `${resolved} is not a directory`;
+    const stray = readdirSync(resolved).filter((entry) => entry !== "latest.json");
+    if (stray.length > 0) {
+      return `${resolved} is not empty (${stray.slice(0, 3).join(", ")}${stray.length > 3 ? ", …" : ""}). Use a directory dedicated to CI evidence.`;
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") return `${resolved} cannot be inspected: ${error.message}`;
+    // Does not exist yet. It will be created, and nothing of the host's is behind it.
+  }
+  return null;
+}
 
 function run(command, args, { capture = false, verbose = false, cwd = ROOT } = {}) {
   if (verbose) console.log(`$ ${command} ${args.join(" ")}`);
@@ -161,6 +215,12 @@ async function main() {
     return EXIT_OK;
   }
 
+  const outRefusal = checkOutDir(options.out);
+  if (outRefusal) {
+    console.error(`ci: refusing --out: ${outRefusal}`);
+    return EXIT_INVOCATION;
+  }
+
   if (run("docker", ["version", "--format", "{{.Server.Version}}"], { capture: true }).code !== EXIT_OK) {
     console.error("ci: Docker is not available or its daemon is not running. Docker is the only host");
     console.error("ci: requirement besides git and Node — start Docker Desktop and try again.");
@@ -237,12 +297,43 @@ async function main() {
     if (options.withMutationCheck) stageArgs.push("--with-mutation-check");
     if (options.verbose) stageArgs.push("--verbose");
 
+    // THE MUTATION STAGE NEEDS A TREE IT IS ALLOWED TO DAMAGE.
+    //
+    // FROM REVIEW. `read_only: true` covers the whole container root, /repo included, so
+    // mutation-check's first writeFile failed with EROFS and the stage could never pass — an option
+    // documented as "safe in the container, where the tree is disposable" that was not runnable at
+    // all. Verified before fixing: it died on the first mutation, having exercised no gate.
+    //
+    // Relaxing read_only for that run would have been the small fix and the wrong one; it is what
+    // stops a stage writing to the source copy by accident. Instead the tree is copied onto the
+    // writable tmpfs at /work and the pipeline runs from there, which is what "disposable copy"
+    // was supposed to mean in the first place. `cp -r`, not `cp -a`: preserving ownership fails for
+    // a non-root user, and the container may run as an arbitrary UID (see below).
+    const command = options.withMutationCheck
+      ? ["sh", "-c", `cp -r /repo/. /work/ && cd /work && exec ${stageArgs.join(" ")}`]
+      : stageArgs;
+
     // --rm unless we are being asked to preserve the failure: `docker compose run --rm` deletes the
     // container the instant it exits, which is exactly wrong when the reason you want it is that it
     // failed.
     const runArgs = ["run", "--no-deps"];
     if (!options.keepOnFailure) runArgs.push("--rm");
-    code = composeRun([...runArgs, CI_SERVICE, ...stageArgs]).status ?? EXIT_FAILED;
+
+    // RUN AS THE INVOKING USER ON LINUX.
+    //
+    // FROM REVIEW. The image runs as `node`, UID 1000. On a native Linux host whose user is not
+    // 1000 — a colleague, or the self-hosted runner this design is meant to accommodate — the
+    // bind-mounted evidence directory is created with the caller's ownership and mode 0755, so the
+    // container cannot write latest.json into it. Every stage would pass and the run would still be
+    // reported as a failure for want of a receipt.
+    //
+    // Docker Desktop on Windows and macOS translates ownership across the VM boundary and does not
+    // have the problem, which is exactly why it would not have been found here.
+    if (process.platform === "linux" && typeof process.getuid === "function") {
+      runArgs.push("--user", `${process.getuid()}:${process.getgid()}`);
+    }
+
+    code = composeRun([...runArgs, CI_SERVICE, ...command]).status ?? EXIT_FAILED;
   } finally {
     const keep = options.keepOnFailure && code !== EXIT_OK;
     if (keep) {
@@ -292,4 +383,8 @@ async function main() {
   return code === EXIT_OK ? EXIT_OK : EXIT_FAILED;
 }
 
-process.exitCode = await main();
+// Importable for tests; only acts when invoked as a program. Without this guard, importing
+// checkOutDir would run the whole pipeline.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = await main();
+}

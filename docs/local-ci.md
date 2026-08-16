@@ -53,12 +53,25 @@ either of them. `npm run ci` works too.
 | `--commit=<sha>` | Verify exactly that commit, exported to a throwaway git worktree. Your working tree takes no part. This is what submission uses. |
 | `--with-mutation-check` | Add the mutation checks (see below). |
 | `--keep-on-failure` | On failure, leave the container standing and print how to inspect it. |
-| `--out=<dir>` | Where the evidence file goes. Default `artifacts/local-ci`. |
+| `--out=<dir>` | Where the evidence file goes. Default `artifacts/local-ci`. Must be a *dedicated* evidence directory — see below. |
 | `--verbose` | Echo every docker command and every stage command. |
 
 Exit code is `0` only when every stage passed, `1` when a stage failed, `2` when the environment or
 the invocation was wrong — a Docker daemon that is not running is not a test failure and does not
 report as one.
+
+### Why `--out` is restricted
+
+That directory becomes the container's one read-write bind mount, so it decides what the pipeline
+can reach on the host. Since every stage runs whatever the branch says, an unrestricted `--out` is a
+hole straight through the isolation boundary: `--out=.` — or the easily mistyped `--out=`, which
+resolves to the current directory — would hand branch-controlled code write access to your working
+tree and to the scripts the *next* run executes.
+
+So it is checked before it becomes a mount. Inside the repository, only `artifacts/local-ci` and
+below. Outside it, only a directory that does not exist yet, is empty, or holds nothing but a
+previous `latest.json`. Anything containing the checkout, your home directory, and the filesystem
+root are refused outright, with exit code 2 and a message naming the reason.
 
 **Run with no arguments, it verifies your working tree**, uncommitted edits included, and says so in
 the header. That is what you want while iterating. It is *not* what submission does.
@@ -91,6 +104,10 @@ verify clean tree → record SHA → run full Docker CI → verify same SHA → 
 | `--body=<text>` / `--body-file=<path>` | Your PR description. The verification block is **appended**, never substituted. |
 | `--dry-run` | Run everything including the full pipeline, report what would be pushed, and push nothing. |
 | `--keep-on-failure`, `--with-mutation-check` | Passed through to CI. |
+
+If an open PR for the branch already exists — which is the normal state once a review has asked for
+changes — the verified push *is* the update, and the existing PR is reported rather than a second
+one attempted.
 
 It refuses, before running anything, if the tree is dirty, if `HEAD` is detached, or if you are on
 the base branch. It refuses, after running, if the pipeline failed, if the evidence file does not
@@ -139,9 +156,15 @@ node scripts/ci.mjs --with-mutation-check
 
 `mutation-check` reintroduces the defect each gate exists to catch and confirms the gate fails. It is
 excluded from `npm test` because it writes to tracked files. Inside the container that objection
-disappears — the tree it mutates is a disposable copy that dies with the run — but it stays opt-in,
-because silently promoting it would change what "CI passed" means for every branch without anyone
-deciding to.
+disappears — but it stays opt-in, because silently promoting it would change what "CI passed" means
+for every branch without anyone deciding to.
+
+"Disposable copy" is literal, and it took a review to make it true. `/repo` is read-only like the
+rest of the container root, so the first mutation used to fail with `EROFS` and the stage could
+never pass. It now copies the tree onto the writable tmpfs at `/work` and runs from there; the copy
+cannot outlive the container, which is the property that makes running a deliberately destructive
+suite in CI reasonable at all. Relaxing `read_only` would have been the smaller fix and the wrong
+one — that setting is what stops a stage writing to the source copy by accident.
 
 ### One definition, two executors
 
@@ -190,8 +213,9 @@ What the boundary is made of:
 | --- | --- |
 | `network_mode: none` | The pipeline cannot reach the network at all. Not hardening theatre — an assertion that this repository has zero runtime dependencies, enforced the same way the absent `npm ci` enforces it. |
 | Source **copied**, not bind-mounted | The image is a sealed snapshot of one tree. Nothing the run does can reach your checkout, which is what makes `--with-mutation-check` safe to offer. |
-| `read_only: true` + `tmpfs /tmp` | The only writable path is scratch, which the init and policy tests need. An accidental write to the source copy fails loudly. |
-| Single bind: `→ /ci-out` | The one place host and container meet. It receives the evidence file and nothing else. |
+| `read_only: true` + `tmpfs /tmp`, `/work` | The only writable paths are scratch. An accidental write to the source copy fails loudly. `/work` exists for the mutation stage, which needs a tree it may damage. |
+| Single bind: `→ /ci-out` | The one place host and container meet. It receives the evidence file and nothing else, and `--out` is validated so it can never be a directory containing the checkout. |
+| `--user $(id -u):$(id -g)` on Linux | The image runs as UID 1000. On a native Linux host with a different UID — a colleague, or the self-hosted runner this design anticipates — the container could not write its receipt into the bind mount, and every stage would pass while the run reported failure. Docker Desktop translates ownership across its VM and hides this, which is why it needed finding by review rather than by running it here. |
 | Non-root (`USER node`) | CI is untrusted code execution by policy — it runs whatever the branch says. |
 | No Docker socket | Handing the daemon to test code hands it the host. |
 | Unique compose project per run | `mathstd-ci-<random>`. Two branches, two terminals, or two repositories can run at once without sharing a container, network, image, or volume. |

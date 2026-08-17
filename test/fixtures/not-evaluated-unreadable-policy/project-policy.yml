@@ -1,0 +1,13 @@
+# The AFTER half of the not-evaluated pair: a policy that cannot be read.
+#
+# The unterminated flow sequence below is a parse error, not a schema error, so the reader refuses
+# the document rather than reporting a field. `validate` reaches NOT_EVALUATED and exits 2 — a
+# configuration error, deliberately not a compliance failure.
+#
+# It must not score. Before FE-41 this half scored HIGHER than `not-evaluated-absent-policy`, whose
+# only difference is that this file is absent there: with the policy unreadable, fewer required
+# project-subject rules resolved into the denominator and the surviving passes dominated what was
+# left. Breaking the configuration improved the number.
+standardVersion: "1.0.0"
+project: "not-evaluated-unreadable-policy"
+exceptions: [

@@ -552,7 +552,7 @@ function summarise(results, policy) {
   const scoredIds = new Set(scored.map((r) => r.ruleId));
   for (const r of results) r.scored = scoredIds.has(r.ruleId);
   const scoredPassed = scored.filter((r) => r.status === RESULT.passed).length;
-  const score = scored.length === 0 ? null : Math.round((scoredPassed / scored.length) * 100);
+  const rawScore = scored.length === 0 ? null : Math.round((scoredPassed / scored.length) * 100);
 
   const notEvaluated = { noDetector: 0, noSubject: 0, unresolvedRequired: 0, staleAttestation: 0, expiredAttestation: 0 };
   const BUCKET = {
@@ -604,9 +604,53 @@ function summarise(results, policy) {
   else if (excepted.length > 0) status = STATUS.COMPLIANT_WITH_EXCEPTIONS;
   else status = STATUS.COMPLIANT;
 
+  /**
+   * A verdict that was never reached does not carry a number.
+   *
+   * `NOT_EVALUATED` means no policy could be read, so nothing decided which rules govern this
+   * project. The detectors still ran — they read the tree, not the policy — and the aggregation
+   * above still produces an arithmetic result from whatever they happened to find. Publishing that
+   * number beside a status meaning "no verdict" is false assurance of exactly the Tier 2 kind, and
+   * it is not merely decorative: measured at 5afcd00 on one target directory,
+   *
+   *     no project-policy.yml          NOT_EVALUATED  score 50
+   *     unreadable project-policy.yml  NOT_EVALUATED  score 80
+   *
+   * The score ROSE as the configuration got worse, because fewer required project-subject rules
+   * resolved and the surviving passes dominated a shrinking denominator. A consumer ranking
+   * repositories by score placed the broken policy above the absent one.
+   *
+   * The human renderer never had this defect: it returns on both NOT_EVALUATED paths before it
+   * prints a Score line. So this is the machine surface being brought to the semantics the terminal
+   * surface already had — not a new policy about scoring.
+   *
+   * The reason is reported rather than the number simply going absent. `score: null` alone is
+   * ambiguous between "no verdict was reached" and "the denominator was empty", and those are
+   * different facts: this repository's own run is legitimately `null` over zero scorable rules while
+   * being fully COMPLIANT.
+   */
+  const scoreUnavailable =
+    status === STATUS.NOT_EVALUATED
+      ? {
+          reason: "not-evaluated",
+          note:
+            "No verdict was reached, so there is no compliance score. The results below are " +
+            "observations from the detectors, not a measurement of this project against a policy.",
+        }
+      : rawScore === null
+        ? {
+            reason: "no-scorable-rules",
+            note:
+              "No required-level rule whose subject is this project was evaluated, so the score " +
+              "has an empty denominator. This is not a low score; it is the absence of one.",
+          }
+        : null;
+  const score = scoreUnavailable === null ? rawScore : null;
+
   return {
     status,
     score,
+    scoreUnavailable,
     summary: counts,
     assurance,
     denominator: {
@@ -673,6 +717,15 @@ export function envelope({ verdict, project, standardVersion, auditedAt, repo, f
       id: "project-subject-required",
       version: 2,
       since: "1.2.0",
+      /**
+       * Null whenever `score` is a number, and a `{ reason, note }` pair whenever it is not.
+       *
+       * A consumer that finds `score: null` and no reason has to guess which of two unrelated
+       * situations it is in, and the guess that reads more naturally — "nothing passed" — is the
+       * wrong one in both. `reason` is the machine-readable token to branch on; `note` is for a
+       * human reading the JSON. The tokens are closed: `not-evaluated`, `no-scorable-rules`.
+       */
+      unavailable: verdict.scoreUnavailable ?? null,
       note:
         "Version 2 scores required-level rules whose subject is this project, and counts a rule " +
         "whose required evidence could not be read as an unearnable denominator entry. Version 1 " +

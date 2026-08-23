@@ -16,13 +16,13 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Status | Items |
 | --- | ---: |
 | ○ Not started | 1 |
-| ◔ Ready | 2 |
+| ◔ Ready | 1 |
 | ◑ In progress | 6 |
-| ◕ In review | 2 |
+| ◕ In review | 4 |
 | ● Complete | 59 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
-| **Total** | **84** |
+| **Total** | **85** |
 
 ## The hierarchy
 
@@ -31,7 +31,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Theme | `TH-` | 1 | Which enduring area of value is this? |
 | Initiative | `IN-` | 4 | What outcome are we pursuing there? |
 | Epic | `EP-` | 12 | What large body of work delivers it? |
-| Feature | `FE-` | 42 | What shippable slice of that epic? |
+| Feature | `FE-` | 43 | What shippable slice of that epic? |
 | Story | `ST-` | 25 | What user-visible change, roughly one PR? |
 | Task | `TA-` | 0 | What technical step inside a story? |
 
@@ -46,7 +46,9 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 - ◑ [EP-07](./items/EP-07.md) — Tier 2 — false assurance
 - ◑ [EP-08](./items/EP-08.md) — Tier 3 — semantic inconsistency and representation
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
+- ◕ [EP-12](./items/EP-12.md) — Every advertised mutation check reaches its gate in the container
 - ◕ [FE-41](./items/FE-41.md) — NOT_EVALUATED must never carry a numeric compliance score
+- ◕ [FE-43](./items/FE-43.md) — The exported tree is the commit, and the mutation suite's reach is checked
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [IN-04](./items/IN-04.md) — This repository's own verification is executed, not asserted
 - ◕ [ST-25](./items/ST-25.md) — Null the score on NOT_EVALUATED, and pin both routes to it
@@ -54,7 +56,6 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 ## Ready to pick up
 
-- ◔ [EP-12](./items/EP-12.md) — Every advertised mutation check reaches its gate in the container
 - ◔ [FE-42](./items/FE-42.md) — An anchored evidence locator is inspected at its anchor, or reported unresolved
 
 ## Everything
@@ -142,7 +143,8 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
   - ◑ **[IN-04](./items/IN-04.md)** This repository's own verification is executed, not asserted _(1/2)_
     - ● **[EP-11](./items/EP-11.md)** Local Docker CI and verified PR submission _(1/1)_
       - ● **[FE-40](./items/FE-40.md)** The containerized gate, and a submission path that cannot outrun it
-    - ◔ **[EP-12](./items/EP-12.md)** Every advertised mutation check reaches its gate in the container
+    - ◕ **[EP-12](./items/EP-12.md)** Every advertised mutation check reaches its gate in the container _(0/1)_
+      - ◕ **[FE-43](./items/FE-43.md)** The exported tree is the commit, and the mutation suite's reach is checked
 
 ## Decided against
 

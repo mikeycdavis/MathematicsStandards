@@ -38,6 +38,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { parseYaml } from "./yaml.mjs";
+import { commitToTreeDrift, contextDigest } from "./tree-fidelity.mjs";
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
@@ -243,6 +244,38 @@ async function main() {
 
   mkdirSync(options.out, { recursive: true });
 
+  // BOUNDARY ONE: THE EXPORT IS THE COMMIT, BYTE FOR BYTE.
+  //
+  // The worktree above is a checkout, and a checkout applies .gitattributes and core.autocrlf. At
+  // 5afcd00 that converted 257 of 286 tracked files on the way out, so the image was built from a
+  // transcription of the commit rather than from the commit — see scripts/tree-fidelity.mjs for how
+  // it was found and why an attribute alone is not the fix. Checked here, before the build, because
+  // this is the last moment at which both things being compared exist on the host.
+  //
+  // Only when a commit was named. Without --commit the source is the working tree, which is not
+  // claimed to be any commit and whose divergence is reported honestly a few lines above.
+  if (target.worktree) {
+    const drift = commitToTreeDrift(ROOT, target.commit, target.worktree);
+    if (drift.length > 0) {
+      console.error(`\nci: the exported tree is not the commit. ${drift.length} tracked file(s) differ:`);
+      for (const item of drift.slice(0, 10)) {
+        console.error(`  ${item.path} — ${item.reason} (commit ${item.commitBytes}B, tree ${item.treeBytes ?? "absent"}B)`);
+      }
+      if (drift.length > 10) console.error(`  … and ${drift.length - 10} more`);
+      console.error("\nNo image was built. A pipeline that verifies a transcription of the commit cannot");
+      console.error("say the commit passed. Reproduce with:");
+      console.error(`  node scripts/tree-fidelity.mjs --commit=${target.commit} --tree=<export>`);
+      return EXIT_INVOCATION;
+    }
+  }
+
+  // BOUNDARY TWO: WHAT THE RUNNER STANDS IN IS WHAT WE EXPORTED.
+  //
+  // The digest travels as an environment variable, and run-stages.mjs recomputes it from its own root
+  // before any stage runs. That covers the COPY into the image and, under --with-mutation-check, the
+  // copy onto the /work tmpfs as well — the mutating stage digests the tree it is about to damage.
+  const context = contextDigest(target.context);
+
   const env = {
     ...process.env,
     CI_CONTEXT: dockerPath(target.context),
@@ -251,6 +284,7 @@ async function main() {
     CI_BRANCH: target.branch,
     CI_ENV: "docker",
     CI_REPO: path.basename(ROOT),
+    CI_TREE_DIGEST: context.digest,
   };
   const composeRun = (args, opts = {}) =>
     spawnSync("docker", [...compose, ...args], {
@@ -266,6 +300,7 @@ async function main() {
   console.log(`  branch     ${target.branch}`);
   console.log(`  commit     ${target.commit}${target.dirty ? "  (working tree has uncommitted changes)" : ""}`);
   console.log(`  source     ${target.worktree ? "exported worktree of the commit" : "working tree"}`);
+  console.log(`  tree       ${context.files.length} file(s), digest ${context.digest.slice(0, 16)}…${target.worktree ? "  (byte-identical to the commit)" : ""}`);
   if (target.dirty) {
     console.log("");
     console.log("  NOTE: verifying the working tree, which does not match the commit above.");

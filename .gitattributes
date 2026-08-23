@@ -1,3 +1,26 @@
+# LINE ENDINGS ARE PART OF THE COMMIT, AND THE CHECKOUT MUST NOT REWRITE THEM.
+#
+# This rule was added on 2026-08-23 for EP-12, after measuring what the pipeline was actually
+# verifying. Development happens on Windows with core.autocrlf=true, and this file previously pinned
+# eol=lf for three globs only, so every other text file was converted on checkout. scripts/ci.mjs
+# exports the commit under verification to a throwaway `git worktree` and builds the CI image from
+# it — and that export is a checkout. At 5afcd00, 257 of 286 tracked files reached the container with
+# different bytes than the commit they were said to be. The pipeline was verifying a transcription.
+#
+# It went unnoticed because almost nothing reads a source file as bytes. What found it was the
+# mutation suite: two of its six checks search for a string anchored on a newline, and CRLF is not
+# that string, so the inventory and fidelity gates had never once been attacked inside the container.
+#
+# `text=auto` lets git detect binary content and leave it alone; there is none in this repository
+# today, and the day there is, this line does the right thing without being edited. eol=lf makes
+# every text file check out as it was committed, on every platform.
+#
+# This attribute is necessary and is not sufficient. It is a file like any other and can be edited
+# away, so the property is also asserted at the boundary: scripts/ci.mjs compares every committed
+# blob to the exported tree before the image is built and refuses the run on any difference. If you
+# are reading this because that check went red, the answer is not to relax the check.
+* text=auto eol=lf
+
 # Shell scripts must check out with LF, on every platform.
 #
 # Development here happens on Windows, where git's autocrlf would hand `scripts/ci.sh` a CRLF line

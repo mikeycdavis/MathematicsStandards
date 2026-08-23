@@ -40,6 +40,10 @@ services:
       CI_BRANCH: ${CI_BRANCH:-unknown}
       CI_ENV: ${CI_ENV:-docker}
       CI_REPO: ${CI_REPO:-}
+      # The build-context digest the host computed. run-stages.mjs recomputes it from the tree it
+      # is standing in and refuses to run a single stage if they differ, so a lossy COPY or a lossy
+      # copy onto /work fails loudly instead of producing a green result over an unverified tree.
+      CI_TREE_DIGEST: ${CI_TREE_DIGEST:-}
 
     # Read-only root filesystem with writable scratch. The pipeline needs somewhere for npm's cache
     # and for the temp directories the init and policy tests create; it needs nothing else writable,

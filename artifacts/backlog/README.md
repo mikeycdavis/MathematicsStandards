@@ -5,10 +5,10 @@
 Work on this project classified with the Extended Agile Hierarchy. Every item is a file in
 [`items/`](./items/); its YAML frontmatter is the source of truth and this page is derived from it.
 
-**39 of 51 leaf items complete — 76%**
+**40 of 51 leaf items complete — 78%**
 
 ```
-██████████████████████████████░░░░░░░░░░  76%
+███████████████████████████████░░░░░░░░░  78%
 ```
 
 ## Status
@@ -18,8 +18,8 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | ○ Not started | 1 |
 | ◔ Ready | 1 |
 | ◑ In progress | 6 |
-| ◕ In review | 4 |
-| ● Complete | 59 |
+| ◕ In review | 2 |
+| ● Complete | 61 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
 | **Total** | **85** |
@@ -39,16 +39,14 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Theme | Progress | Done | Remaining |
 | --- | --- | ---: | ---: |
-| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 76% | 39 | 12 |
+| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 78% | 40 | 11 |
 
 ## In flight
 
 - ◑ [EP-07](./items/EP-07.md) — Tier 2 — false assurance
 - ◑ [EP-08](./items/EP-08.md) — Tier 3 — semantic inconsistency and representation
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
-- ◕ [EP-12](./items/EP-12.md) — Every advertised mutation check reaches its gate in the container
 - ◕ [FE-41](./items/FE-41.md) — NOT_EVALUATED must never carry a numeric compliance score
-- ◕ [FE-43](./items/FE-43.md) — The exported tree is the commit, and the mutation suite's reach is checked
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [IN-04](./items/IN-04.md) — This repository's own verification is executed, not asserted
 - ◕ [ST-25](./items/ST-25.md) — Null the score on NOT_EVALUATED, and pin both routes to it
@@ -60,7 +58,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 ## Everything
 
-- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(39/51)_
+- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(40/51)_
   - ● **[IN-01](./items/IN-01.md)** A working policy-as-code pack for mathematical research _(9/9)_
     - ● **[EP-01](./items/EP-01.md)** The v1.0.0 framework _(6/6)_
       - ● **[FE-01](./items/FE-01.md)** Provenance, the derived spec, and the canonical inventory
@@ -140,11 +138,11 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
       - — **[FE-37](./items/FE-37.md)** More standards beyond the 22
       - — **[FE-38](./items/FE-38.md)** Network-backed citation checking
       - — **[FE-39](./items/FE-39.md)** A profile mechanism
-  - ◑ **[IN-04](./items/IN-04.md)** This repository's own verification is executed, not asserted _(1/2)_
+  - ◑ **[IN-04](./items/IN-04.md)** This repository's own verification is executed, not asserted _(2/2)_
     - ● **[EP-11](./items/EP-11.md)** Local Docker CI and verified PR submission _(1/1)_
       - ● **[FE-40](./items/FE-40.md)** The containerized gate, and a submission path that cannot outrun it
-    - ◕ **[EP-12](./items/EP-12.md)** Every advertised mutation check reaches its gate in the container _(0/1)_
-      - ◕ **[FE-43](./items/FE-43.md)** The exported tree is the commit, and the mutation suite's reach is checked
+    - ● **[EP-12](./items/EP-12.md)** Every advertised mutation check reaches its gate in the container _(1/1)_
+      - ● **[FE-43](./items/FE-43.md)** The exported tree is the commit, and the mutation suite's reach is checked
 
 ## Decided against
 

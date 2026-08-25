@@ -9,6 +9,100 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
+## 3.0.0 — 2026-08-25
+
+**A verdict that was never reached no longer carries a number. MAJOR, because the result-envelope
+contract is incompatible: `score` widens from numeric to nullable on the `NOT_EVALUATED` path, and
+the envelope's `schemaVersion` advances to `2.0` to say so.**
+
+The versioning rule stated at the top of this file decides releases by what happens to *rules*, and
+this release adds, removes, weakens and reclassifies none. The clause that decides it is the other
+one, stated in the 1.1.0 entry below: this framework versions the format on incompatible change.
+That test has been applied twice before and came out MINOR both times, each time for the same
+reason recorded in the entry — 1.1.0 and 1.2.0 only ADDED fields, and a consumer joining on `ruleId`
+cannot be broken by a field it never read. This is the first envelope change where the test comes
+out the other way.
+
+**What changed.** A run that reaches no verdict now reports `score: null` rather than a number, and
+says which of two unrelated situations produced the absence:
+
+    "score": null,
+    "scoreBasis": {
+      "version": 2,
+      "unavailable": { "reason": "not-evaluated", "note": "No verdict was reached, ..." }
+    }
+
+`reason` is a closed token — `not-evaluated` or `no-scorable-rules` — and is `null` whenever a score
+is present. Both are needed: `score: null` alone cannot distinguish "no verdict was reached" from
+"the denominator was empty", the second is a legitimate state of a fully `COMPLIANT` run, and the
+guess that reads more naturally — "nothing passed" — is wrong in both cases.
+
+Both routes to `NOT_EVALUATED` are covered, an absent policy and an unreadable one. Only the first
+was ever reported.
+
+**Where it came from.** Not from this repository's own review. StandardsEnforcer found it from the
+outside, integrating this pack: its `describe()` printed the pack's score beside the verdict until
+MathematicsStandards reported `score: 97` with 52 rules passed *beside a status of
+`NOT_EVALUATED`*, and the consumer's repair was to print less. Reproduced on a fixture pair
+differing only in whether `project-policy.yml` parses:
+
+| fixture | status | score before | score now |
+|---|---|---|---|
+| `not-evaluated-absent-policy` | `NOT_EVALUATED` | 50 | `null` |
+| `not-evaluated-unreadable-policy` | `NOT_EVALUATED` | 80 | `null` |
+
+The number ROSE as the configuration got worse. With the policy unreadable, fewer required
+project-subject rules resolved into the denominator and the surviving passes dominated what was
+left, so a consumer ranking repositories by score placed the broken policy above the absent one.
+
+The human renderer never had the defect — it returns on both `NOT_EVALUATED` paths before printing a
+Score line. This is the machine surface being brought to the semantics the terminal surface already
+had.
+
+**Four version numbers, four questions.** Only two of them move here, and the two that do not are
+the more interesting ones:
+
+| number | before | after | why |
+|---|---|---|---|
+| framework release (`VERSION`) | 2.0.0 | **3.0.0** | the envelope contract is incompatible |
+| result-envelope `schemaVersion` | 1.0 | **2.0** | one version may not identify two incompatible shapes |
+| `scoreBasis.version` | 2 | 2 | unchanged deliberately |
+| adapter `standards-adapter.json` | 1.0.0 | 1.0.0 | unchanged deliberately |
+
+`scoreBasis.version` stays at 2 because this release changes *whether a score exists*, never *how
+one is computed*. Its contract is that two scores are comparable when their basis version agrees;
+bumping it would tell every consumer their historical numbers are incomparable, which would not be
+true, and no score in this release differs from the number 2.0.0 produced for the same target.
+
+`standards-adapter.json` stays at schemaVersion 1.0.0 because this pack still does not require the
+adapter's 1.1.0 `{policy}` capability. Declaring 1.1.0 would narrow compatibility with older
+enforcers for nothing.
+
+The `audit` findings report is a **separate document** with its own version, and it is untouched at
+`1.0.0`. It carries no compliance score, so the field whose domain widened does not appear in it —
+checkable rather than asserted, and pinned by a test.
+
+**Scored verdicts are arithmetically unchanged.** One control per scored family, compared field by
+field against 2.0.0: `COMPLIANT` 100, `NON_COMPLIANT` 97, `BLOCKED_BY_INVARIANT` 93, and
+RiemannHypothesis 92. `results`, `denominator`, `summary`, `assurance`, `blockedBy` and
+`foreignFailures` are byte-identical; stripping the new `scoreBasis.unavailable` field makes the
+whole document equal to 2.0.0's.
+
+**The archived specimens are not rewritten.** `artifacts/adoption/rh-baseline-validate.json` still
+reads `NOT_EVALUATED` with `score: 95` under `schemaVersion` 1.0. They are records of what the
+framework said on a date, and editing them to match today's code would destroy the evidence this
+release rests on.
+
+**Upgrading.** A consumer reading `score` as a number must treat it as nullable, or branch on
+`schemaVersion` before reading it. A consumer that already checks `status` before reading `score` is
+unaffected. The `null` is never bare: `scoreBasis.unavailable.reason` is the token to branch on.
+
+**Chronology.** The implementation landed on `main` at `912d4f0` on 2026-08-23, verified
+independently at `ca0a54a` before that. This release makes that behaviour official; it does not
+introduce it. The envelope `schemaVersion` bump and its contract tests are the one part of the
+change made at the release boundary itself, because the incompatibility was identified while
+classifying the release rather than while implementing it.
+
 ## 2.0.0 — 2026-08-16
 
 **Tier 3, semantic consistency and representation: what counts as the evidence is declared once and

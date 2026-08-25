@@ -37,6 +37,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { stagesFor } from "./ci-stages.mjs";
+import { checkTreeDigest, contextDigest } from "./tree-fidelity.mjs";
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
@@ -114,7 +115,33 @@ async function main() {
   const repository = process.env.CI_REPO || path.basename(ROOT);
   const startedAt = nowIso();
 
+  // WHAT AM I STANDING IN?
+  //
+  // Digested before a single stage runs, and compared against the digest the host computed over the
+  // tree it exported. The host has already proved that export is the commit byte for byte
+  // (scripts/ci.mjs, boundary one); this closes the other half of the chain, so that "this commit
+  // passed" is a claim about the bytes in the commit rather than about whatever arrived here.
+  //
+  // It matters most for the stage that is allowed to do damage. Under --with-mutation-check the
+  // pipeline is copied onto the /work tmpfs and ROOT is that copy, so this digest is taken from the
+  // disposable tree the mutations are about to edit — which is how we know the tree they attack is
+  // still the commit, and not a copy that lost something on the way.
+  //
+  // An absent CI_TREE_DIGEST is not a failure. The GitHub workflow calls this script directly, with
+  // no host to hand a digest over and no export boundary to check; refusing there would fail a run
+  // for lacking a guarantee that does not apply to it.
+  const tree = contextDigest(ROOT);
+  const digestCheck = checkTreeDigest(process.env.CI_TREE_DIGEST || null, tree.digest);
+  if (!digestCheck.ok) {
+    console.error(`run-stages: ${digestCheck.message}`);
+    return EXIT_INVOCATION;
+  }
+
   console.log(`Pipeline: ${stages.length} stages · commit ${commit} · branch ${branch} · env ${environment}`);
+  console.log(
+    `Source:   ${ROOT} · ${tree.files.length} file(s) · digest ${tree.digest.slice(0, 16)}…` +
+      (process.env.CI_TREE_DIGEST ? " (matches the tree the host exported)" : " (no host digest to compare against)"),
+  );
 
   const records = [];
   let failed = null;
@@ -146,6 +173,8 @@ async function main() {
     completedAt,
     checks: records.filter((r) => r.result === "passed").map((r) => r.id),
     failedStage: failed ? failed.id : null,
+    // The tree this run actually executed, so the receipt names the bytes and not only the SHA.
+    tree: { root: ROOT, files: tree.files.length, digest: tree.digest, hostDigest: process.env.CI_TREE_DIGEST || null },
     stages: records,
     pipeline: stages.map((s) => s.id),
   };

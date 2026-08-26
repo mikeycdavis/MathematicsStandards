@@ -678,10 +678,31 @@ function summarise(results, policy) {
   };
 }
 
+/**
+ * The version of the result-envelope format itself, independent of the framework release, of
+ * `scoreBasis.version`, and of the adapter contract. Four version numbers, four questions.
+ *
+ * It advances on an INCOMPATIBLE change to the envelope, which is the rule CHANGELOG.md has stated
+ * since 1.1.0 and the reason it stayed at "1.0" through two releases that only ever ADDED fields:
+ * a consumer joining on `ruleId` could not be broken by a field it had never read.
+ *
+ * "2.0" is the first time that test came out the other way. FE-41 changed an existing
+ * machine-consumed field rather than adding a new one: `score` is a number on every scored verdict
+ * and `null` on `NOT_EVALUATED`, so its valid value domain widened from numeric to nullable. A
+ * consumer written against "1.0" can break on a document whose top-level verdict is still perfectly
+ * valid. Leaving this at "1.0" would let one version number identify two incompatible shapes, which
+ * is the one job the field exists to do.
+ *
+ * Exported, and the only place the value is written, because `test/envelope-schema-version.test.mjs`
+ * asserts that the nullable-score shape and this declaration cannot drift apart. A second literal
+ * somewhere else is exactly the drift that assertion exists to prevent.
+ */
+export const ENVELOPE_SCHEMA_VERSION = "2.0";
+
 /** The Standard 25 envelope. `schemaVersion` versions this format, independent of the others. */
 export function envelope({ verdict, project, standardVersion, auditedAt, repo, frameworkCoverage, claims }) {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: ENVELOPE_SCHEMA_VERSION,
     standardVersion: standardVersion ?? null,
     project: project ?? repo ?? null,
     /**

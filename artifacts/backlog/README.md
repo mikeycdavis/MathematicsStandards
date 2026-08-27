@@ -5,10 +5,10 @@
 Work on this project classified with the Extended Agile Hierarchy. Every item is a file in
 [`items/`](./items/); its YAML frontmatter is the source of truth and this page is derived from it.
 
-**42 of 51 leaf items complete — 82%**
+**42 of 52 leaf items complete — 81%**
 
 ```
-█████████████████████████████████░░░░░░░  82%
+████████████████████████████████░░░░░░░░  81%
 ```
 
 ## Status
@@ -16,11 +16,12 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Status | Items |
 | --- | ---: |
 | ○ Not started | 1 |
+| ◔ Ready | 1 |
 | ◑ In progress | 6 |
 | ● Complete | 64 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
-| **Total** | **85** |
+| **Total** | **86** |
 
 ## The hierarchy
 
@@ -29,7 +30,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Theme | `TH-` | 1 | Which enduring area of value is this? |
 | Initiative | `IN-` | 4 | What outcome are we pursuing there? |
 | Epic | `EP-` | 12 | What large body of work delivers it? |
-| Feature | `FE-` | 43 | What shippable slice of that epic? |
+| Feature | `FE-` | 44 | What shippable slice of that epic? |
 | Story | `ST-` | 25 | What user-visible change, roughly one PR? |
 | Task | `TA-` | 0 | What technical step inside a story? |
 
@@ -37,7 +38,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 | Theme | Progress | Done | Remaining |
 | --- | --- | ---: | ---: |
-| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 82% | 42 | 9 |
+| [TH-01 Assurance that does not manufacture certainty](./items/TH-01.md) | `███████████░░░` 81% | 42 | 10 |
 
 ## In flight
 
@@ -50,11 +51,11 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 
 ## Ready to pick up
 
-_Nothing marked ready._
+- ◔ [FE-44](./items/FE-44.md) — Two published surfaces disagree about what an evidence locator promises
 
 ## Everything
 
-- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(42/51)_
+- ◑ **[TH-01](./items/TH-01.md)** Assurance that does not manufacture certainty _(42/52)_
   - ● **[IN-01](./items/IN-01.md)** A working policy-as-code pack for mathematical research _(9/9)_
     - ● **[EP-01](./items/EP-01.md)** The v1.0.0 framework _(6/6)_
       - ● **[FE-01](./items/FE-01.md)** Provenance, the derived spec, and the canonical inventory
@@ -87,7 +88,7 @@ _Nothing marked ready._
     - ● **[EP-05](./items/EP-05.md)** Disposition of the adoption evidence _(1/1)_
       - ● **[FE-12](./items/FE-12.md)** The v1.1 evidence disposition _(1/1)_
         - ● **[ST-13](./items/ST-13.md)** Dispose of the adoption evidence and retire first-unproved-bridge
-  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(21/30)_
+  - ◑ **[IN-03](./items/IN-03.md)** Fix what the field trials falsified _(21/31)_
     - ● **[EP-06](./items/EP-06.md)** Tier 1 — false invariant blocks _(8/8)_
       - ● **[FE-13](./items/FE-13.md)** The Tier 1 falsifier, written before any mechanism _(3/3)_
         - ● **[ST-14](./items/ST-14.md)** Pin the ceiling: evidence strength constrains the verdict
@@ -100,7 +101,7 @@ _Nothing marked ready._
         - ● **[ST-19](./items/ST-19.md)** The evidence ceiling, and cappedFrom where it fires
         - ● **[ST-20](./items/ST-20.md)** §0i — the defaulting obligation parse
       - ● **[FE-16](./items/FE-16.md)** Land Tier 1 and the §0a fix on main
-    - ◑ **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(6/6)_
+    - ◑ **[EP-07](./items/EP-07.md)** Tier 2 — false assurance _(6/7)_
       - ● **[FE-17](./items/FE-17.md)** §0 — a detector with no subject must not report a pass
       - ● **[FE-18](./items/FE-18.md)** §0e — attestations must not be silently permanently fresh
       - ● **[FE-19](./items/FE-19.md)** §0h — a result must say whose property it is about
@@ -108,6 +109,7 @@ _Nothing marked ready._
       - ● **[FE-41](./items/FE-41.md)** NOT_EVALUATED must never carry a numeric compliance score _(1/1)_
         - ● **[ST-25](./items/ST-25.md)** Null the score on NOT_EVALUATED, and pin both routes to it
       - ● **[FE-42](./items/FE-42.md)** An anchored evidence locator is inspected at its anchor, or reported unresolved
+      - ◔ **[FE-44](./items/FE-44.md)** Two published surfaces disagree about what an evidence locator promises
     - ◑ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(3/10)_
       - ● **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
       - ● **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule

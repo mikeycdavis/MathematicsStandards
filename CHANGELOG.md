@@ -9,6 +9,46 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
+## Unreleased — prepared as 3.1.0, MINOR, not yet assigned
+
+**A published evidence locator now says what it promises, and the envelope stops erasing the
+difference between a section pointer that resolves and one that does not.** Classified MINOR by the
+rule at the top of this file: one `recommended` rule is added, nothing is removed, weakened or
+reclassified, and the envelope only gains a field. `VERSION`, `package.json` and the tag are
+deliberately untouched — the number is prepared, not assigned, and the rule's `introducedIn` names
+the version this is intended to ship as rather than one that exists.
+
+**What was wrong.** `evidence.artifact-linked` has promised containing-file resolution "with any
+anchor suffix removed before resolution" since the catalog's first commit, and `scripts/pointers.mjs`
+refuses that widening for the pointers it handles because "a rule told to inspect one section of a
+document and handed the whole document has not inspected what it was pointed at". Both are published.
+Measured on `bfe7215`: a ledger citing `proofs/clm-0002.md#base` where that section exists, and one
+citing a section that does not, produced **byte-identical** envelopes — the record said a file had
+been inspected when a location had been declared, and said the same thing either way. The untruth was
+in `inspected`, not in `status`. See `design/fe-44-locator-contract.md`.
+
+**What changed, in three layers.**
+
+1. `inspected.surfaces` for `cited-artifacts` now carries `locators` — the citation as the project
+   wrote it — beside the existing `paths`, which continue to hold only bare containing files. A
+   consumer joining on `paths` reads exactly what it read before; that is why this is MINOR, and it
+   is pinned by a falsifier rather than by intention.
+2. The `$assuranceNote` on `evidence.artifact-linked` now states plainly that the rule establishes
+   containing-file existence only, and that a locator naming a section that is nowhere in an existing
+   file passes it deliberately.
+3. A new `recommended` / `warning` rule, `evidence.locator-fragment-resolves`, reports a locator whose
+   named location was not found in the file that does exist. It resolves Markdown heading anchors and
+   nothing else: a fragment in a `.lean`, `.v` or `.py` file is reported `not-evaluated`, never as a
+   project failure, because a check this framework cannot perform is its own limitation.
+
+**What did not change, deliberately.** The published description, `level`, `severity` and verdict
+semantics of `evidence.artifact-linked` are untouched, and an unresolvable anchor still passes it and
+still leaves the verdict `COMPLIANT`. Requiring the named location to resolve is a coherent future and
+a MAJOR one — it would move adopter verdicts on unchanged evidence — and it is not evidenced: neither
+frozen adoption record carries a single anchored evidence locator, so the population such a change
+would break has never been measured. If it is ever taken, it goes through `deprecatedIn` /
+`supersededBy` rather than an edited sentence.
+
 ## 3.0.0 — 2026-08-25
 
 **A verdict that was never reached no longer carries a number. MAJOR, because the result-envelope

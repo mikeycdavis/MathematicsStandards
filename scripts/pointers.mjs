@@ -32,7 +32,7 @@
  *      four new outcomes — but the diagnostic keeps them apart, because the remedy differs.
  */
 
-import { realpathSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 export const POINTER = {
@@ -49,8 +49,11 @@ export const POINTER = {
 /** A scheme-qualified locator: `https:`, `git:`, `doi:`. Not a path, and not fetched from here. */
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
-function answer(pointer, status, { target = null, kind = null, reason = null } = {}) {
-  return { pointer, target, kind, status, reason };
+function answer(pointer, status, { target = null, kind = null, reason = null, fragment = null } = {}) {
+  // `fragment` is null on every answer this module gave before FE-44, and on every answer to a
+  // pointer that names no location inside a file. Present-and-null and absent are the same
+  // proposition here, so it is a plain field rather than an optional one.
+  return { pointer, target, kind, status, reason, fragment };
 }
 
 /**
@@ -58,6 +61,9 @@ function answer(pointer, status, { target = null, kind = null, reason = null } =
  *
  * @param projectRoot absolute path to the repository being audited. Required; never defaulted.
  * @param pointer     the string the adopter wrote in its policy.
+ * @param options     `{ fragments }` — false by default, in which case `file#anchor` is `unsupported`
+ *                    exactly as before. True asks for the fragment to be followed too, and is used
+ *                    only by the rule that exists to report whether it resolves.
  * @returns { pointer, target, kind, status, reason } — `target` is project-relative with forward
  *          slashes, so it can be printed and compared on any platform; `reason` is null exactly when
  *          the status is `resolved`.
@@ -65,7 +71,7 @@ function answer(pointer, status, { target = null, kind = null, reason = null } =
  * Reading the artifact is the caller's job. This says where it is and whether it is there; what is
  * *in* it is the rule's question, and a primitive that answered it would be a detector.
  */
-export function resolveEvidencePointer(projectRoot, pointer) {
+export function resolveEvidencePointer(projectRoot, pointer, { fragments = false } = {}) {
   if (typeof projectRoot !== "string" || projectRoot === "" || !path.isAbsolute(projectRoot)) {
     throw new Error(
       `resolveEvidencePointer requires an absolute project root; received ${JSON.stringify(projectRoot)}. ` +
@@ -97,9 +103,18 @@ export function resolveEvidencePointer(projectRoot, pointer) {
     // Supportable later — the ledger already uses `<file>#<slug>` locators. Reported as unsupported
     // rather than silently truncated to the file: a rule told to inspect one section of a document
     // and handed the whole document has not inspected what it was pointed at.
-    return answer(raw, POINTER.unsupported, {
-      reason: `'${raw}' names a fragment within a file. Fragment resolution is not implemented, and reading the whole file instead would inspect something other than what was declared.`,
-    });
+    //
+    // FE-44 made "later" arrive, for callers that ask. `fragments: true` follows the fragment as
+    // well as the file; the default is unchanged, so the two callers on the declared-failed-routes
+    // path still receive `unsupported` for an anchored pointer and nothing about their behaviour
+    // moves. An opt-in rather than a new default because widening what an existing caller resolves
+    // is exactly the silent truncation the paragraph above refuses.
+    if (!fragments) {
+      return answer(raw, POINTER.unsupported, {
+        reason: `'${raw}' names a fragment within a file. Fragment resolution is not implemented, and reading the whole file instead would inspect something other than what was declared.`,
+      });
+    }
+    return resolveFragmentPointer(projectRoot, raw);
   }
 
   const normalised = raw.split("\\").join("/").replace(/\/+$/, "");
@@ -138,5 +153,134 @@ export function resolveEvidencePointer(projectRoot, pointer) {
   return answer(raw, POINTER.unsupported, {
     target: relative,
     reason: `'${relative}' is neither a file nor a directory.`,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Fragments
+//
+// FE-44. `evidence.artifact-linked` resolves a locator with the anchor stripped and that stays its
+// published contract; what was missing is any way to say whether the named location is there. This
+// is that, and it is deliberately separable: the caller opts in, the four-token status vocabulary is
+// unchanged, and the one new field is additive.
+//
+// The distinction the design record insists on, and the reason `unsupported` is not folded into
+// `missing`: a fragment this framework cannot resolve is the FRAMEWORK's limitation, and reporting
+// it as an absent location would turn parser incapability into a confident statement about the
+// adopter's evidence. Only Markdown headings are resolved today. A `.lean` declaration name, a Coq
+// section, a Python symbol — each is a real locator that a real adopter may write, and each needs a
+// parser this framework does not have.
+// ---------------------------------------------------------------------------
+
+/** Extensions whose fragments this framework can currently resolve. Everything else is unsupported. */
+const FRAGMENT_KINDS = new Map([
+  [".md", "markdown"],
+  [".markdown", "markdown"],
+]);
+
+/**
+ * GitHub-flavoured heading slugs, near enough — lowercase, punctuation dropped, spaces hyphenated.
+ *
+ * "Near enough" is a real qualification and the callers must carry it: this does not implement every
+ * rule of any one renderer's slugger, so a heading whose slug this computes differently from the
+ * tool the adopter used would be reported absent when it is present. That is why the rule reading
+ * this is `recommended`/`warning` rather than `required`/`error`, and why its finding says what it
+ * matched on. An approximation that does not admit to being one is a claim.
+ */
+function slug(heading) {
+  return heading
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+/** Every anchor a Markdown document offers: heading slugs, plus explicit `id=`/`name=` attributes. */
+export function markdownAnchors(text) {
+  const anchors = new Set();
+  let inFence = false;
+  for (const line of String(text).split(/\r?\n/)) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const heading = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/.exec(line);
+    // `{#explicit}` wins where a writer supplied one, and the computed slug is still offered: a
+    // document can be linked either way and this reports what the document actually provides.
+    if (heading) {
+      const explicit = /\{#([^}\s]+)\}\s*$/.exec(heading[1]);
+      if (explicit) anchors.add(explicit[1]);
+      anchors.add(slug(heading[1].replace(/\{#[^}\s]+\}\s*$/, "")));
+    }
+    for (const m of line.matchAll(/<[^>]*\b(?:id|name)\s*=\s*["']([^"']+)["']/g)) anchors.add(m[1]);
+  }
+  anchors.delete("");
+  return anchors;
+}
+
+/**
+ * Resolve `<file>#<fragment>`. Only reached with `fragments: true`.
+ *
+ * The file half is resolved by the ordinary path, so a fragment on a file that is not there is
+ * `missing` for the file's reason and never for the fragment's — a project told its section is
+ * absent when the whole document is absent has been told the wrong thing.
+ */
+function resolveFragmentPointer(projectRoot, raw) {
+  const hash = raw.indexOf("#");
+  const filePart = raw.slice(0, hash);
+  const fragment = raw.slice(hash + 1);
+
+  if (filePart === "") {
+    return answer(raw, POINTER.invalid, { fragment, reason: `'${raw}' names a fragment and no file to find it in.` });
+  }
+  if (fragment === "") {
+    return answer(raw, POINTER.invalid, { fragment, reason: `'${raw}' ends in an empty fragment; nothing is named after the '#'.` });
+  }
+
+  const file = resolveEvidencePointer(projectRoot, filePart);
+  if (file.status !== POINTER.resolved || file.kind !== "file") {
+    return { ...file, pointer: raw, fragment };
+  }
+
+  const kind = FRAGMENT_KINDS.get(path.extname(file.target).toLowerCase());
+  if (!kind) {
+    return answer(raw, POINTER.unsupported, {
+      target: file.target,
+      kind: file.kind,
+      fragment,
+      reason:
+        `'${file.target}' exists, and fragment resolution for ${path.extname(file.target) || "files of this kind"} ` +
+        `is not implemented. Whether '${fragment}' is in it was not determined, by this framework rather than by the project.`,
+    });
+  }
+
+  let text;
+  try {
+    text = readFileSync(path.resolve(projectRoot, file.target), "utf8");
+  } catch (error) {
+    return answer(raw, POINTER.unsupported, {
+      target: file.target,
+      fragment,
+      reason: `'${file.target}' exists and could not be read (${error.code ?? "unknown error"}), so '${fragment}' was not looked for.`,
+    });
+  }
+
+  const anchors = markdownAnchors(text);
+  if (anchors.has(fragment) || anchors.has(slug(fragment))) {
+    return answer(raw, POINTER.resolved, { target: file.target, kind: "fragment", fragment });
+  }
+  return answer(raw, POINTER.missing, {
+    target: file.target,
+    // `fragment` on both outcomes of an actual search, found and absent alike, so a caller can tell
+    // "this framework looked inside the file" from "it never got that far" without reading prose.
+    // The three ways of never getting that far — the file is missing, the pointer is malformed, the
+    // kind is not one whose fragments are resolved — keep the kind they had.
+    kind: "fragment",
+    fragment,
+    reason:
+      `'${file.target}' exists and contains no section '${fragment}'. Matched against ${anchors.size} heading ` +
+      `anchor(s) computed from the document; a heading whose slug a renderer computes differently would read ` +
+      `absent here, which is why this is reported as a recommendation rather than a failure.`,
   });
 }

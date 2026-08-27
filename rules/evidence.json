@@ -59,7 +59,27 @@
       "deprecatedIn": null,
       "supersededBy": null,
       "removedIn": null,
-      "$assuranceNote": "Exact about existence at the cited path. What is in the file, and whether it establishes the claim, is outside the reach of this or any other check here."
+      "$assuranceNote": "Establishes containing-file existence, and only that. The anchor suffix of a locator like proofs/clm-0002.md#base is removed before resolution, so this rule does not resolve the fragment: a locator naming a section that is nowhere in an existing file passes here, deliberately and by the published description. Whether the named location exists is reported separately by evidence.locator-fragment-resolves, at recommended/warning, and a warning there is not a failure here. What is in the file, and whether it establishes the claim, is outside the reach of this or any other check here."
+    },
+    {
+      "id": "evidence.locator-fragment-resolves",
+      "title": "A locator naming a location inside a file names one that is there",
+      "standard": 19,
+      "category": "evidence",
+      "level": "recommended",
+      "severity": "warning",
+      "validationType": "structural",
+      "assurance": "partial",
+      "nonExemptible": false,
+      "introducedIn": "3.1.0",
+      "description": "Where an evidence locator names a fragment within a file — proofs/clm-0002.md#base — the named location is found in that file. Reported as a recommendation; the required containing-file contract is evidence.artifact-linked and is unchanged.",
+      "rationale": "evidence.artifact-linked removes the anchor before resolving, by its published description, so a locator naming a section that is nowhere in an existing file passes it. Measured: an anchor that resolves and an anchor that does not produced byte-identical envelopes. This rule is the difference, reported at the strength the evidence supports — a stale heading slug is usually a renamed section rather than absent evidence, so it is a recommendation and never a failure.",
+      "remediation": "Open the cited file and check the section the locator names. Correct the anchor if the section was renamed, or point the locator at the section that carries the evidence. Where the fragment is right and this framework cannot resolve fragments for that kind of file, the rule reports not-evaluated rather than a problem, and nothing needs doing.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Establishes only that a fragment this framework can resolve was, or was not, found in the file. Markdown heading anchors are computed with an approximation of a renderer slug, so a heading whose slug a particular renderer computes differently would be reported absent when a reader can reach it — which is why this is a recommendation. Fragments in Lean, Coq, Python and every other kind are not resolved at all: those are reported as not-evaluated, because a check the framework cannot perform is the framework limitation and not the project failure. Whether the named section actually contains the evidence claimed is outside the reach of any check here."
     },
     {
       "id": "evidence.labels",

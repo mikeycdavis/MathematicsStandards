@@ -1622,6 +1622,68 @@ function detectEvidenceShape() {
   }
 }
 
+/**
+ * Every declared locator that names a place inside a file, with what came back when it was followed.
+ *
+ * FE-44, layer three. Computed once and read twice — by the detector below and by the surface
+ * resolver — because the two must agree about what the subject was: a rule reporting a finding over
+ * evidence its own inspection record says it did not have is the shape this repository exists to
+ * stop, and one list is how that is prevented rather than promised.
+ *
+ * Nothing here changes `evidence.artifact-linked`. That rule strips the anchor and asks whether the
+ * containing file exists, which is its published description and stays so. This asks the other
+ * question, and reports it at the strength the evidence supports.
+ */
+let declaredFragmentCache = null;
+function declaredFragmentPointers() {
+  if (declaredFragmentCache) return declaredFragmentCache;
+  const out = [];
+  if (ledger) {
+    for (const entry of ledger.entries.values()) {
+      const declared = [];
+      for (const item of entry.evidence ?? []) {
+        for (const artifact of item.artifacts ?? []) declared.push(String(artifact));
+      }
+      if (entry.formal?.file) declared.push(String(entry.formal.file));
+      for (const locator of declared) {
+        if (!locator.includes("#")) continue;
+        // Path-shaped first. `external:hardy-wright-1979` and a bare prose sentence are not
+        // locators into a file, and asking the pointer module about them would produce a diagnostic
+        // about a citation nobody claimed was a path.
+        if (!isPathShaped(containingFile(locator))) continue;
+        out.push({
+          id: entry.id,
+          line: entry.line,
+          locator,
+          answer: resolveEvidencePointer(root, locator, { fragments: true }),
+        });
+      }
+    }
+  }
+  declaredFragmentCache = out;
+  return out;
+}
+
+/** The fragment was actually looked for — found or absent. Anything else never got that far. */
+const fragmentWasSearched = (entry) => entry.answer.kind === "fragment";
+
+function detectLocatorFragments() {
+  if (!ledger) return;
+  const absent = declaredFragmentPointers()
+    .filter((e) => fragmentWasSearched(e) && e.answer.status === POINTER.missing)
+    .map((e) => `${LEDGER_PATH}:${e.line} ${e.id} — evidence cites ${e.locator}; ${e.answer.target} exists and no section '${e.answer.fragment}' was found in it`);
+  if (absent.length === 0) return;
+  report("evidence.locator-fragment-resolves", {
+    message:
+      `${absent.length} evidence locator(s) name a location inside a file that was not found there. The file exists, so ` +
+      `evidence.artifact-linked passes and this is a recommendation, not a failure: the usual cause is a renamed heading ` +
+      `rather than absent evidence. Anchors are matched against heading slugs computed by this framework, so a heading a ` +
+      `renderer slugs differently would read absent here.`,
+    evidence: absent,
+    label: "OBSERVED",
+  });
+}
+
 const REGIMES = new Set(["informal", "computational", "formal", "theorem-proving", "open-problem"]);
 
 function detectApplicability() {
@@ -1771,6 +1833,7 @@ detectFormal(proofs);
 detectOpenProblems();
 detectFailedRoutes();
 detectEvidenceShape();
+detectLocatorFragments();
 detectApplicability();
 await detectProvenance();
 detectRuleLifecycle();
@@ -2293,6 +2356,18 @@ const problemPaths = relativeFiles.filter(
   (p) => p.startsWith(`${OPEN_PROBLEMS_DIR.replace(/\/$/, "")}/`) && p.endsWith("/problem.md"),
 );
 const citedPaths = new Set();
+/**
+ * The same citations, spelled the way the project wrote them.
+ *
+ * FE-44. `citedPaths` is the resolved set: `containingFile` has already removed any anchor, because
+ * that is what `evidence.artifact-linked` has published since the catalog's first commit and this
+ * change does not touch it. But an inspection record holding only the resolved file says the
+ * framework inspected a document when what was declared was a section of one, and — measured on
+ * bfe7215 — records exactly the same thing for an anchor that resolves and an anchor that does not.
+ * The declared spelling is kept beside the resolved one so that difference stops being invisible.
+ * Beside, never instead of: design/fe-44-locator-contract.md §6 and falsifier D7.
+ */
+const citedLocators = new Set();
 if (ledger) {
   for (const entry of ledger.entries.values()) {
     for (const item of entry.evidence ?? []) {
@@ -2303,16 +2378,24 @@ if (ledger) {
       // A surface that silently resolves to nothing is the §0 defect wearing the fix's clothes:
       // the field would say "inspected no artifacts" about a ledger citing dozens.
       for (const artifact of item.artifacts ?? []) {
-        const bare = containingFile(String(artifact));
-        if (isPathShaped(bare) && relativeFileSet.has(bare)) citedPaths.add(bare);
+        const declared = String(artifact);
+        const bare = containingFile(declared);
+        if (isPathShaped(bare) && relativeFileSet.has(bare)) {
+          citedPaths.add(bare);
+          citedLocators.add(declared);
+        }
       }
     }
     // Through `containingFile` like every other locator above. It used to compare the raw value,
     // so a Formal block writing `formal/Main.lean#main_result` matched nothing in the file set and
     // the claim's own artifact disappeared from this surface — reporting zero cited artifacts for a
     // ledger that cites one. FE-42.
-    const formalFile = containingFile(entry.formal?.file ?? "");
-    if (formalFile && relativeFileSet.has(formalFile)) citedPaths.add(formalFile);
+    const declaredFormal = entry.formal?.file ?? "";
+    const formalFile = containingFile(declaredFormal);
+    if (formalFile && relativeFileSet.has(formalFile)) {
+      citedPaths.add(formalFile);
+      citedLocators.add(declaredFormal);
+    }
   }
 }
 /**
@@ -2352,7 +2435,39 @@ const resolveSurface = (surface) => {
       );
 
     case "cited-artifacts":
-      return resolved([...citedPaths].sort());
+      // The resolved containing files, plus the locators as declared. FE-44: the second list is
+      // what makes an anchor that resolves and an anchor that does not distinguishable in the
+      // record, and it is additive — nothing reads `paths` differently because of it.
+      return resolved([...citedPaths].sort(), { locators: [...citedLocators].sort() });
+    case "declared-locator-fragments": {
+      // The subject of evidence.locator-fragment-resolves: anchored locators whose fragment this
+      // framework could actually look for. Three answers, and the difference between them is the
+      // whole reason this surface is separate from `cited-artifacts`.
+      const declared = declaredFragmentPointers();
+      if (declared.length === 0) return resolved([]); // no anchor anywhere: no subject, honestly
+      const searched = declared.filter(fragmentWasSearched);
+      const unreachable = declared.filter((e) => !fragmentWasSearched(e));
+      if (searched.length === 0) {
+        // Everything the project declared is a fragment this framework cannot follow, or sits in a
+        // file that is not there. Neither is a statement about the project's sections, so the rule
+        // must not pass and must not warn: it reports not-evaluated, and this is what makes it do so.
+        return unresolved(
+          `${unreachable.length} anchored locator(s) declared, none of which this framework could follow: ` +
+            unreachable.map((e) => `${e.locator} (${e.answer.status})`).join("; "),
+        );
+      }
+      return resolved(
+        searched.map((e) => e.locator).sort(),
+        unreachable.length === 0
+          ? {}
+          : {
+              reason:
+                `${unreachable.length} further anchored locator(s) are not part of this rule's subject because ` +
+                `this framework could not follow them: ` +
+                unreachable.map((e) => `${e.locator} (${e.answer.status})`).join("; "),
+            },
+      );
+    }
     case "prose":
       // Empty without a ledger because the prose detectors themselves return early without one:
       // there are no registered claims for a reference scan to seek. Observed empty, not a failure.

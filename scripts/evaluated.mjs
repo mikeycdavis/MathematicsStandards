@@ -66,6 +66,7 @@ export const EVALUATED_RULES = [
   "evidence.applicability-declared",
   "evidence.type-vocabulary",
   "evidence.artifact-linked",
+  "evidence.locator-fragment-resolves",
   "evidence.labels",
   "evidence.skipped-never-passed",
   "evidence.equivalence-direction-proved",

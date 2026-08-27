@@ -46,6 +46,7 @@ import {
   looksUniversal,
   looksBounded,
   isPathShaped,
+  containingFile,
   evidenceCan,
   hasFormalBlock,
 } from "./claims.mjs";
@@ -1035,7 +1036,7 @@ function detectComputationEvidence() {
         }
       }
       for (const artifact of item.artifacts) {
-        const bare = artifact.split("#")[0];
+        const bare = containingFile(artifact);
         if (!existsSync(path.join(root, bare))) {
           // Only computational evidence belongs to this rule. A missing proof document is an
           // evidence.artifact-linked failure and is reported there; reporting it here as well would
@@ -1317,6 +1318,14 @@ function detectFormal(proofs) {
       incomplete.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — Formal block omits ${missing.join(", ")}`);
     }
 
+    // Deliberately NOT `containingFile`, though the operation looks identical. That primitive
+    // carries the file-level contract of `evidence.artifact-linked`; this rule's contract is
+    // different and must not drift toward it by sharing a helper. Standard 16 R3 prohibits a
+    // placeholder "anywhere the target's proof depends on", and nothing here traces that chain, so
+    // the containing file is a conservative envelope around it — deliberately wider than the
+    // declaration the Formal block names. Narrowing to the anchor would trade over-firing for
+    // missed violations on a forbidden, non-exemptible rule, which is the failure this framework
+    // exists to prevent rather than a tidier reading. FE-42.
     const cited = String(block.file ?? "").split("#")[0].trim();
     if (!cited) {
       inChain.push(`${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) — cites no formal artifact`);
@@ -1328,7 +1337,14 @@ function detectFormal(proofs) {
     }
     const count = placeholderFiles.get(cited.split(path.sep).join("/"));
     if (count) {
-      inChain.push(`${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) — cites ${cited}, which contains ${count} placeholder${count === 1 ? "" : "s"}`);
+      const declared = String(block.declaration ?? "").trim();
+      const named = declared ? ` names ${declared} in` : " cites";
+      inChain.push(
+        `${LEDGER_PATH}:${entry.line} ${entry.id} (${entry.status}) —${named} ${cited}, ` +
+          `which contains ${count} placeholder${count === 1 ? "" : "s"} somewhere in the file; ` +
+          `the formal dependency chain is not traced, so this does not establish that ` +
+          `${declared || "the cited declaration"} itself contains or depends on one`,
+      );
     }
   }
 
@@ -1341,7 +1357,11 @@ function detectFormal(proofs) {
   }
   if (inChain.length > 0) {
     report("formal.placeholder-in-chain", {
-      message: `${inChain.length} claim(s) assert formal certification over a placeholder, a missing file, or nothing at all. A clean pass here is still not certification — that requires running the assistant.`,
+      message:
+        `${inChain.length} claim(s) assert formal certification over a placeholder, a missing file, or nothing at all. ` +
+        `Placeholders are counted over the whole cited file, which is a conservative approximation of the target's ` +
+        `dependency chain rather than a claim about the named declaration — this rule does not trace that chain. ` +
+        `A clean pass here is still not certification — that requires running the assistant.`,
       evidence: inChain,
       label: "OBSERVED",
     });
@@ -1558,7 +1578,7 @@ function detectEvidenceShape() {
         badTypes.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — evidence type '${item.type}' is not in the vocabulary`);
       }
       for (const artifact of item.artifacts) {
-        const bare = artifact.split("#")[0];
+        const bare = containingFile(artifact);
         if (isPathShaped(bare) && !existsSync(path.join(root, bare))) {
           missing.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — evidence cites ${bare}, which does not exist`);
         }
@@ -2283,12 +2303,16 @@ if (ledger) {
       // A surface that silently resolves to nothing is the §0 defect wearing the fix's clothes:
       // the field would say "inspected no artifacts" about a ledger citing dozens.
       for (const artifact of item.artifacts ?? []) {
-        const bare = String(artifact).split("#")[0];
+        const bare = containingFile(String(artifact));
         if (isPathShaped(bare) && relativeFileSet.has(bare)) citedPaths.add(bare);
       }
     }
-    const formalFile = entry.formal?.file;
-    if (typeof formalFile === "string" && relativeFileSet.has(formalFile)) citedPaths.add(formalFile);
+    // Through `containingFile` like every other locator above. It used to compare the raw value,
+    // so a Formal block writing `formal/Main.lean#main_result` matched nothing in the file set and
+    // the claim's own artifact disappeared from this surface — reporting zero cited artifacts for a
+    // ledger that cites one. FE-42.
+    const formalFile = containingFile(entry.formal?.file ?? "");
+    if (formalFile && relativeFileSet.has(formalFile)) citedPaths.add(formalFile);
   }
 }
 /**

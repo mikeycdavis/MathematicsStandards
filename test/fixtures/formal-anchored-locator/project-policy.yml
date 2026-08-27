@@ -1,0 +1,19 @@
+standardVersion: "1.0.0"
+project: "sorry-certified"
+
+mathematics:
+  regimes:
+    - formal
+    - theorem-proving
+  proofAssistants:
+    - lean4
+
+# Deliberately present and deliberately rejected: formal.placeholder-in-chain is forbidden and
+# nonExemptible, so this waiver is refused rather than honoured, and the refusal is itself a failure.
+# The fixture exists to prove that a project cannot buy its way past an invariant.
+exceptions:
+  - rule: formal.placeholder-in-chain
+    reason: "The formalisation is nearly finished and the release is Friday."
+    approvedBy: "the author"
+    approvedAt: "2026-03-01"
+    expires: "2026-12-01"

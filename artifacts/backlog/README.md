@@ -16,8 +16,8 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 | Status | Items |
 | --- | ---: |
 | ○ Not started | 1 |
-| ◔ Ready | 1 |
 | ◑ In progress | 6 |
+| ◕ In review | 1 |
 | ● Complete | 63 |
 | ◌ Deferred | 8 |
 | — Cancelled | 6 |
@@ -45,13 +45,14 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
 - ◑ [EP-07](./items/EP-07.md) — Tier 2 — false assurance
 - ◑ [EP-08](./items/EP-08.md) — Tier 3 — semantic inconsistency and representation
 - ◑ [EP-09](./items/EP-09.md) — Tier 4 — authoring and ergonomics
+- ◕ [FE-42](./items/FE-42.md) — An anchored evidence locator is inspected at its anchor, or reported unresolved
 - ◑ [IN-03](./items/IN-03.md) — Fix what the field trials falsified
 - ◑ [IN-04](./items/IN-04.md) — This repository's own verification is executed, not asserted
 - ◑ [TH-01](./items/TH-01.md) — Assurance that does not manufacture certainty
 
 ## Ready to pick up
 
-- ◔ [FE-42](./items/FE-42.md) — An anchored evidence locator is inspected at its anchor, or reported unresolved
+_Nothing marked ready._
 
 ## Everything
 
@@ -108,7 +109,7 @@ Work on this project classified with the Extended Agile Hierarchy. Every item is
       - ● **[FE-20](./items/FE-20.md)** §0m — a rule that accepts a pointer must be able to follow it
       - ● **[FE-41](./items/FE-41.md)** NOT_EVALUATED must never carry a numeric compliance score _(1/1)_
         - ● **[ST-25](./items/ST-25.md)** Null the score on NOT_EVALUATED, and pin both routes to it
-      - ◔ **[FE-42](./items/FE-42.md)** An anchored evidence locator is inspected at its anchor, or reported unresolved
+      - ◕ **[FE-42](./items/FE-42.md)** An anchored evidence locator is inspected at its anchor, or reported unresolved
     - ◑ **[EP-08](./items/EP-08.md)** Tier 3 — semantic inconsistency and representation _(3/10)_
       - ● **[FE-21](./items/FE-21.md)** §0c — a recognized representation of the evidence must not be read as its absence
       - ● **[FE-22](./items/FE-22.md)** §0d — evidence types must mean the same thing to every rule

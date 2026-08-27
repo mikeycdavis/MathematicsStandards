@@ -484,6 +484,36 @@ export function isPathShaped(token) {
   return token.includes("/") || /\.[A-Za-z0-9]{1,6}(#|$)/.test(token);
 }
 
+/**
+ * The containing file named by a locator, with any `#fragment` removed.
+ *
+ * FE-42. The ledger grammar of Standard 3 lets an adopter write `proofs/clm-0002.md#base` or
+ * `formal/Squares.lean#sq_nonneg`, and four consumers each cut that at the `#` with their own copy
+ * of `split("#")[0]`. Four copies of one rule is how the copies stop agreeing: a fifth site compared
+ * `Formal.file` to the file set *without* cutting, so an anchored `file:` matched nothing and
+ * vanished from `inspected.surfaces` — the ledger cited an artifact and the envelope reported it had
+ * inspected none. Same locator, two spellings, opposite errors.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT DO. It does not resolve the fragment. Stripping it is the
+ * published contract of `evidence.artifact-linked`, stated in the catalog since the first commit
+ * that created it: the reference resolves "with any anchor suffix removed before resolution".
+ * Whether an unresolvable anchor ought to fail is a real and open question — `scripts/pointers.mjs`
+ * takes the opposite view for the pointers it handles — but answering it would amend a published
+ * rule description, which is a release decision rather than a repair. This function exists to make
+ * the four file-level consumers agree with each other and with what the catalog already promises.
+ *
+ * It is also NOT for the placeholder scanner (`formal.placeholder-in-chain`), whose contract is
+ * intentionally different: Standard 16 R3 prohibits a placeholder "anywhere the target's proof
+ * depends on", and since nothing here traces that chain, the containing file is the conservative
+ * envelope. Narrowing it to the anchor would trade over-firing for missed violations on a rule that
+ * gates BLOCKED_BY_INVARIANT.
+ */
+export function containingFile(locator) {
+  if (typeof locator !== "string") return "";
+  const hash = locator.indexOf("#");
+  return (hash === -1 ? locator : locator.slice(0, hash)).trim();
+}
+
 /** `2026-08-05 OBSERVATION → THEOREM (proof written, proofs/x.md)` or `2026-08-01 → OBSERVATION (...)`. */
 function parseHistory(textLine) {
   const date = /^(\d{4}-\d{2}-\d{2})/.exec(textLine)?.[1] ?? null;

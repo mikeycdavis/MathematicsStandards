@@ -38,8 +38,14 @@ in `inspected`, not in `status`. See `design/fe-44-locator-contract.md`.
    file passes it deliberately.
 3. A new `recommended` / `warning` rule, `evidence.locator-fragment-resolves`, reports a locator whose
    named location was not found in the file that does exist. It resolves Markdown heading anchors and
-   nothing else: a fragment in a `.lean`, `.v` or `.py` file is reported `not-evaluated`, never as a
-   project failure, because a check this framework cannot perform is its own limitation.
+   nothing else: a fragment in a `.lean`, `.v` or `.py` file is never reported as a project failure,
+   because a check this framework cannot perform is its own limitation. Such a locator is set aside
+   from the rule's subject and named in the inspection record's `reason`; the rule reports
+   `not-evaluated` when every anchored locator declared is one it could not follow. It does not
+   withdraw itself because one locator among several was unreachable — that would discard the checks
+   it did perform, which is the granularity error the design record rejects in Model 3. The declared
+   fragment is matched as written against the anchors a document offers, rather than being slugged
+   first, so a punctuated locator cannot resolve to a heading the document does not actually offer.
 
 **What did not change, deliberately.** The published description, `level`, `severity` and verdict
 semantics of `evidence.artifact-linked` are untouched, and an unresolvable anchor still passes it and

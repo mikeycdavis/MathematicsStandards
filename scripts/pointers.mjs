@@ -267,7 +267,16 @@ function resolveFragmentPointer(projectRoot, raw) {
   }
 
   const anchors = markdownAnchors(text);
-  if (anchors.has(fragment) || anchors.has(slug(fragment))) {
+  // The declared fragment is compared as written, against the anchors the document actually offers.
+  // It is deliberately NOT slugged first: `slug()` strips punctuation, so slugging both sides makes a
+  // locator `#a.b` match a heading `A.B` whose only anchor is `ab` — a fragment the document does not
+  // offer, reported resolved. That is this rule's own failure mode, since it exists to report a
+  // locator naming a place that is not there. The leniency it would buy (a writer citing the heading
+  // text rather than its slug) is unevidenced: the shipped `templates/claims-ledger.md` teaches the
+  // slug form, and §3 of design/fe-44-locator-contract.md measured zero anchored evidence locators
+  // across both frozen adopters. Headings still contribute their computed slug AND any explicit
+  // `{#id}`, so a document remains linkable either way.
+  if (anchors.has(fragment)) {
     return answer(raw, POINTER.resolved, { target: file.target, kind: "fragment", fragment });
   }
   return answer(raw, POINTER.missing, {

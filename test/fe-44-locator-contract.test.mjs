@@ -37,10 +37,12 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import os from "node:os";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 import { HOME, run } from "./helpers/cli.mjs";
+import { resolveEvidencePointer, POINTER } from "../scripts/pointers.mjs";
 
 /** The rule the design record recommends adding. Named once; every assertion below reads it. */
 const FRAGMENT_RULE = "evidence.locator-fragment-resolves";
@@ -317,4 +319,104 @@ test("D7 · the containing file is still there to be joined on", () => {
   const cited = citedArtifacts(envelopeFor("locator-anchor-absent"));
   assert.ok(cited.paths.includes("proofs/clm-0002.md"), `the containing file left the record: ${JSON.stringify(cited.paths)}`);
   assert.equal(cited.state, "resolved-nonempty");
+});
+
+// ---------------------------------------------------------------------------
+// R1, R2 · the two review findings on this branch, and the design record's answer to each.
+//
+// Both arrived as automated review comments on the pull request for this change. Neither is a
+// regression against `main` — the rule they concern did not exist there — and neither was decided by
+// the reviewer: design/fe-44-locator-contract.md already settles both, in opposite directions.
+//
+//   R1  the declared fragment was slugged before matching, so `#a.b` resolved against a heading
+//       `A.B` whose only anchor is `ab`. Fixed: the locator is compared as written. A rule whose
+//       whole subject is "the named place is not there" must not manufacture a match for it.
+//   R2  a ledger mixing a followable locator with an unfollowable one reports on the followable one
+//       and names the rest in `reason`. NOT changed. Withdrawing the rule because one locator was
+//       unreachable is §4 Model 3's granularity error — "one unresolvable anchor would withdraw the
+//       rule entirely, discarding the existence checks" — which the design record rejects outright.
+//       The wording that read as a per-locator promise was corrected instead.
+// ---------------------------------------------------------------------------
+
+test("R1 · a punctuated locator does not match a heading the document does not offer", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "mathstd-fe44-frag-"));
+  try {
+    writeFileSync(path.join(dir, "doc.md"), "# A.B\n\ntext\n");
+    const offered = resolveEvidencePointer(dir, "doc.md#ab", { fragments: true });
+    const notOffered = resolveEvidencePointer(dir, "doc.md#a.b", { fragments: true });
+
+    // The document's heading `A.B` contributes exactly one anchor, `ab`. A locator spelling that
+    // anchor resolves; a locator spelling the heading's punctuation does not, because no such
+    // anchor exists to link to. Slugging the declared side collapses the two.
+    assert.equal(offered.status, POINTER.resolved, "the anchor the document does offer stopped resolving");
+    assert.equal(
+      notOffered.status,
+      POINTER.missing,
+      "'#a.b' was reported resolved against a document offering only '#ab' — the declared fragment " +
+        "is being slugged before comparison, which lets this rule manufacture the match it exists to deny",
+    );
+    assert.equal(notOffered.kind, "fragment", "the absent fragment lost the evidence that it was searched for");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("R1 · and the ways a document can legitimately offer an anchor still work", () => {
+  // The other half: reporting everything absent would also satisfy the assertion above.
+  const dir = mkdtempSync(path.join(os.tmpdir(), "mathstd-fe44-frag-"));
+  try {
+    writeFileSync(path.join(dir, "doc.md"), '# Proof of CLM-0002\n\n## Base case {#base}\n\n<a id="uniformity"></a>\n');
+    for (const fragment of ["proof-of-clm-0002", "base", "uniformity"]) {
+      assert.equal(
+        resolveEvidencePointer(dir, `doc.md#${fragment}`, { fragments: true }).status,
+        POINTER.resolved,
+        `'#${fragment}' is offered by the document and was reported absent`,
+      );
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("R2 · an unfollowable locator sets itself aside; it does not withdraw the rule", () => {
+  // A ledger declaring BOTH a Markdown fragment this framework can look for and a `.py` fragment it
+  // cannot. Model 3's granularity error would report the whole rule not-evaluated here, discarding a
+  // check that was actually performed. Built outside the repository so no committed fixture teaches
+  // a shape the design record rejects.
+  const dir = mkdtempSync(path.join(os.tmpdir(), "mathstd-fe44-mixed-"));
+  try {
+    cpSync(path.join(HOME, "test/fixtures/locator-anchor-present"), dir, { recursive: true });
+    const ledger = path.join(dir, "artifacts/claims-ledger.md");
+    const followable = "  - proof — `proofs/clm-0002.md#proof-of-clm-0002`";
+    const text = readFileSync(ledger, "utf8");
+    assert.equal(text.split(followable).length - 1, 1, "the fixture's resolvable locator moved; this test needs it");
+    writeFileSync(ledger, text.replace(followable, `${followable}\n  - computational — \`computations/density/search.py#scan\``));
+
+    const { out } = run(["validate", `--dir=${dir}`, "--json"]);
+    const result = JSON.parse(out).results.find((r) => r.ruleId === FRAGMENT_RULE);
+    assert.ok(result, `${FRAGMENT_RULE} is absent from the results entirely`);
+
+    assert.equal(
+      result.status,
+      "passed",
+      `one unfollowable locator withdrew the whole rule (status ${result.status}, because ` +
+        `${result.notEvaluatedBecause}). That discards the Markdown fragment that WAS checked and ` +
+        `found, which is the granularity the design record rejects in Model 3.`,
+    );
+
+    const surface = result.inspected.surfaces.find((s) => s.surface === "declared-locator-fragments");
+    assert.deepEqual(
+      surface.paths,
+      ["proofs/clm-0002.md#proof-of-clm-0002"],
+      "the rule's subject is the locators it could follow, and nothing else",
+    );
+    assert.match(
+      surface.reason ?? "",
+      /computations\/density\/search\.py#scan/,
+      `the locator set aside is not named in the record: ${JSON.stringify(surface.reason)}. Excluding it ` +
+        `silently would be the FE-44 defect itself, one layer down.`,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

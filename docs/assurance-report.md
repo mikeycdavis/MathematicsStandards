@@ -12,8 +12,8 @@ rule catalog, so it cannot claim coverage the rules do not declare.
 
 | Figure | Value |
 | --- | --- |
-| Rules in the catalog | 83 |
-| Rules with a detector | 54 |
+| Rules in the catalog | 84 |
+| Rules with a detector | 55 |
 | Rules with no detector (report not-evaluated, never passed) | 29 |
 | Prohibitions (`forbidden` + `nonExemptible`) | 37 |
 | Standards carrying at least one rule | 22 of 22 |
@@ -76,7 +76,7 @@ Every Status value is one of the fifteen tokens of Standard 2 R1.
 
 Every path-shaped evidence reference resolves to a file in the repository, with any anchor suffix removed before resolution.
 
-**What the check does not establish.** Exact about existence at the cited path. What is in the file, and whether it establishes the claim, is outside the reach of this or any other check here.
+**What the check does not establish.** Establishes containing-file existence, and only that. The anchor suffix of a locator like proofs/clm-0002.md#base is removed before resolution, so this rule does not resolve the fragment: a locator naming a section that is nowhere in an existing file passes here, deliberately and by the published description. Whether the named location exists is reported separately by evidence.locator-fragment-resolves, at recommended/warning, and a warning there is not a failure here. What is in the file, and whether it establishes the claim, is outside the reach of this or any other check here.
 
 ### `evidence.skipped-never-passed`
 
@@ -233,6 +233,14 @@ An Equivalences entry claiming iff names a claim that proves the equivalence, an
 Every finding carries one of OBSERVED, INFERRED, CONFIRMED_BY_OWNER, or UNKNOWN, and no heuristic detection is labelled OBSERVED.
 
 **What the check does not establish.** Checks that every finding carries a label from the vocabulary. That each label is the right one for how the finding was produced is enforced by a test over the detectors, not by this rule at run time.
+
+### `evidence.locator-fragment-resolves`
+
+[Standard 19](../standards/19-evidence-requirements.md) · recommended · warning · structural
+
+Where an evidence locator names a fragment within a file — proofs/clm-0002.md#base — the named location is found in that file. Reported as a recommendation; the required containing-file contract is evidence.artifact-linked and is unchanged.
+
+**What the check does not establish.** Establishes only that a fragment this framework can resolve was, or was not, found in the file. Markdown heading anchors are computed with an approximation of a renderer slug, so a heading whose slug a particular renderer computes differently would be reported absent when a reader can reach it — which is why this is a recommendation. Fragments in Lean, Coq, Python and every other kind are not resolved at all. Such a locator is excluded from this rule's subject and named in the inspection record's reason, because a check the framework cannot perform is the framework limitation and not the project failure; it is never reported as a project failure. The rule reports not-evaluated when every anchored locator declared is one it could not follow. Where some could be followed and some could not, it reports on the ones it followed and the record names the rest: withdrawing the whole rule because one locator was unreachable would discard checks that were actually performed, which is the granularity error design/fe-44-locator-contract.md rejects in its Model 3. Whether the named section actually contains the evidence claimed is outside the reach of any check here.
 
 ### `formal.axiom-disclosure`
 

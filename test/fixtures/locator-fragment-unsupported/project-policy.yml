@@ -1,0 +1,75 @@
+standardVersion: "1.0.0"
+project: "gap-regular-sequences"
+
+mathematics:
+  regimes:
+    - informal
+    - computational
+  claimsLedger: "artifacts/claims-ledger.md"
+
+applicability:
+  formal.status-declared:
+    status: not-applicable
+    reason: "The Lean file here is a scratch development supporting no claim."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "A claim declares formal status."
+  formal.trusted-chain-tracked:
+    status: not-applicable
+    reason: "No claim declares formal status."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+  formal.gap-inventory:
+    status: not-applicable
+    reason: "No claim declares formal status; the Formal field is uniformly absent by intent."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "A claim declares formal status."
+  problems.tracking-file:
+    status: not-applicable
+    reason: "This project is not working toward a major open problem."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "openProblemMode is set."
+  problems.proved-vs-conjectural:
+    status: not-applicable
+    reason: "No open-problem record."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An open-problem record is added."
+  problems.known-result-check:
+    status: not-applicable
+    reason: "No open-problem record."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An open-problem record is added."
+  problems.equivalence-tracking:
+    status: not-applicable
+    reason: "No open-problem record."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An open-problem record is added."
+  problems.difficulty-location:
+    status: not-applicable
+    reason: "No open-problem record."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An open-problem record is added."
+  problems.barriers-recorded:
+    status: not-applicable
+    reason: "No open-problem record."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An open-problem record is added."
+  lifecycle.failed-routes-preserved:
+    status: not-applicable
+    reason: "No approach has been abandoned yet."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An approach is terminated."
+  lifecycle.terminated-approaches:
+    status: not-applicable
+    reason: "No approach has been terminated."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An approach is terminated."
+  lifecycle.reopening-evidence:
+    status: not-applicable
+    reason: "No approach has been terminated."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "An approach is terminated."
+  lifecycle.stopping-criteria:
+    status: not-applicable
+    reason: "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here."
+    reviewedAt: "2026-01-12"
+    revisitWhen: "openProblemMode is set."

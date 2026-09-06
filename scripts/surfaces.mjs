@@ -72,6 +72,13 @@ export const SURFACES = new Set([
   // number of things of the kind it checks is zero.
   "reference-identifiers",
   "cited-artifacts",
+  // The anchored locators only, and only the ones whose fragment this framework can actually
+  // look for. Separate from `cited-artifacts` because the two answer different questions about
+  // the same strings: that surface is every citation, resolved to its containing file, and this
+  // one is the subset that names a location inside a file. A ledger with no anchor at all
+  // resolves this to empty and the rule reading it reports `no-subject` — which is the honest
+  // answer, and the one both frozen adopters produce.
+  "declared-locator-fragments",
   "prose",
   "proof-sources",
   "open-problems",
@@ -203,6 +210,22 @@ export const RULE_SURFACES = new Map([
   ["evidence.applicability-declared", { subject: P, surfaces: ["project-policy"] }],
   ["evidence.type-vocabulary", { subject: P, surfaces: ["claims-ledger"] }],
   ["evidence.artifact-linked", { subject: P, surfaces: ["claims-ledger", "cited-artifacts"] }],
+  // FE-44. `requires` is load-bearing and is the whole of how parser incapability stays the
+  // framework's problem: where a project declares fragments this framework cannot resolve — a
+  // Lean declaration, a Python symbol — the surface comes back `unresolved`, the rule is
+  // reported `skipped / not-evaluated` with `unresolved-evidence`, and no finding is made about
+  // the project. Without it the rule would pass on evidence it never examined, which is the §0
+  // shape this repository exists to stop. The rule is `recommended`, so an unresolved surface
+  // costs a denominator slot and never a verdict: step 5 counts only required rules.
+  [
+    "evidence.locator-fragment-resolves",
+    // One surface, deliberately. Declaring `claims-ledger` beside it would make any ledger at all
+    // count as something this rule inspected, so a project with no anchored locator anywhere would
+    // report `passed` — a rule passing over evidence of a kind it never saw, which is the §0 shape
+    // and what falsifier D5 exists to catch. The subject of this rule is the anchored locators, and
+    // nothing else is.
+    { subject: P, surfaces: ["declared-locator-fragments"], requires: ["declared-locator-fragments"] },
+  ],
   ["evidence.equivalence-direction-proved", { subject: P, surfaces: ["claims-ledger"] }],
 
   // The run's own conduct. These read the findings this invocation produced, and their subject is
@@ -232,6 +255,7 @@ export const SURFACE_LABELS = {
   references: "references",
   "reference-identifiers": "resolvable identifiers",
   "cited-artifacts": "cited artifacts",
+  "declared-locator-fragments": "declared locators naming a place inside a file",
   prose: "prose documents",
   "proof-sources": "proof-assistant sources",
   "open-problems": "open-problem records",
@@ -304,10 +328,32 @@ export const RESOLUTION = {
   unresolved: "unresolved",
 };
 
-/** A resolver's successful answer. `items` may be paths or locators; emptiness is a real answer. */
-export function resolved(items) {
+/**
+ * A resolver's successful answer. `items` may be paths or locators; emptiness is a real answer.
+ *
+ * Two optional companions, both added by FE-44 and both additive by construction:
+ *
+ *   - `locators` — what the PROJECT wrote, where that differs from what the framework resolved it
+ *     to. `evidence.artifact-linked` resolves `proofs/clm-0002.md#base` to `proofs/clm-0002.md`,
+ *     which is its published contract and stays its published contract; but an envelope recording
+ *     only the resolved file states that a file was inspected when a section was declared, and it
+ *     records the identical thing for an anchor that resolves and one that does not. Measured on
+ *     bfe7215: byte-identical. The locators accompany `items`, never replace them — a consumer
+ *     joining on the resolved paths must keep working, and replacing them would be a MAJOR change
+ *     rather than the MINOR this is (design/fe-44-locator-contract.md §6, falsifier D7).
+ *   - `reason` on a resolved answer — why the items are the ones they are, where something the
+ *     surface could have carried was deliberately left out. Previously null on every success,
+ *     because the only reason worth reporting was a failure to resolve. A surface that silently
+ *     drops what it cannot check reports a smaller subject with no account of the difference.
+ */
+export function resolved(items, { locators = null, reason = null } = {}) {
   const list = [...items];
-  return { state: list.length > 0 ? RESOLUTION.nonempty : RESOLUTION.empty, items: list, reason: null };
+  return {
+    state: list.length > 0 ? RESOLUTION.nonempty : RESOLUTION.empty,
+    items: list,
+    reason,
+    locators: locators === null ? null : [...locators],
+  };
 }
 
 /** A resolver that could not answer. Never the same as finding nothing. */
@@ -370,6 +416,14 @@ export function inspectionFor(ruleId, resolve) {
       paths: answer.items.slice(0, MAX_SURFACE_PATHS),
       reason: answer.reason ?? null,
       declared: DECLARED_SURFACES.has(surface),
+      // Present only where the surface has a notion of a declared locator distinct from the path it
+      // resolves to. Absent is not "the project declared nothing" — it is "this kind of surface does
+      // not carry that distinction", which is a property of the surface rather than an observation
+      // about the project, and the two must not share a spelling. Where it is present it is capped
+      // exactly like `paths`, so one long ledger cannot unbound the envelope.
+      ...(answer.locators === null || answer.locators === undefined
+        ? {}
+        : { locators: answer.locators.slice(0, MAX_SURFACE_PATHS) }),
     };
   });
 

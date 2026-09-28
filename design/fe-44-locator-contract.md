@@ -1,7 +1,7 @@
 # FE-44 — what a published evidence locator promises
 
 **Design record. Nothing here is implemented, and nothing here should be implemented on the strength
-of this document.** It evaluates the models recorded in [FE-44](../artifacts/backlog/items/FE-44.md)
+of this document.** It evaluates the models recorded in [FE-44](https://github.com/mikeycdavis/MathematicsStandards/issues/75)
 against the repository's written standards and its compatibility contract, and recommends one. The
 trigger for acting on it is a decision to act on it, not the fact that it is written down
 (Standard 18 R5, and the precedent of [design/v1.1-candidates.md](v1.1-candidates.md)).

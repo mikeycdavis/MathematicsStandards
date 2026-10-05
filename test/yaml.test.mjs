@@ -151,11 +151,70 @@ test("a whitespace-only line at or under the body indent is an empty line in bot
   assert.deepEqual(parseYaml("a: >-\n  one\n \n  two\n"), { a: "one\ntwo" });
 });
 
-test("trailing and leading whitespace-only lines are blank lines, whatever their width", () => {
-  assert.deepEqual(parseYaml("a: |-\n  one\n    \n      \n"), { a: "one" });
-  assert.deepEqual(parseYaml("a: |\n  one\n    \nb: 1\n"), { a: "one\n", b: "1" });
-  assert.deepEqual(parseYaml("a: >-\n  one\n    \n"), { a: "one" });
-  assert.deepEqual(parseYaml("a: |-\n    \n  one\n"), { a: "\none" });
+// The second review of FE-32 (PR #110, review comment
+// https://github.com/mikeycdavis/MathematicsStandards/pull/110#discussion_r4189245269) found the
+// same corner at the end of the body: a trailing whitespace-only line wider than the body's indent
+// was dropped by chomping. YAML 1.2 chomping removes only *empty* trailing lines (l-chomped-empty:
+// at most the body's indent in spaces); a line with spaces beyond the indent is a content line made
+// of spaces (l-nb-literal-text), so `-` strips only its final line break and the spaces stay.
+test("a trailing whitespace-only line deeper than the body keeps its extra spaces in a literal scalar", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n"), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |\n  one\n    \n"), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n      \n"), { a: "one\n  \n    " });
+  assert.deepEqual(parseYaml("a: |\n  one\n    \nb: 1\n"), { a: "one\n  \n", b: "1" });
+});
+
+test("only truly empty trailing lines are chomped, whichever side of a deeper whitespace line they fall", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n\n\n"), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n  \n \n"), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |-\n  one\n\n    \n"), { a: "one\n\n  " });
+  assert.deepEqual(parseYaml("a: |-\n  one\n\n  \n \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\n  one\n\n  \n \n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n\n  \n \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: >\n  one\n  \n"), { a: "one\n" });
+});
+
+test("a trailing whitespace-only line is judged the same in a CRLF document and with no final newline", () => {
+  assert.deepEqual(parseYaml("a: |-\r\n  one\r\n    \r\n"), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |-\r\n  one\r\n  \r\n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n    "), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |\n  one\n    "), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n  "), { a: "one" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n"), { a: "one" });
+  refuses("a: >-\n  one\n    ", /line 3: more-indented/);
+});
+
+test("a trailing whitespace-only line deeper than the body is refused in a folded scalar", () => {
+  refuses("a: >-\n  one\n    \n", /line 3: more-indented/);
+  refuses("a: >\n  one\n    \n", /line 3: more-indented/);
+  refuses("a: >-\n  one\n\n    \n\n", /line 4: more-indented/);
+  refuses("a: >-\n  one\n    \nb: 1\n", /line 3: more-indented/);
+});
+
+test("a trailing whitespace-only line at or under the body indent is an empty line", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n  \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\n  one\n \nb: 1\n"), { a: "one\n", b: "1" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n  \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: >\n  one\n \n"), { a: "one\n" });
+});
+
+// YAML 1.2 section 8.1.1.1: leading empty lines are empty lines only up to the first body line's
+// indent; a wider one is an error, not text. The reader used to flatten it to an empty line.
+test("a leading whitespace-only line at or under the body indent is an empty line, a wider one is refused", () => {
+  assert.deepEqual(parseYaml("a: |-\n  \n  one\n"), { a: "\none" });
+  assert.deepEqual(parseYaml("a: |-\n \n  one\n"), { a: "\none" });
+  assert.deepEqual(parseYaml("a: >-\n  \n  one\n"), { a: "\none" });
+  refuses("a: |-\n    \n  one\n", /line 2: .*leading whitespace-only line/);
+  refuses("a: >-\n    \n  one\n", /line 2: .*leading whitespace-only line/);
+  refuses("a: |-\n  \n      \n  one\n", /line 3: .*leading whitespace-only line/);
+});
+
+// Whitespace in YAML is the space and the tab. JavaScript's `trim()` and `\s` also strip a no-break
+// space and other Unicode spaces, which are content: a line holding only one is not empty.
+test("a Unicode-space-only line is content, not an empty line", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n  \u00a0\n"), { a: "one\n\u00a0" });
+  assert.deepEqual(parseYaml("a: |-\n  \u00a0\n  one\n"), { a: "\u00a0\none" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n  \u00a0two\n"), { a: "one \u00a0two" });
 });
 
 test("a tab-only line is still refused", () => {

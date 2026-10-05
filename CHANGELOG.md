@@ -9,14 +9,16 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
-## Unreleased — prepared as 3.1.0, MINOR, not yet assigned
+## 3.1.0 — 2026-10-05
 
 **A published evidence locator now says what it promises, and the envelope stops erasing the
 difference between a section pointer that resolves and one that does not.** Classified MINOR by the
 rule at the top of this file: one `recommended` rule is added, nothing is removed, weakened or
-reclassified, and the envelope only gains a field. `VERSION`, `package.json` and the tag are
-deliberately untouched — the number is prepared, not assigned, and the rule's `introducedIn` names
-the version this is intended to ship as rather than one that exists.
+reclassified, and the envelope only gains a field. The rule's `introducedIn: "3.1.0"` was written
+while this number was prepared and not yet assigned; this release is what makes it true, and it is
+resolved by shipping the version rather than by editing the rule. Falsifier D7 of the design record
+(`paths` stays bare containing files) was re-run against the release candidate before the number was
+assigned, because failing it would have made this MAJOR.
 
 **What was wrong.** `evidence.artifact-linked` has promised containing-file resolution "with any
 anchor suffix removed before resolution" since the catalog's first commit, and `scripts/pointers.mjs`

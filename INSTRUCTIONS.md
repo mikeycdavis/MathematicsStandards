@@ -89,7 +89,9 @@ reader is deliberately strict, because a reader that quietly ignores a construct
 that refuses it, so these are still refused with an error that names the line: `+` (keep) chomping,
 explicit indentation indicators such as `|2`, anchors and aliases, a block scalar as a list entry,
 tabs, an empty body, and more-indented lines inside a folded (`>`) scalar. Use `|-` when the
-indentation inside the text matters.
+indentation inside the text matters. A line of spaces is empty only up to the body's indent; wider,
+its extra spaces are text (kept by `|`, refused by `>`), even on the last line, and chomping removes
+only truly empty trailing lines.
 
 **Nothing waives a prohibition.** An exception against a rule that is `forbidden` and
 `nonExemptible` is rejected, and the rejection is itself a failure. That is what makes it a

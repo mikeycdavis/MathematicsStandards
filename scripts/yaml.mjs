@@ -13,9 +13,12 @@
  *             (folded), each with the clip default or `-` (strip) chomping. A block scalar's
  *             body is verbatim text, so it may hold double quotes, `#`, `: `, and `---`; it ends
  *             at the first non-blank line indented no deeper than its key.
- *             A whitespace-only line wider than the body's indent keeps its extra spaces in a
- *             literal scalar and is refused in a folded one; any other whitespace-only line is
- *             an empty line.
+ *             Whitespace is the space (and, refused, the tab), as in YAML: a line of spaces is
+ *             empty only up to the body's indent. Wider, its extra spaces are content wherever it
+ *             falls, including last: kept verbatim in a literal scalar, refused as more-indented in
+ *             a folded one. A leading one wider than the first body line is refused. Chomping
+ *             (`-` strip, default clip) removes only truly empty trailing lines; a no-break or
+ *             other Unicode space is content, never "blank".
  * Rejected:   tabs, anchors/aliases (`&`/`*`), `+` (keep) chomping, explicit indentation
  *             indicators (`|2`), a block scalar as a sequence entry (`- |`), more-indented lines
  *             inside a folded scalar, an empty block scalar, flow collections with content
@@ -133,6 +136,20 @@ function parseBlockHeader(rest, lineNo) {
   throw new YamlError(`unsupported block scalar header '${rest}': expected '${style}' or '${style}-'`, lineNo);
 }
 
+/**
+ * Leading spaces on a block scalar body line. YAML's only indentation is the space: JavaScript's
+ * `trim()`, `trimStart()` and `\s` also match a no-break space and other Unicode spaces, which are
+ * content, so none of them may decide whether a body line is empty or how deep it is.
+ */
+function spaces(line) {
+  return /^ */.exec(line)[0].length;
+}
+
+/** A body line is empty when it holds nothing but spaces (tabs are refused before this is asked). */
+function isBlank(line) {
+  return spaces(line) === line.length;
+}
+
 /** Collapse a block scalar's de-indented body lines into its string value. */
 function blockValue(style, strip, body, lineNo) {
   let text;
@@ -150,7 +167,7 @@ function blockValue(style, strip, body, lineNo) {
         pendingBlank++;
         return;
       }
-      if (/^\s/.test(line)) {
+      if (line.startsWith(" ")) {
         throw new YamlError("more-indented lines inside a folded (`>`) block scalar are not supported", lineNo + 1 + k);
       }
       if (started) text += pendingBlank > 0 ? "\n".repeat(pendingBlank) : " ";
@@ -199,27 +216,48 @@ function tokenize(text) {
     const parentIndent = indent + (isEntry ? 2 : 0);
     const body = [];
     let contentIndent = null;
+    let widestLeading = 0;
+    let widestLeadingLine = 0;
     let next = index + 1;
     for (; next < raws.length; next++) {
       const line = raws[next];
       if (line.includes("\t")) throw new YamlError("tabs are not permitted for indentation", next + 1);
-      if (line.trim() === "") {
-        // A whitespace-only line is an empty line unless it is wider than the body's indent, when
-        // its extra spaces are content: kept verbatim in a literal scalar, refused in a folded one
-        // (a more-indented line). Before the body's indent is known, and at the end of the body,
-        // it is an empty line whatever its width.
-        body.push(contentIndent !== null && line.length > contentIndent ? line.slice(contentIndent) : "");
+      if (isBlank(line)) {
+        // A whitespace-only line is empty only up to the body's indent. Wider, its extra spaces are
+        // content, wherever it falls (interior, trailing or last with no newline): kept verbatim in
+        // a literal scalar, refused in a folded one (a more-indented line). Before the body's
+        // indent is known it is held back: it is empty if it is no wider than the first body line
+        // (YAML 1.2 section 8.1.1.1), an error if it is wider.
+        if (contentIndent === null) {
+          if (line.length > widestLeading) {
+            widestLeading = line.length;
+            widestLeadingLine = next + 1;
+          }
+          body.push("");
+        } else {
+          body.push(line.length > contentIndent ? line.slice(contentIndent) : "");
+        }
         continue;
       }
-      const lineIndent = line.length - line.trimStart().length;
+      const lineIndent = spaces(line);
       if (lineIndent <= parentIndent) break;
-      if (contentIndent === null) contentIndent = lineIndent;
+      if (contentIndent === null) {
+        contentIndent = lineIndent;
+        if (widestLeading > contentIndent) {
+          throw new YamlError(
+            "a leading whitespace-only line is indented more than the first line of the block scalar body",
+            widestLeadingLine,
+          );
+        }
+      }
       if (lineIndent < contentIndent) {
         throw new YamlError("block scalar line is indented less than the first line of its body", next + 1);
       }
       body.push(line.slice(contentIndent));
     }
-    while (body.length > 0 && body[body.length - 1].trim() === "") body.pop();
+    // Chomping removes only empty trailing lines. A whitespace-only line wider than the body's
+    // indent is content (spaces), already de-indented to a non-empty string above, so it stays.
+    while (body.length > 0 && body[body.length - 1] === "") body.pop();
     if (contentIndent === null) throw new YamlError("a block scalar needs a non-empty body", lineNo);
     token.block = blockValue(style, strip, body, lineNo);
     index = next - 1;

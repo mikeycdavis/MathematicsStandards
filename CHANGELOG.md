@@ -18,7 +18,11 @@ of a mapping key: `|` (literal) and `>` (folded), with the default or `-` chompi
 verbatim text, so it may contain double quotes, `#`, `: ` and `---`. Everything else stays refused
 with an error that names the line: `+` chomping, explicit indentation indicators (`|2`), anchors and
 aliases, a block scalar as a list entry, tabs, an empty body, and more-indented lines inside a
-folded scalar. A block scalar is returned as a string, like every other scalar.
+folded scalar. A block scalar is returned as a string, like every other scalar. A line of spaces is
+empty only up to the body's indent; wider, its extra spaces are content wherever it falls, even as
+the last line: `|-` keeps them (only the final line break is stripped), `>` refuses the line as
+more-indented, and a leading one wider than the first body line is refused, as in YAML 1.2.
+Chomping removes only truly empty trailing lines.
 
 Facts for classification, which is not decided here: no rule is added, removed, weakened or
 reclassified, and no rule's wording or level changes; input the reader previously rejected is now

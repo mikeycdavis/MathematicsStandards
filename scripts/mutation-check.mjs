@@ -142,6 +142,39 @@ Object.freeze({
   to: "  from: \"  exact mul_self_nonneg_typo x\",",
   gate: () => runTest("mutation-targets.test.mjs"),
 }),
+
+// 9-12. The policy reader's block scalars (FE-32). Each reintroduces one way the reader could stop
+//       being strict while still parsing the documents that matter: dropping chomping, ignoring the
+//       body indent, accepting `+`, and tolerating a tab in a body. A reader that accepts more than
+//       it documents is the false green the issue's second constraint exists to prevent.
+Object.freeze({
+  name: "yaml: ignore the chomping indicator on a block scalar",
+  file: "scripts/yaml.mjs",
+  from: "  return strip ? text : `${text}\\n`;",
+  to: "  return text;",
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: ignore the body indent of a block scalar",
+  file: "scripts/yaml.mjs",
+  from: "      body.push(line.slice(contentIndent));",
+  to: "      body.push(line.trim());",
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: accept `+` (keep) chomping",
+  file: "scripts/yaml.mjs",
+  from: '  if (tail === "" || tail === "-") return { style, strip: tail === "-" };',
+  to: '  if (tail === "" || tail === "-" || tail === "+") return { style, strip: tail === "-" };',
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: tolerate a tab inside a block scalar body",
+  file: "scripts/yaml.mjs",
+  from: '      if (line.includes("\\t")) throw new YamlError("tabs are not permitted for indentation", next + 1);\n',
+  to: "",
+  gate: () => runTest("yaml.test.mjs"),
+}),
 ]);
 
 /**

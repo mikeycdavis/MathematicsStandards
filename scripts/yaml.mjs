@@ -9,10 +9,19 @@
  *
  * Supported:  nested block mappings (2-space indent), block sequences of mappings, scalars
  *             (bare, single- or double-quoted), empty inline sequence `[]`, `#` comments, blank
- *             lines.
- * Rejected:   tabs, anchors/aliases (`&`/`*`), block scalars (`|`/`>`), flow collections with
- *             content (`{...}`/`[a, b]`), documents (`---`), merge keys, duplicate keys,
- *             inconsistent indentation.
+ *             lines, and block scalars as the value of a mapping key: `|` (literal) and `>`
+ *             (folded), each with the clip default or `-` (strip) chomping. A block scalar's
+ *             body is verbatim text, so it may hold double quotes, `#`, `: `, and `---`; it ends
+ *             at the first non-blank line indented no deeper than its key.
+ * Rejected:   tabs, anchors/aliases (`&`/`*`), `+` (keep) chomping, explicit indentation
+ *             indicators (`|2`), a block scalar as a sequence entry (`- |`), more-indented lines
+ *             inside a folded scalar, an empty block scalar, flow collections with content
+ *             (`{...}`/`[a, b]`), documents (`---`), merge keys, duplicate keys, inconsistent
+ *             indentation.
+ *
+ * Block scalars exist because an attestation's `evidence` is expert reasoning (FE-32): a reader
+ * that allowed only one physical line with no double quotes punished reasoning at length. The
+ * strictness is unchanged for everything else; a construct outside the list above still throws.
  *
  * Every scalar is returned as a string. Type coercion belongs to the schema, not the parser — the
  * schema declares `standardVersion` is a string matching a semver pattern, and a parser that turned
@@ -69,7 +78,9 @@ function parseScalar(raw, lineNo) {
     throw new YamlError("anchors and aliases are not supported", lineNo);
   }
   if (first === "|" || first === ">") {
-    throw new YamlError("block scalars are not supported", lineNo);
+    // Reached only where a block scalar is not allowed (a sequence entry, a key). A block scalar as
+    // a mapping value is collected by `tokenize` before parsing and never arrives here.
+    throw new YamlError("block scalars are supported only as the value of a mapping key", lineNo);
   }
   if (first === "{") throw new YamlError("flow mappings are not supported", lineNo);
   if (first === "[") {
@@ -101,23 +112,111 @@ function splitKey(text) {
   return null;
 }
 
+/**
+ * Validate a block scalar header (the text after `key:`): `|` or `>`, optionally followed by `-`.
+ * Anything else that starts with `|` or `>` is refused with a message naming what was refused.
+ */
+function parseBlockHeader(rest, lineNo) {
+  const m = /^([|>])(.*)$/.exec(rest);
+  const style = m[1];
+  const tail = m[2];
+  if (tail === "" || tail === "-") return { style, strip: tail === "-" };
+  if (tail.startsWith("+")) {
+    throw new YamlError("keep chomping (`+`) on a block scalar is not supported; use `-` or none", lineNo);
+  }
+  if (/^[0-9]/.test(tail) || /^-[0-9]/.test(tail)) {
+    throw new YamlError("explicit indentation indicators on a block scalar are not supported", lineNo);
+  }
+  throw new YamlError(`unsupported block scalar header '${rest}': expected '${style}' or '${style}-'`, lineNo);
+}
+
+/** Collapse a block scalar's de-indented body lines into its string value. */
+function blockValue(style, strip, body, lineNo) {
+  let text;
+  if (style === "|") {
+    text = body.join("\n");
+  } else {
+    // Folded: a run of non-blank lines joins with one space; each blank line between runs is a
+    // newline. Lines indented deeper than the body keep their newlines in full YAML; that rule is
+    // not implemented, so it is refused rather than guessed.
+    text = "";
+    let pendingBlank = 0;
+    let started = false;
+    body.forEach((line, k) => {
+      if (line === "") {
+        pendingBlank++;
+        return;
+      }
+      if (/^\s/.test(line)) {
+        throw new YamlError("more-indented lines inside a folded (`>`) block scalar are not supported", lineNo + 1 + k);
+      }
+      if (started) text += pendingBlank > 0 ? "\n".repeat(pendingBlank) : " ";
+      else text += "\n".repeat(pendingBlank);
+      pendingBlank = 0;
+      started = true;
+      text += line;
+    });
+  }
+  return strip ? text : `${text}\n`;
+}
+
 /** Tokenize into significant lines carrying indent, content, and 1-based line number. */
 function tokenize(text) {
   const lines = [];
-  text.split(/\r?\n/).forEach((raw, index) => {
+  const raws = text.split(/\r?\n/);
+  for (let index = 0; index < raws.length; index++) {
+    const raw = raws[index];
     const lineNo = index + 1;
     if (raw.includes("\t")) throw new YamlError("tabs are not permitted for indentation", lineNo);
     for (const [pattern, message] of REJECTED) {
       if (pattern.test(raw)) throw new YamlError(message, lineNo);
     }
     const code = stripComment(raw);
-    if (code.trim() === "") return;
+    if (code.trim() === "") continue;
     const indent = code.length - code.trimStart().length;
     if (indent % 2 !== 0) {
       throw new YamlError(`indentation must be a multiple of 2 spaces (found ${indent})`, lineNo);
     }
-    lines.push({ indent, text: code.trim(), lineNo });
-  });
+    const trimmed = code.trim();
+    const token = { indent, text: trimmed, lineNo };
+    lines.push(token);
+
+    const isEntry = trimmed.startsWith("- ");
+    const inline = isEntry ? trimmed.slice(2).trim() : trimmed;
+    if (isEntry && /^[|>]/.test(inline)) {
+      throw new YamlError("a block scalar as a sequence entry is not supported", lineNo);
+    }
+    const pair = splitKey(inline);
+    const rest = pair ? pair[1].trim() : "";
+    if (!pair || !/^[|>]/.test(rest)) continue;
+
+    // A block scalar. Its body is verbatim text, so it is collected from the raw lines here: the
+    // comment, quote, document-marker and indentation rules above do not apply inside it.
+    const { style, strip } = parseBlockHeader(rest, lineNo);
+    const parentIndent = indent + (isEntry ? 2 : 0);
+    const body = [];
+    let contentIndent = null;
+    let next = index + 1;
+    for (; next < raws.length; next++) {
+      const line = raws[next];
+      if (line.includes("\t")) throw new YamlError("tabs are not permitted for indentation", next + 1);
+      if (line.trim() === "") {
+        body.push("");
+        continue;
+      }
+      const lineIndent = line.length - line.trimStart().length;
+      if (lineIndent <= parentIndent) break;
+      if (contentIndent === null) contentIndent = lineIndent;
+      if (lineIndent < contentIndent) {
+        throw new YamlError("block scalar line is indented less than the first line of its body", next + 1);
+      }
+      body.push(line.slice(contentIndent));
+    }
+    while (body.length > 0 && body[body.length - 1] === "") body.pop();
+    if (contentIndent === null) throw new YamlError("a block scalar needs a non-empty body", lineNo);
+    token.block = blockValue(style, strip, body, lineNo);
+    index = next - 1;
+  }
   return lines;
 }
 
@@ -147,7 +246,7 @@ function parseSequence(lines, start, indent) {
     }
     // A mapping entry: its first key sits on the dash line, the rest are indented beneath.
     const entryIndent = indent + 2;
-    const synthetic = [{ indent: entryIndent, text: inline, lineNo: line.lineNo }];
+    const synthetic = [{ indent: entryIndent, text: inline, lineNo: line.lineNo, block: line.block }];
     let j = i + 1;
     while (j < lines.length && lines[j].indent >= entryIndent) {
       synthetic.push(lines[j]);
@@ -185,6 +284,12 @@ function parseMapping(lines, start, indent) {
     }
 
     const rest = pair[1].trim();
+    if (line.block !== undefined) {
+      // Collected by `tokenize`: the header line carries the block scalar's finished value.
+      map[key] = line.block;
+      i++;
+      continue;
+    }
     if (rest !== "") {
       map[key] = parseScalar(rest, line.lineNo);
       i++;

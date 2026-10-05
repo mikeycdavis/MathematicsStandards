@@ -13,6 +13,9 @@
  *             (folded), each with the clip default or `-` (strip) chomping. A block scalar's
  *             body is verbatim text, so it may hold double quotes, `#`, `: `, and `---`; it ends
  *             at the first non-blank line indented no deeper than its key.
+ *             A whitespace-only line wider than the body's indent keeps its extra spaces in a
+ *             literal scalar and is refused in a folded one; any other whitespace-only line is
+ *             an empty line.
  * Rejected:   tabs, anchors/aliases (`&`/`*`), `+` (keep) chomping, explicit indentation
  *             indicators (`|2`), a block scalar as a sequence entry (`- |`), more-indented lines
  *             inside a folded scalar, an empty block scalar, flow collections with content
@@ -201,7 +204,11 @@ function tokenize(text) {
       const line = raws[next];
       if (line.includes("\t")) throw new YamlError("tabs are not permitted for indentation", next + 1);
       if (line.trim() === "") {
-        body.push("");
+        // A whitespace-only line is an empty line unless it is wider than the body's indent, when
+        // its extra spaces are content: kept verbatim in a literal scalar, refused in a folded one
+        // (a more-indented line). Before the body's indent is known, and at the end of the body,
+        // it is an empty line whatever its width.
+        body.push(contentIndent !== null && line.length > contentIndent ? line.slice(contentIndent) : "");
         continue;
       }
       const lineIndent = line.length - line.trimStart().length;
@@ -212,7 +219,7 @@ function tokenize(text) {
       }
       body.push(line.slice(contentIndent));
     }
-    while (body.length > 0 && body[body.length - 1] === "") body.pop();
+    while (body.length > 0 && body[body.length - 1].trim() === "") body.pop();
     if (contentIndent === null) throw new YamlError("a block scalar needs a non-empty body", lineNo);
     token.block = blockValue(style, strip, body, lineNo);
     index = next - 1;

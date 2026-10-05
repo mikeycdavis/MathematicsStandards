@@ -126,6 +126,43 @@ test("more-indented lines inside a folded scalar are refused", () => {
   refuses("a: >-\n  one\n    two\n", /more-indented/);
 });
 
+// A whitespace-only line is the corner the first review of FE-32 found: the reader turned it into an
+// empty line whatever its width, so a literal scalar lost content the header promises to keep
+// verbatim and a folded scalar accepted what it documents as unsupported (PR #109, review comment
+// https://github.com/mikeycdavis/MathematicsStandards/pull/109#discussion_r4187202375).
+test("a whitespace-only line deeper than the body keeps its extra spaces in a literal scalar", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n  two\n"), { a: "one\n  \ntwo" });
+  assert.deepEqual(parseYaml("a: |\n  one\n   \n  two\n"), { a: "one\n \ntwo\n" });
+});
+
+test("the same line in a CRLF document is preserved without its carriage return", () => {
+  assert.deepEqual(parseYaml("a: |-\r\n  one\r\n    \r\n  two\r\n"), { a: "one\n  \ntwo" });
+});
+
+test("a whitespace-only line deeper than the body is refused in a folded scalar, with its line number", () => {
+  refuses("a: >-\n  one\n    \n  two\n", /line 3: more-indented/);
+  refuses("a: >\n  one\n\n     \n  two\n", /line 4: more-indented/);
+});
+
+test("a whitespace-only line at or under the body indent is an empty line in both styles", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n  \n  two\n"), { a: "one\n\ntwo" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n \n  two\n"), { a: "one\n\ntwo" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n  \n  two\n"), { a: "one\ntwo" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n \n  two\n"), { a: "one\ntwo" });
+});
+
+test("trailing and leading whitespace-only lines are blank lines, whatever their width", () => {
+  assert.deepEqual(parseYaml("a: |-\n  one\n    \n      \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\n  one\n    \nb: 1\n"), { a: "one\n", b: "1" });
+  assert.deepEqual(parseYaml("a: >-\n  one\n    \n"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |-\n    \n  one\n"), { a: "\none" });
+});
+
+test("a tab-only line is still refused", () => {
+  refuses("a: |-\n  one\n\t\n  two\n", /tabs/);
+  refuses("a: >-\n  one\n  \t\n  two\n", /tabs/);
+});
+
 test("anchors and aliases are still refused, with or without a block scalar", () => {
   refuses("a: &x |-\n  one\n", /anchors/);
   refuses("a: *x\n", /anchors/);

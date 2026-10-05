@@ -143,9 +143,10 @@ Object.freeze({
   gate: () => runTest("mutation-targets.test.mjs"),
 }),
 
-// 9-12. The policy reader's block scalars (FE-32). Each reintroduces one way the reader could stop
+// 9-14. The policy reader's block scalars (FE-32). Each reintroduces one way the reader could stop
 //       being strict while still parsing the documents that matter: dropping chomping, ignoring the
-//       body indent, accepting `+`, and tolerating a tab in a body. A reader that accepts more than
+//       body indent, accepting `+`, tolerating a tab in a body, flattening a whitespace-only line
+//       wider than the body, and keeping trailing whitespace-only lines. A reader that accepts more than
 //       it documents is the false green the issue's second constraint exists to prevent.
 Object.freeze({
   name: "yaml: ignore the chomping indicator on a block scalar",
@@ -166,6 +167,20 @@ Object.freeze({
   file: "scripts/yaml.mjs",
   from: '  if (tail === "" || tail === "-") return { style, strip: tail === "-" };',
   to: '  if (tail === "" || tail === "-" || tail === "+") return { style, strip: tail === "-" };',
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: flatten a deeper whitespace-only body line to an empty line",
+  file: "scripts/yaml.mjs",
+  from: 'body.push(contentIndent !== null && line.length > contentIndent ? line.slice(contentIndent) : "");',
+  to: 'body.push("");',
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: keep trailing whitespace-only lines of a block scalar body",
+  file: "scripts/yaml.mjs",
+  from: 'body[body.length - 1].trim() === "") body.pop();',
+  to: 'body[body.length - 1] === "") body.pop();',
   gate: () => runTest("yaml.test.mjs"),
 }),
 Object.freeze({

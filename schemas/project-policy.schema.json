@@ -141,7 +141,7 @@
           "enum": ["applicable", "not-applicable"]
         },
         "reason": {
-          "description": "Required. A not-applicable declaration with no reason is indistinguishable from a rule that was forgotten (Standard 1 R2).",
+          "description": "Required. A not-applicable declaration with no reason is indistinguishable from a rule that was forgotten (Standard 1 R2). Long text may be written as a YAML block scalar (`>-` or `|-`); see INSTRUCTIONS.md for what the reader still refuses.",
           "type": "string",
           "minLength": 1
         },
@@ -172,7 +172,7 @@
         "reviewedBy": { "type": "string", "minLength": 1 },
         "reviewedAt": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
         "evidence": {
-          "description": "What was examined. Required, because an attestation without it is an assertion rather than evidence — the thing this mechanism exists to avoid.",
+          "description": "What was examined. Required, because an attestation without it is an assertion rather than evidence — the thing this mechanism exists to avoid. In the YAML policy, write long reasoning as a block scalar (`>-` folds lines into one string, `|-` keeps line breaks); a double quote is plain text inside it. `+` chomping, explicit indent indicators, anchors and a block scalar as a list entry are refused (INSTRUCTIONS.md).",
           "type": "string",
           "minLength": 1
         },

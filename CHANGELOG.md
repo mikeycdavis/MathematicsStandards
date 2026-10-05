@@ -9,6 +9,24 @@ reclassifying any rule is MAJOR. A rule never disappears silently — it is mark
 optionally `supersededBy`, and only then `removedIn`, and the removal is recorded here. That trail
 is one of the arms protecting Standard 21 (see `standards/21-standards-integrity.md`).
 
+## Unreleased
+
+**The policy reader accepts block scalars, so an attestation can hold its reasoning at length.**
+Until now `scripts/yaml.mjs` refused `|` and `>`, which forced an attestation's `evidence` onto one
+physical line with no double quotes (FE-32, #63). The reader now accepts a block scalar as the value
+of a mapping key: `|` (literal) and `>` (folded), with the default or `-` chomping. The body is
+verbatim text, so it may contain double quotes, `#`, `: ` and `---`. Everything else stays refused
+with an error that names the line: `+` chomping, explicit indentation indicators (`|2`), anchors and
+aliases, a block scalar as a list entry, tabs, an empty body, and more-indented lines inside a
+folded scalar. A block scalar is returned as a string, like every other scalar.
+
+Facts for classification, which is not decided here: no rule is added, removed, weakened or
+reclassified, and no rule's wording or level changes; input the reader previously rejected is now
+accepted; input it accepted before parses to the same value. The versioning paragraph above
+classifies rule changes only. Documentation is updated in `INSTRUCTIONS.md`,
+`templates/project-policy.yml` and the schema's `evidence` and `reason` descriptions. The reader is
+vendored per repository (ADR 0005): this change does not reach the five sibling copies.
+
 ## 3.1.0 — 2026-10-05
 
 **A published evidence locator now says what it promises, and the envelope stops erasing the

@@ -67,6 +67,30 @@ when they change. It can also record a **rejection**: "I reviewed this and it is
 first-class outcome, and a system that only let you record approval would have decided in advance
 what you were going to say.
 
+**Writing an attestation's reasoning.** `evidence` (and an exception's `reason`) is where the
+judgement is recorded, and judgement is rarely one short line. The policy reader accepts a YAML block
+scalar for any mapping value: `>-` folds the lines you write into one string, and `|-` keeps the line
+breaks. Inside the body double quotes, `#`, and `: ` are ordinary text. A plain or quoted one-line
+value still works, but a quoted value cannot contain the quote character itself.
+
+```yaml
+attestations:
+  rigor.unjustified-division:
+    status: approved
+    reviewedBy: "A. Reviewer"
+    reviewedAt: "2026-01-15"
+    evidence: >-
+      Checked every cancellation in proofs/clm-0002.md; each "denominator" is non-vanishing
+      on the stated domain by Lemma CLM-0005.
+```
+
+Only `|` and `>` are supported, with the default (one final newline) or `-` (none) chomping. The
+reader is deliberately strict, because a reader that quietly ignores a construct is worse than one
+that refuses it, so these are still refused with an error that names the line: `+` (keep) chomping,
+explicit indentation indicators such as `|2`, anchors and aliases, a block scalar as a list entry,
+tabs, an empty body, and more-indented lines inside a folded (`>`) scalar. Use `|-` when the
+indentation inside the text matters.
+
 **Nothing waives a prohibition.** An exception against a rule that is `forbidden` and
 `nonExemptible` is rejected, and the rejection is itself a failure. That is what makes it a
 prohibition.

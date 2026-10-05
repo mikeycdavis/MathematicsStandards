@@ -87,7 +87,14 @@ mathematics:
 #     status: approved
 #     reviewedBy: "<name>"
 #     reviewedAt: "2026-01-15"
-#     evidence: "Checked every cancellation in proofs/clm-0002.md; each denominator is non-vanishing on the stated domain by Lemma CLM-0005."
+#     # Write reasoning at length as a block scalar: `>-` folds the lines into one string, `|-`
+#     # keeps the line breaks. Double quotes and `#` are plain text inside the body. A one-line
+#     # "quoted string" also works, but cannot contain a double quote. Not supported, and refused
+#     # with an error rather than guessed at: `+` chomping, explicit indent indicators (`|2`),
+#     # anchors, and a block scalar as a list entry. See INSTRUCTIONS.md.
+#     evidence: >-
+#       Checked every cancellation in proofs/clm-0002.md; each "denominator" is non-vanishing on
+#       the stated domain by Lemma CLM-0005.
 #     reviewedAgainst:
 #       paths:
 #         - "proofs/clm-0002.md"

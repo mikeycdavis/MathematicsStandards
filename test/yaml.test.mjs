@@ -11,6 +11,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -197,6 +198,32 @@ test("clip chomping keeps a final line break only when the source has one", () =
   assert.deepEqual(parseYaml("a: |\n\n  one"), { a: "\none" });
   assert.deepEqual(parseYaml("x:\n  a: |\n    one"), { x: { a: "one" } });
   assert.deepEqual(parseYaml("a: |\n  one\nb: 1"), { a: "one\n", b: "1" });
+});
+
+// The fourth review of FE-32 (PR #112, Codex P2 "Describe clipping by the scalar body's final line")
+// found INSTRUCTIONS.md saying clip chomping depends on whether "the file" ends in a newline. The
+// reader decides by the last retained body line: a body followed by another key keeps its break even
+// when the file has none. This pins the documented sentence to the reader's behaviour.
+const blockScalarSection = () => {
+  const text = readFileSync(path.join(HOME, "INSTRUCTIONS.md"), "utf8").replace(/\r\n/g, "\n");
+  const start = text.indexOf("Only `|` and `>` are supported");
+  assert.ok(start >= 0, "INSTRUCTIONS.md lost its block-scalar section");
+  return text.slice(start, text.indexOf("\n\n", start)).replace(/\s+/g, " ");
+};
+
+test("INSTRUCTIONS.md describes clip chomping by the last body line, as the reader behaves", () => {
+  const section = blockScalarSection();
+  assert.match(
+    section,
+    /clip chomping \(the default\) keeps the line break that ends the last body line and adds none/i,
+  );
+  assert.match(section, /followed by another key ends in a newline even when the file does not/);
+  assert.match(section, /reaches the end of the file with no line break has none/);
+  assert.doesNotMatch(section, /only when the file has one|one final newline/i);
+  // the documented cases, against the reader
+  assert.deepEqual(parseYaml("a: |\n  one\nb: 1"), { a: "one\n", b: "1" });
+  assert.deepEqual(parseYaml("a: |\n  one\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\n  one"), { a: "one" });
 });
 
 test("a trailing empty line at end of input leaves the break that ended the last content line", () => {

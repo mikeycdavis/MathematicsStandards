@@ -226,6 +226,20 @@ Object.freeze({
   gate: () => runTest("yaml.test.mjs"),
 }),
 Object.freeze({
+  name: "docs: INSTRUCTIONS.md says clip chomping depends on whether the file has a final newline",
+  file: "INSTRUCTIONS.md",
+  from: "Clip chomping (the default) keeps the line break that ends the last",
+  to: "Clip chomping (the default) keeps a final newline only when the file has one, as the last",
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "docs: INSTRUCTIONS.md drops that a body followed by another key keeps its break",
+  file: "INSTRUCTIONS.md",
+  from: "followed by another key ends in a newline even when the file does",
+  to: "ends in a newline only when the file does, or when the file does",
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
   name: "yaml: tolerate a tab inside a block scalar body",
   file: "scripts/yaml.mjs",
   from: '      if (line.includes("\\t")) throw new YamlError("tabs are not permitted for indentation", next + 1);\n',

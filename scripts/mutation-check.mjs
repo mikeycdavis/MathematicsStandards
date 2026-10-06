@@ -151,7 +151,7 @@ Object.freeze({
 Object.freeze({
   name: "yaml: ignore the chomping indicator on a block scalar",
   file: "scripts/yaml.mjs",
-  from: "  return strip ? text : `${text}\\n`;",
+  from: "  return strip || !finalBreak ? text : `${text}\\n`;",
   to: "  return text;",
   gate: () => runTest("yaml.test.mjs"),
 }),
@@ -209,6 +209,20 @@ Object.freeze({
   file: "scripts/yaml.mjs",
   from: '        if (widestLeading > contentIndent) {',
   to: '        if (false) {',
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: clip chomping always adds a final line break (even at end of input with none)",
+  file: "scripts/yaml.mjs",
+  from: "  return strip || !finalBreak ? text : `${text}\\n`;",
+  to: "  return strip ? text : `${text}\\n`;",
+  gate: () => runTest("yaml.test.mjs"),
+}),
+Object.freeze({
+  name: "yaml: judge the final line break by the text's last character instead of the last retained body line",
+  file: "scripts/yaml.mjs",
+  from: '    const finalBreak = index + body.length < raws.length - 1;',
+  to: '    const finalBreak = text.endsWith("\\n");',
   gate: () => runTest("yaml.test.mjs"),
 }),
 Object.freeze({

@@ -91,7 +91,8 @@ explicit indentation indicators such as `|2`, anchors and aliases, a block scala
 tabs, an empty body, and more-indented lines inside a folded (`>`) scalar. Use `|-` when the
 indentation inside the text matters. A line of spaces is empty only up to the body's indent; wider,
 its extra spaces are text (kept by `|`, refused by `>`), even on the last line, and chomping removes
-only truly empty trailing lines.
+only truly empty trailing lines. `|` and `>` keep a final newline only when the file has one, so a
+body that ends the file with no line break has none.
 
 **Nothing waives a prohibition.** An exception against a rule that is `forbidden` and
 `nonExemptible` is rejected, and the rejection is itself a failure. That is what makes it a

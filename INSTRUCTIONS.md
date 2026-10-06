@@ -84,15 +84,16 @@ attestations:
       on the stated domain by Lemma CLM-0005.
 ```
 
-Only `|` and `>` are supported, with the default (one final newline) or `-` (none) chomping. The
-reader is deliberately strict, because a reader that quietly ignores a construct is worse than one
-that refuses it, so these are still refused with an error that names the line: `+` (keep) chomping,
+Only `|` and `>` are supported, with the default (clip) or `-` (strip) chomping. The reader is
+deliberately strict, because a reader that quietly ignores a construct is worse than one that
+refuses it, so these are still refused with an error that names the line: `+` (keep) chomping,
 explicit indentation indicators such as `|2`, anchors and aliases, a block scalar as a list entry,
 tabs, an empty body, and more-indented lines inside a folded (`>`) scalar. Use `|-` when the
 indentation inside the text matters. A line of spaces is empty only up to the body's indent; wider,
 its extra spaces are text (kept by `|`, refused by `>`), even on the last line, and chomping removes
-only truly empty trailing lines. `|` and `>` keep a final newline only when the file has one, so a
-body that ends the file with no line break has none.
+only truly empty trailing lines. Clip chomping (the default) keeps the line break that ends the last
+body line and adds none, so a body followed by another key ends in a newline even when the file does
+not, and a body whose last line reaches the end of the file with no line break has none.
 
 **Nothing waives a prohibition.** An exception against a rule that is `forbidden` and
 `nonExemptible` is rejected, and the rejection is itself a failure. That is what makes it a

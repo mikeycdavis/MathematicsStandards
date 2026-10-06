@@ -22,10 +22,12 @@ folded scalar. A block scalar is returned as a string, like every other scalar. 
 empty only up to the body's indent; wider, its extra spaces are content wherever it falls, even as
 the last line: `|-` keeps them (only the final line break is stripped), `>` refuses the line as
 more-indented, and a leading one wider than the first body line is refused, as in YAML 1.2.
-Chomping removes only truly empty trailing lines, and the default (clip) chomping keeps the
-line break that ends the last body line and adds none: a body followed by another key ends in a
-newline even when the file does not, and a body whose last line reaches end of input with no line
-break has no trailing newline, as in YAML 1.2 (`b-chomped-last`).
+Chomping removes only truly empty trailing lines, and it does so before the final line break is
+decided; the default (clip) chomping then keeps the line break that ends the last line that remains
+and adds none. A body followed by another key, or by an empty line, ends in a newline even when the
+file does not, and an empty last line at end of input is removed too (`one` followed by an empty last
+line still ends in a newline). Only when the last remaining line itself reaches end of input with no line break
+is there no trailing newline, as in YAML 1.2 (`b-chomped-last`).
 
 Facts for classification, which is not decided here: no rule is added, removed, weakened or
 reclassified, and no rule's wording or level changes; input the reader previously rejected is now

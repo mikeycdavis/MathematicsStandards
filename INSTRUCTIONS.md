@@ -90,10 +90,14 @@ refuses it, so these are still refused with an error that names the line: `+` (k
 explicit indentation indicators such as `|2`, anchors and aliases, a block scalar as a list entry,
 tabs, an empty body, and more-indented lines inside a folded (`>`) scalar. Use `|-` when the
 indentation inside the text matters. A line of spaces is empty only up to the body's indent; wider,
-its extra spaces are text (kept by `|`, refused by `>`), even on the last line, and chomping removes
-only truly empty trailing lines. Clip chomping (the default) keeps the line break that ends the last
-body line and adds none, so a body followed by another key ends in a newline even when the file does
-not, and a body whose last line reaches the end of the file with no line break has none.
+its extra spaces are text (kept by `|`, refused by `>`), even on the last line. Chomping removes
+only truly empty trailing lines, and it does so before the final line break is decided. `-` (strip)
+then removes the line break that ends the last line that remains. Clip (the default) keeps that line
+break and adds none, so a body followed by another key, or by an empty line, ends in a newline even
+when the file does not. An empty last line at the end of the file is removed too, so `one` followed
+by an empty last line still ends in a newline. Only when the last remaining line itself reaches the
+end of the file with no line break is there no trailing newline: a final line of spaces wider than
+the indent is such a line, so it stays and nothing follows it.
 
 **Nothing waives a prohibition.** An exception against a rule that is `forbidden` and
 `nonExemptible` is rejected, and the rejection is itself a failure. That is what makes it a

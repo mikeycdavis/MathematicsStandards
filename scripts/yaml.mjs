@@ -152,7 +152,8 @@ function isBlank(line) {
 
 /**
  * Collapse a block scalar's de-indented body lines into its string value. `finalBreak` says whether
- * the last body line was ended by a line break in the source: clip chomping keeps that break and
+ * the last retained body line (after empty trailing lines are chomped) was ended by a line break in
+ * the source: clip chomping keeps that break and
  * adds none (YAML 1.2 b-chomped-last: a line feed, or end of input), so a body that ends at end of
  * input on a line with no break has no trailing newline.
  */

@@ -211,19 +211,60 @@ const blockScalarSection = () => {
   return text.slice(start, text.indexOf("\n\n", start)).replace(/\s+/g, " ");
 };
 
-test("INSTRUCTIONS.md describes clip chomping by the last body line, as the reader behaves", () => {
+test("INSTRUCTIONS.md describes clip chomping by the last remaining line, as the reader behaves", () => {
   const section = blockScalarSection();
-  assert.match(
-    section,
-    /clip chomping \(the default\) keeps the line break that ends the last body line and adds none/i,
-  );
-  assert.match(section, /followed by another key ends in a newline even when the file does not/);
-  assert.match(section, /reaches the end of the file with no line break has none/);
-  assert.doesNotMatch(section, /only when the file has one|one final newline/i);
-  // the documented cases, against the reader
+  // every sentence of the clip description is pinned to a case below
+  assert.match(section, /Chomping removes only truly empty trailing lines, and it does so before the final line break is decided/);
+  assert.match(section, /`-` \(strip\) then removes the line break that ends the last line that remains/);
+  assert.match(section, /Clip \(the default\) keeps that line break and adds none/);
+  assert.match(section, /followed by another key, or by an empty line, ends in a newline even when the file does not/);
+  assert.match(section, /An empty last line at the end of the file is removed too, so `one` followed by an empty last line still ends in a newline/);
+  assert.match(section, /Only when the last remaining line itself reaches the end of the file with no line break is there no trailing newline/);
+  assert.match(section, /a final line of spaces wider than the indent is such a line/);
+  const changelog = readFileSync(path.join(HOME, "CHANGELOG.md"), "utf8").replace(/\s+/g, " ");
+  assert.match(changelog, /keeps the line break that ends the last line that remains and adds none/);
+  assert.doesNotMatch(changelog, /a body whose last line reaches end of input/);
+  assert.doesNotMatch(section, /a body whose last line reaches the end of the file|only when the file has one|one final newline/i);
+  // followed by another key, or an empty line, with the file ending without a newline
   assert.deepEqual(parseYaml("a: |\n  one\nb: 1"), { a: "one\n", b: "1" });
+  assert.deepEqual(parseYaml("a: |\n  one\n\nb: 1"), { a: "one\n", b: "1" });
+  assert.deepEqual(parseYaml("a: |\n  one\n\n"), { a: "one\n" });
+  // an empty last line at end of file (no break after it) is removed; the break after `one` stays
+  assert.deepEqual(parseYaml("a: |\n  one\n  "), { a: "one\n" });
   assert.deepEqual(parseYaml("a: |\n  one\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: >\n  one\n  "), { a: "one\n" });
+  // strip removes the break that ends the last remaining line, however the body ends
+  assert.deepEqual(parseYaml("a: |-\n  one\n  "), { a: "one" });
+  assert.deepEqual(parseYaml("a: |-\n  one\nb: 1"), { a: "one", b: "1" });
+  assert.deepEqual(parseYaml("a: |-\n  one\n    "), { a: "one\n  " });
+  // the last remaining line ends the file with no break: no trailing newline
   assert.deepEqual(parseYaml("a: |\n  one"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\n  one\n    "), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: >\n  one"), { a: "one" });
+});
+
+test("the refusals and advice INSTRUCTIONS.md gives are what the reader does", () => {
+  const section = blockScalarSection();
+  const cases = [
+    ["`+` (keep) chomping", "a: |+\n  one\n", /keep chomping/],
+    ["explicit indentation indicators such as `|2`", "a: |2\n  one\n", /explicit indentation/],
+    ["anchors and aliases", "a: &x 1\n", /anchor|alias/i],
+    ["a block scalar as a list entry", "a:\n  - |\n    one\n", /sequence entry/],
+    ["tabs", "a: |\n\tone\n", /tab/],
+    ["an empty body", "a: |\nb: 1\n", /non-empty body/],
+    ["more-indented lines inside a folded (`>`) scalar", "a: >\n  one\n    two\n", /more-indented/],
+  ];
+  for (const [phrase, yaml, pattern] of cases) {
+    assert.ok(section.includes(phrase), `INSTRUCTIONS.md no longer lists: ${phrase}`);
+    refuses(yaml, pattern);
+  }
+  assert.match(section, /Only `\|` and `>` are supported, with the default \(clip\) or `-` \(strip\) chomping/);
+  assert.match(section, /Use `\|-` when the indentation inside the text matters/);
+  assert.deepEqual(parseYaml("a: |-\n  one\n    two\n"), { a: "one\n  two" });
+  assert.match(section, /empty only up to the body's indent; wider, its extra spaces are text \(kept by `\|`, refused by `>`\), even on the last line/);
+  assert.deepEqual(parseYaml("a: |-\n  one\n   \n  two\n"), { a: "one\n \ntwo" });
+  assert.deepEqual(parseYaml("a: |\n  one\n   \n"), { a: "one\n \n" });
+  refuses("a: >\n  one\n   \n  two\n", /more-indented/);
 });
 
 test("a trailing empty line at end of input leaves the break that ended the last content line", () => {

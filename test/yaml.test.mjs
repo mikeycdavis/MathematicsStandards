@@ -178,10 +178,53 @@ test("a trailing whitespace-only line is judged the same in a CRLF document and 
   assert.deepEqual(parseYaml("a: |-\r\n  one\r\n    \r\n"), { a: "one\n  " });
   assert.deepEqual(parseYaml("a: |-\r\n  one\r\n  \r\n"), { a: "one" });
   assert.deepEqual(parseYaml("a: |-\n  one\n    "), { a: "one\n  " });
-  assert.deepEqual(parseYaml("a: |\n  one\n    "), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n    "), { a: "one\n  " });
   assert.deepEqual(parseYaml("a: |-\n  one\n  "), { a: "one" });
   assert.deepEqual(parseYaml("a: |-\n  one\n"), { a: "one" });
   refuses("a: >-\n  one\n    ", /line 3: more-indented/);
+});
+
+// The third review of FE-32 (PR #111, Codex P2 "Preserve EOF when applying clip chomping") found
+// that clip chomping appended a line break the source never had. YAML 1.2 b-chomped-last(CLIP) is
+// `b-as-line-feed | <end-of-input>`: the final line break is kept when there is one, and when the
+// body ends at end-of-input on a line with no break there is nothing to keep.
+test("clip chomping keeps a final line break only when the source has one", () => {
+  assert.deepEqual(parseYaml("a: |\n  one\n    "), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |\n  one\n    \n"), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |\n  one"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\n  one\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n  two"), { a: "one\ntwo" });
+  assert.deepEqual(parseYaml("a: |\n\n  one"), { a: "\none" });
+  assert.deepEqual(parseYaml("x:\n  a: |\n    one"), { x: { a: "one" } });
+  assert.deepEqual(parseYaml("a: |\n  one\nb: 1"), { a: "one\n", b: "1" });
+});
+
+test("a trailing empty line at end of input leaves the break that ended the last content line", () => {
+  assert.deepEqual(parseYaml("a: |\n  one\n  "), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n "), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n    \n  "), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |\n  one\n\n    "), { a: "one\n\n  " });
+});
+
+test("clip chomping at end of input is the same in a CRLF document", () => {
+  assert.deepEqual(parseYaml("a: |\r\n  one"), { a: "one" });
+  assert.deepEqual(parseYaml("a: |\r\n  one\r\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: |\r\n  one\r\n    "), { a: "one\n  " });
+  assert.deepEqual(parseYaml("a: |\r\n  one\r\n    \r\n"), { a: "one\n  \n" });
+  assert.deepEqual(parseYaml("a: |\r\n  one\r\n  "), { a: "one\n" });
+});
+
+test("a folded scalar chomps at end of input the same way, and still refuses more-indented lines", () => {
+  assert.deepEqual(parseYaml("a: >\n  one"), { a: "one" });
+  assert.deepEqual(parseYaml("a: >\n  one\n  two"), { a: "one two" });
+  assert.deepEqual(parseYaml("a: >\n  one\n"), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: >\n  one\n  "), { a: "one\n" });
+  assert.deepEqual(parseYaml("a: >\r\n  one\r\n  two"), { a: "one two" });
+  assert.deepEqual(parseYaml("a: >-\n  one"), { a: "one" });
+  refuses("a: >\n  one\n    ", /line 3: more-indented/);
+  refuses("a: >\r\n  one\r\n    ", /line 3: more-indented/);
+  refuses("a: >\n  one\n  two\n    x", /line 4: more-indented/);
 });
 
 test("a trailing whitespace-only line deeper than the body is refused in a folded scalar", () => {

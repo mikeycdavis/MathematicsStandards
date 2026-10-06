@@ -150,8 +150,13 @@ function isBlank(line) {
   return spaces(line) === line.length;
 }
 
-/** Collapse a block scalar's de-indented body lines into its string value. */
-function blockValue(style, strip, body, lineNo) {
+/**
+ * Collapse a block scalar's de-indented body lines into its string value. `finalBreak` says whether
+ * the last body line was ended by a line break in the source: clip chomping keeps that break and
+ * adds none (YAML 1.2 b-chomped-last: a line feed, or end of input), so a body that ends at end of
+ * input on a line with no break has no trailing newline.
+ */
+function blockValue(style, strip, body, lineNo, finalBreak) {
   let text;
   if (style === "|") {
     text = body.join("\n");
@@ -177,7 +182,7 @@ function blockValue(style, strip, body, lineNo) {
       text += line;
     });
   }
-  return strip ? text : `${text}\n`;
+  return strip || !finalBreak ? text : `${text}\n`;
 }
 
 /** Tokenize into significant lines carrying indent, content, and 1-based line number. */
@@ -259,7 +264,10 @@ function tokenize(text) {
     // indent is content (spaces), already de-indented to a non-empty string above, so it stays.
     while (body.length > 0 && body[body.length - 1] === "") body.pop();
     if (contentIndent === null) throw new YamlError("a block scalar needs a non-empty body", lineNo);
-    token.block = blockValue(style, strip, body, lineNo);
+    // body[k] is raws[index + 1 + k], so the last retained line is raws[index + body.length]; it has
+    // no line break only when that is the final physical line (the text after the last newline).
+    const finalBreak = index + body.length < raws.length - 1;
+    token.block = blockValue(style, strip, body, lineNo, finalBreak);
     index = next - 1;
   }
   return lines;

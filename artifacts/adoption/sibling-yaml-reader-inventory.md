@@ -13,18 +13,18 @@ nested, in a list, plain, `[]`, `{}`).
 
 | Repository | Head | `scripts/yaml.mjs` blob | Family | Block scalar (`\|`, `>`) | `{}` |
 | --- | --- | --- | --- | --- | --- |
-| MathematicsStandards (this repository) | `9dc7f47` | `e431d60e0005` | own reader (this change's subject) | accepted (`\|`, `>`; `\|+` refused) | refused |
-| BettingStandards | `8601662` | `dbc8b72fb4c1` | C | refused: "block scalars are not supported" | refused |
-| StandardsOrchestrator | `91c065c` | `dbc8b72fb4c1` | C (byte-identical to Betting) | refused | refused |
-| EngineeringStandards | `e341dba` | `abc2b9ff6515` | C | refused | refused |
-| FinancialStandards | `91ae2d7` | `f52fc6364fad` | C | refused | refused |
-| PredictionStandards | `88cad41` | `edec30238a34` | C | refused | refused |
-| InnovationStandards | `e39fdfb` | `3604106b367a` | C | refused | refused |
-| MachineLearningStandards | `0a389fd` | `4f4f208af6b2` | C | refused | refused |
-| UIUXDesignStandards | `19b13fe` | `75caec7ee218` | C | refused | refused |
-| HealthAndFitnessAndNutritionStandards | `b23d43d` | `2c0cd13c2f11` | H (C plus `{}` accepted) | refused | accepted as `{}` |
-| AIStandards | `de149bf` | `15aa4e978724` | Z (a separate implementation) | refused ("unexpected indentation inside a mapping") | accepted as `{}` |
-| StandardsEnforcer | `d1bc8e0` | none (`scripts/yaml.mjs` not found) | not applicable | not applicable | not applicable |
+| MathematicsStandards (this repository) | `9dc7f4755b7bcf70ee04b112cabdafcd929dde15` | `e431d60e0005` | own reader (this change's subject) | accepted (`\|`, `>`; `\|+` refused) | refused |
+| BettingStandards | `8601662a85ff1963ba99bd512f575680a716d15e` | `dbc8b72fb4c1` | C | refused: "block scalars are not supported" | refused |
+| StandardsOrchestrator | `91c065c245c545894e929668043d4050959e019e` | `dbc8b72fb4c1` | C (byte-identical to Betting) | refused | refused |
+| EngineeringStandards | `e341dba472110ff9e85d8cd3fae0fce60d83a31f` | `abc2b9ff6515` | C | refused | refused |
+| FinancialStandards | `91ae2d7437b270dbb5a56cac7f623aeb5ef59929` | `f52fc6364fad` | C | refused | refused |
+| PredictionStandards | `88cad415232245a54091530c1b549431d2831841` | `edec30238a34` | C | refused | refused |
+| InnovationStandards | `e39fdfb59c3f99ba4e4d4c0592692f0451a3333c` | `3604106b367a` | C | refused | refused |
+| MachineLearningStandards | `0a389fde0f584939225e32c5f78924298e97ebed` | `4f4f208af6b2` | C | refused | refused |
+| UIUXDesignStandards | `19b13fec9f8b8a088a6bc0ae57c30d1b0520727d` | `75caec7ee218` | C | refused | refused |
+| HealthAndFitnessAndNutritionStandards | `b23d43d0a08d0b25e0d81085f5b64f879e9a1f14` | `2c0cd13c2f11` | H (C plus `{}` accepted) | refused | accepted as `{}` |
+| AIStandards | `de149bfa260b65461a01b5aa22d950fb8a97754c` | `15aa4e978724` | Z (a separate implementation) | refused ("unexpected indentation inside a mapping") | accepted as `{}` |
+| StandardsEnforcer | `d1bc8e054e6743cffe3bcc65d6d599ccd270ffb1` | none (`scripts/yaml.mjs` not found) | not applicable | not applicable | not applicable |
 
 Families:
 
@@ -58,17 +58,31 @@ are not restated here.
 
 ## Reproduce
 
-Run from a scratch directory outside this repository (bash; needs `gh` and `node`). The first loop
-fetches each sibling's file as raw content under its repository name; the second imports each file by
-its real path and parses one block-scalar document with it.
+This reproduces the inventory as of the revisions in the `Head` column, not the current heads of the
+default branches: each file is fetched at its recorded commit through the Contents API `ref`
+parameter, so later commits to a repository do not change what is fetched. Run it from a scratch
+directory (bash; needs `gh` and `node`). The loop (its `gh` calls read `/dev/null` so they cannot consume the list) fetches each repository's file as raw content at
+its recorded commit and prints the blob id; the `node` step imports each file by its real path and
+parses one block-scalar document with it.
 
 ```text
 mkdir -p siblings && cd siblings
-for r in AIStandards BettingStandards EngineeringStandards FinancialStandards          HealthAndFitnessAndNutritionStandards InnovationStandards MachineLearningStandards          PredictionStandards StandardsOrchestrator UIUXDesignStandards; do
-  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs" -H "Accept: application/vnd.github.raw" > "$r.mjs"
-  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs" --jq '"\(.sha)  '"$r"'"'
-done
-cp <path to this repository>/scripts/yaml.mjs MathematicsStandards.mjs
+while read -r r sha; do
+  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs?ref=$sha" -H "Accept: application/vnd.github.raw" < /dev/null > "$r.mjs"
+  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs?ref=$sha" --jq ".sha + \"  $r\"" < /dev/null
+done <<'LIST'
+AIStandards de149bfa260b65461a01b5aa22d950fb8a97754c
+BettingStandards 8601662a85ff1963ba99bd512f575680a716d15e
+EngineeringStandards e341dba472110ff9e85d8cd3fae0fce60d83a31f
+FinancialStandards 91ae2d7437b270dbb5a56cac7f623aeb5ef59929
+HealthAndFitnessAndNutritionStandards b23d43d0a08d0b25e0d81085f5b64f879e9a1f14
+InnovationStandards e39fdfb59c3f99ba4e4d4c0592692f0451a3333c
+MachineLearningStandards 0a389fde0f584939225e32c5f78924298e97ebed
+PredictionStandards 88cad415232245a54091530c1b549431d2831841
+StandardsOrchestrator 91c065c245c545894e929668043d4050959e019e
+UIUXDesignStandards 19b13fec9f8b8a088a6bc0ae57c30d1b0520727d
+MathematicsStandards 9dc7f4755b7bcf70ee04b112cabdafcd929dde15
+LIST
 node --input-type=module -e "
 import fs from 'node:fs'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
 const doc = 'evidence: |\n  a\n  b\nnext: x\n';
@@ -79,6 +93,6 @@ for (const f of fs.readdirSync('.').filter((n) => n.endsWith('.mjs')).sort()) {
 }"
 ```
 
-The `gh api ... --jq` lines print the blob ids compared above. This repository's file prints
-`accepted` with the block text as a string; every sibling file prints `refused:` with a `YamlError`
-message.
+The printed blob ids are the ones in the `scripts/yaml.mjs` column (first twelve characters). The
+MathematicsStandards file prints `accepted` with the block text as a string; every sibling file
+prints `refused:` with a `YamlError` message.

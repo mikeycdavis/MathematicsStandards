@@ -1,14 +1,14 @@
 # Inventory — the YAML readers in the sibling standards repositories
 
 Recorded 2026-10-11 against each repository's default branch (`main`). It replaces the unsupported
-count ("five sibling copies") that ADR 0005 and the `CHANGELOG.md` `Unreleased` entry used. It records
+count that ADR 0005 and the `CHANGELOG.md` `Unreleased` entry used. It records
 what exists; it makes no decision and proposes no propagation of this repository's block-scalar reader.
 
 ## What was inventoried
 
 The `scripts/yaml.mjs` blob at each repository's default-branch head, fetched through the GitHub
 contents API and compared by git blob id and by behaviour. Behaviour was probed by importing each
-file's `parseYaml` and parsing the same ten small documents (literal, folded, strip and keep chomping,
+file's `parseYaml` and parsing the same small set of documents (literal, folded, strip and keep chomping,
 nested, in a list, plain, `[]`, `{}`).
 
 | Repository | Head | `scripts/yaml.mjs` blob | Family | Block scalar (`\|`, `>`) | `{}` |
@@ -28,15 +28,16 @@ nested, in a list, plain, `[]`, `{}`).
 
 Families:
 
-- **C (eight repositories).** After stripping comments and blank lines the code is identical, byte for
+- **C (the rows marked C).** After stripping comments and blank lines the code is identical, byte for
   byte; only header and explanatory comments differ between them (Betting and Orchestrator are
   byte-identical files). A whole-file comparison of the code body, not a semantic proof.
-- **H (one).** The C code with one change: a flow mapping that is exactly `{}` is accepted and returned
+- **H (the row marked H).** The C code with one change: a flow mapping that is exactly `{}` is accepted and returned
   as an empty object; any other flow mapping is refused.
-- **Z (one).** A different implementation with its own refusal table. It also refuses block scalars.
-- Ten sibling repositories carry a `scripts/yaml.mjs`; StandardsEnforcer carries none.
+- **Z (the row marked Z).** A different implementation with its own refusal table. It also refuses block scalars.
+- Every sibling in the table except StandardsEnforcer carries a `scripts/yaml.mjs`; StandardsEnforcer
+  carries none.
 
-All ten refuse block scalars. None accepts the block scalars this repository's reader accepts since
+Every sibling reader in the table refuses block scalars. None accepts the block scalars this repository's reader accepts since
 FE-32 (#63). This repository's reader is not propagated, and nothing here changes that.
 
 ## Divergence is recorded by the repositories themselves
@@ -52,15 +53,32 @@ was opened are listed; the other siblings' decision records were not examined.
 | InnovationStandards | `artifacts/adr/0001-vendored-engine-standalone-repo.md` | `yaml.mjs` copied unchanged; a defect fixed in the sibling's engine is not fixed here and nothing will say so, stated as a permanent maintenance cost. |
 | MachineLearningStandards | `artifacts/adr/0001-standalone-domain-first-design.md` | `yaml.mjs` is vendored with a provenance header; the copies "may diverge", which is accepted, so a fix here does not wait on another repository and a change there does not arrive here unannounced. It does not say that upstream fixes will not arrive in those words. |
 
-The repositories' own counts in those records ("eight sibling repositories", "nine repositories")
-describe the family on the date each was written and are not restated here.
+Any counts the repositories' own records state describe the family on the date each was written and
+are not restated here.
 
 ## Reproduce
 
+Run from a scratch directory outside this repository (bash; needs `gh` and `node`). The first loop
+fetches each sibling's file as raw content under its repository name; the second imports each file by
+its real path and parses one block-scalar document with it.
+
 ```text
-gh api repos/mikeycdavis/<Repo>/contents/scripts/yaml.mjs --jq .sha
-node -e "import('./yaml.mjs').then(m => console.log(m.parseYaml('evidence: |\n  a\n  b\nnext: x\n')))"
+mkdir -p siblings && cd siblings
+for r in AIStandards BettingStandards EngineeringStandards FinancialStandards          HealthAndFitnessAndNutritionStandards InnovationStandards MachineLearningStandards          PredictionStandards StandardsOrchestrator UIUXDesignStandards; do
+  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs" -H "Accept: application/vnd.github.raw" > "$r.mjs"
+  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs" --jq '"\(.sha)  '"$r"'"'
+done
+cp <path to this repository>/scripts/yaml.mjs MathematicsStandards.mjs
+node --input-type=module -e "
+import fs from 'node:fs'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
+const doc = 'evidence: |\n  a\n  b\nnext: x\n';
+for (const f of fs.readdirSync('.').filter((n) => n.endsWith('.mjs')).sort()) {
+  const m = await import(pathToFileURL(path.resolve(f)).href);
+  try { console.log(f, 'accepted', JSON.stringify(m.parseYaml(doc))); }
+  catch (e) { console.log(f, 'refused:', e.message); }
+}"
 ```
 
-The first prints the blob id compared above; the second is accepted by this repository's reader and
-throws a `YamlError` in every sibling's.
+The `gh api ... --jq` lines print the blob ids compared above. This repository's file prints
+`accepted` with the block text as a string; every sibling file prints `refused:` with a `YamlError`
+message.

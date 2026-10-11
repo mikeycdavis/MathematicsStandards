@@ -34,8 +34,8 @@ reclassified, and no rule's wording or level changes; input the reader previousl
 accepted; input it accepted before parses to the same value. The versioning paragraph above
 classifies rule changes only. Documentation is updated in `INSTRUCTIONS.md`,
 `templates/project-policy.yml` and the schema's `evidence` and `reason` descriptions. The reader is
-vendored per repository (ADR 0005): this change does not reach the sibling repositories' readers; all ten that carry
-one refused block scalars when inventoried on 2026-10-11 (`artifacts/adoption/sibling-yaml-reader-inventory.md`).
+vendored per repository (ADR 0005): this change does not reach the sibling repositories' readers, which
+refused block scalars when inventoried on 2026-10-11 (`artifacts/adoption/sibling-yaml-reader-inventory.md`).
 
 ## 3.1.0 — 2026-10-05
 

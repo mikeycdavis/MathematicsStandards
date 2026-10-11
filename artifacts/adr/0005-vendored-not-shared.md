@@ -26,10 +26,12 @@ another repository's release schedule, and because "independently maintained" is
 dependency that happens to be stable today.
 
 The cost is real and worth stating: a fix to the YAML parser here does not reach the sibling
-repositories, and five copies of a subtle parser is five places for the same bug. That cost was
-accepted in exchange for independence, which the charter treats as a requirement rather than a
-preference. Each vendored file keeps the comments explaining why its guards exist, because those
-comments are the reason the copy is worth having.
+repositories, and a subtle parser that exists as several independently maintained copies is several
+places for the same bug. That cost was accepted in exchange for independence, which the charter treats
+as a requirement rather than a preference. The copies that exist, and where they differ, are recorded
+in [`artifacts/adoption/sibling-yaml-reader-inventory.md`](../adoption/sibling-yaml-reader-inventory.md).
+Each vendored file keeps the comments explaining why its guards exist, because those comments are the
+reason the copy is worth having.
 
 ## Decision 2 — The assurance report is generated, never written
 

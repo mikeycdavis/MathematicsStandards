@@ -59,40 +59,27 @@ are not restated here.
 ## Reproduce
 
 This reproduces the inventory as of the revisions in the `Head` column, not the current heads of the
-default branches: each file is fetched at its recorded commit through the Contents API `ref`
-parameter, so later commits to a repository do not change what is fetched. Run it from a scratch
-directory (bash; needs `gh` and `node`). The loop (its `gh` calls read `/dev/null` so they cannot consume the list) fetches each repository's file as raw content at
-its recorded commit and prints the blob id; the `node` step imports each file by its real path and
-parses one block-scalar document with it.
+default branches. The procedure is the checked-in script
+[`sibling-yaml-reader-probe.mjs`](sibling-yaml-reader-probe.mjs), which carries the same
+repository-and-commit list as the table. Run it from the root of this repository with `gh`
+(authenticated) and `node`, giving it an empty scratch directory:
 
 ```text
-mkdir -p siblings && cd siblings
-while read -r r sha; do
-  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs?ref=$sha" -H "Accept: application/vnd.github.raw" < /dev/null > "$r.mjs"
-  gh api "repos/mikeycdavis/$r/contents/scripts/yaml.mjs?ref=$sha" --jq ".sha + \"  $r\"" < /dev/null
-done <<'LIST'
-AIStandards de149bfa260b65461a01b5aa22d950fb8a97754c
-BettingStandards 8601662a85ff1963ba99bd512f575680a716d15e
-EngineeringStandards e341dba472110ff9e85d8cd3fae0fce60d83a31f
-FinancialStandards 91ae2d7437b270dbb5a56cac7f623aeb5ef59929
-HealthAndFitnessAndNutritionStandards b23d43d0a08d0b25e0d81085f5b64f879e9a1f14
-InnovationStandards e39fdfb59c3f99ba4e4d4c0592692f0451a3333c
-MachineLearningStandards 0a389fde0f584939225e32c5f78924298e97ebed
-PredictionStandards 88cad415232245a54091530c1b549431d2831841
-StandardsOrchestrator 91c065c245c545894e929668043d4050959e019e
-UIUXDesignStandards 19b13fec9f8b8a088a6bc0ae57c30d1b0520727d
-MathematicsStandards 9dc7f4755b7bcf70ee04b112cabdafcd929dde15
-LIST
-node --input-type=module -e "
-import fs from 'node:fs'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
-const doc = 'evidence: |\n  a\n  b\nnext: x\n';
-for (const f of fs.readdirSync('.').filter((n) => n.endsWith('.mjs')).sort()) {
-  const m = await import(pathToFileURL(path.resolve(f)).href);
-  try { console.log(f, 'accepted', JSON.stringify(m.parseYaml(doc))); }
-  catch (e) { console.log(f, 'refused:', e.message); }
-}"
+node artifacts/adoption/sibling-yaml-reader-probe.mjs <empty scratch directory>
 ```
 
-The printed blob ids are the ones in the `scripts/yaml.mjs` column (first twelve characters). The
-MathematicsStandards file prints `accepted` with the block text as a string; every sibling file
-prints `refused:` with a `YamlError` message.
+For each row it:
+
+- fetches `scripts/yaml.mjs` at the recorded commit through the Contents API `ref` parameter, so later
+  commits do not change what is fetched, and for StandardsEnforcer confirms that no such file exists;
+- compares the git blob id of each file with the recorded one;
+- parses the same documents with every file (literal, folded, strip and keep chomping, nested, inside a
+  list, plain, `[]`, `{}`) and checks that every sibling refuses each block scalar while this
+  repository's reader accepts all but keep chomping;
+- groups the files by their code with comments and blank lines removed, and checks that the rows
+  marked C share one body while the rows marked H and Z differ from it and from each other;
+- checks that `{}` is accepted by the H and Z rows only.
+
+It prints one line per repository and exits 0 with "Every recorded value was reproduced." only when
+every check holds; otherwise it lists each difference and exits 1. The comment stripping is crude by
+design and is applied identically to every file, so identical results mean identical code.

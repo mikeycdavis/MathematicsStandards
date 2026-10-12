@@ -92,3 +92,5 @@ every check holds; otherwise it lists each difference and exits 1. After the che
 deliberate alterations to the collected results (a wrong value, a changed message, an extra code line,
 a changed blob id and the like) and requires each to be noticed, so a probe that can no longer fail is
 reported as broken.
+A fetch that fails (an expired token, an unavailable revision) is listed in the same report and the run
+exits 1; `--simulate-fetch-failure=<Repository>` exercises that path on demand.

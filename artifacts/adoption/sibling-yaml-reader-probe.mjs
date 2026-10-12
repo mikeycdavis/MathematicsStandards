@@ -138,6 +138,9 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // All checks, over collected results. Returns the list of differences (empty means reproduced).
 function evaluate(results) {
   const problems = [];
+  for (const [repo] of ROWS) {
+    if (!results.some((r) => r.repo === repo)) problems.push(`${repo}: no result was collected for this row`);
+  }
   for (const r of results) {
     if (r.family === "absent") {
       if (!r.absent) problems.push(`${r.repo}: expected no scripts/yaml.mjs at the recorded commit`);
@@ -159,6 +162,7 @@ function evaluate(results) {
   const c = family("C");
   const h = family("H");
   const z = family("Z");
+  if (c.length === 0) return problems; // the code comparisons need a family C row; its absence is reported above
   for (const r of c.slice(1)) {
     if (!same(r.source, c[0].source)) problems.push(`${r.repo}: normalized code differs from ${c[0].repo}`);
   }
@@ -201,6 +205,7 @@ function selfTest(results) {
     ["StandardsEnforcer has the file", (rs) => (find(rs, "StandardsEnforcer").absent = false)],
   ];
   const failures = [];
+  if (results.length !== ROWS.length) return { failures: ["results are incomplete; self-test skipped"], total: mutations.length };
   if (evaluate(clone()).length !== 0) failures.push("the unaltered results do not pass");
   for (const [name, alter] of mutations) {
     const copy = clone();
@@ -210,7 +215,7 @@ function selfTest(results) {
   return { failures, total: mutations.length };
 }
 
-const outDir = process.argv[2];
+const outDir = process.argv.slice(2).find((a) => !a.startsWith("--"));
 if (!outDir) {
   console.error("usage: node sibling-yaml-reader-probe.mjs <empty scratch directory>");
   process.exit(2);
@@ -221,7 +226,7 @@ if (readdirSync(outDir).length > 0) {
   process.exit(2);
 }
 
-function fetchRaw(repo, sha) {
+function ghFetch(repo, sha) {
   const result = spawnSync(
     "gh",
     ["api", `repos/${OWNER}/${repo}/contents/scripts/yaml.mjs?ref=${sha}`, "-H", "Accept: application/vnd.github.raw"],
@@ -233,33 +238,63 @@ function fetchRaw(repo, sha) {
 const gitBlobId = (bytes) =>
   createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 
-const results = [];
-const fetchProblems = [];
-for (const [repo, sha, recordedBlob, family] of ROWS) {
-  const got = fetchRaw(repo, sha);
-  if (family === "absent") {
-    const missing = got.status !== 0 && /404|Not Found/i.test(got.error);
-    if (got.status !== 0 && !missing) fetchProblems.push(`${repo}: fetch failed for another reason: ${got.error.trim()}`);
-    results.push({ repo, family, absent: missing });
-    continue;
-  }
-  if (got.status !== 0) {
-    fetchProblems.push(`${repo}: could not fetch scripts/yaml.mjs at ${sha}: ${got.error.trim()}`);
-    continue;
-  }
-  const file = path.resolve(outDir, `${repo}.mjs`);
-  writeFileSync(file, got.body);
-  const mod = await import(pathToFileURL(file).href);
-  const probe = {};
-  for (const [name, doc] of Object.entries(CASES)) {
+// Fetch every row with `fetcher`, write each file under `dir` and probe it. A row that cannot be
+// fetched or imported is recorded in `fetchProblems` and left out of `results`; nothing here throws
+// for such a row, so the caller always reaches its report.
+async function collect(fetcher, dir) {
+  const results = [];
+  const fetchProblems = [];
+  for (const [repo, sha, recordedBlob, family] of ROWS) {
+    let got;
     try {
-      probe[name] = { ok: true, value: JSON.stringify(mod.parseYaml(doc)) };
+      got = fetcher(repo, sha);
     } catch (error) {
-      probe[name] = { ok: false, value: String(error.message) };
+      got = { status: 1, body: Buffer.alloc(0), error: String(error?.message ?? error) };
+    }
+    if (family === "absent") {
+      const missing = got.status !== 0 && /404|Not Found/i.test(got.error);
+      if (got.status !== 0 && !missing) fetchProblems.push(`${repo}: fetch failed for another reason: ${got.error.trim()}`);
+      if (got.status === 0) results.push({ repo, family, absent: false });
+      else if (missing) results.push({ repo, family, absent: true });
+      continue;
+    }
+    if (got.status !== 0) {
+      fetchProblems.push(`${repo}: could not fetch scripts/yaml.mjs at ${sha}: ${got.error.trim()}`);
+      continue;
+    }
+    try {
+      const file = path.resolve(dir, `${repo}.mjs`);
+      writeFileSync(file, got.body);
+      const mod = await import(pathToFileURL(file).href);
+      const probe = {};
+      for (const [name, doc] of Object.entries(CASES)) {
+        try {
+          probe[name] = { ok: true, value: JSON.stringify(mod.parseYaml(doc)) };
+        } catch (error) {
+          probe[name] = { ok: false, value: String(error.message) };
+        }
+      }
+      results.push({ repo, family, recordedBlob, blob: gitBlobId(got.body), probe, source: normalize(got.body.toString("utf8")) });
+    } catch (error) {
+      fetchProblems.push(`${repo}: the fetched file could not be loaded: ${String(error?.message ?? error).split("\n")[0]}`);
     }
   }
-  results.push({ repo, family, recordedBlob, blob: gitBlobId(got.body), probe, source: normalize(got.body.toString("utf8")) });
+  return { results, fetchProblems };
 }
+
+// `--simulate-fetch-failure=<Repository>` makes that repository's fetch fail, to exercise the
+// failure path of this script.
+const simulate = process.argv.find((a) => a.startsWith("--simulate-fetch-failure="))?.split("=")[1];
+const liveFetcher = (repo, sha) =>
+  repo === simulate ? { status: 1, body: Buffer.alloc(0), error: "simulated fetch failure" } : ghFetch(repo, sha);
+
+const bodies = new Map(); // repository -> bytes, kept so the failure self-test needs no network
+const recordingFetcher = (repo, sha) => {
+  const got = liveFetcher(repo, sha);
+  if (got.status === 0) bodies.set(repo, got.body);
+  return got;
+};
+const { results, fetchProblems } = await collect(recordingFetcher, outDir);
 
 const problems = [...fetchProblems, ...evaluate(results)];
 
@@ -280,6 +315,32 @@ for (const r of results) {
 }
 
 const test = selfTest(results);
+if (results.length === ROWS.length && fetchProblems.length === 0) {
+  // Failure path, with an injected fetcher that fails for one repository: the run must complete,
+  // report that fetch failure, and flag the row as missing, without throwing.
+  const dir = path.join(outDir, "_failure-selftest");
+  mkdirSync(dir, { recursive: true });
+  const failing = "BettingStandards";
+  const injected = (repo) =>
+    repo === failing
+      ? { status: 1, body: Buffer.alloc(0), error: "injected failure" }
+      : { status: bodies.has(repo) ? 0 : 1, body: bodies.get(repo) ?? Buffer.alloc(0), error: bodies.has(repo) ? "" : "Not Found" };
+  let outcome;
+  try {
+    const sub = await collect(injected, dir);
+    outcome = [...sub.fetchProblems, ...evaluate(sub.results)];
+  } catch (error) {
+    outcome = null;
+    test.failures.push(`fetch-failure path threw: ${error?.message ?? error}`);
+  }
+  if (outcome && !outcome.some((p) => p.startsWith(`${failing}: could not fetch`))) {
+    test.failures.push("fetch-failure path did not report the failed fetch");
+  }
+  if (outcome && !outcome.some((p) => p.startsWith(`${failing}: no result was collected`))) {
+    test.failures.push("fetch-failure path did not flag the missing row");
+  }
+  test.total += 1;
+}
 for (const failure of test.failures) problems.push(`self-test: ${failure}`);
 
 if (problems.length > 0) {

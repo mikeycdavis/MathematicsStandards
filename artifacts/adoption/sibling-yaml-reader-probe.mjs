@@ -5,13 +5,21 @@
 //
 // Needs `gh` (authenticated) and `node`. For each repository in the table it fetches
 // scripts/yaml.mjs at the recorded commit (not the current branch head), compares the git blob id
-// with the recorded one, probes the file's `parseYaml` with the same documents, groups the files by
-// code with comments and blank lines stripped, and checks the StandardsEnforcer row (no such file).
-// It exits 0 only when every recorded value is reproduced, and prints each difference otherwise.
+// with the recorded one, parses the same documents with the file's `parseYaml`, and compares each
+// result (the parsed value, or the error message) with the exact result the inventory records for
+// that family. It then compares the files' code: the C rows must be one body, and the H row must
+// differ from it by exactly the `{}` branch and nothing else. The StandardsEnforcer row must have no
+// such file. It exits 0 only when every recorded value is reproduced, and lists each difference
+// otherwise. A final self-test applies deliberate alterations to the collected results and requires
+// the checks to notice every one of them, so a probe that cannot fail is reported as broken.
+//
+// "Normalized" code, used for every code comparison below, is the file with block comments
+// (/* ... */) removed, everything from `//` to the end of the line removed, trailing whitespace
+// removed and blank lines dropped. Indentation and every other character are kept. The `//` rule is
+// crude (it also cuts a `//` inside a string), but it is applied identically to every file, so equal
+// normalized code means equal code apart from comments and blank lines.
 //
 // This file is a record, not part of the standards toolchain: nothing imports it and no gate runs it.
-// The comment stripping is deliberately crude (it also cuts "//" inside strings); it is applied the
-// same way to every file, so equal results mean equal code, and a difference means a difference.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -49,7 +57,158 @@ const CASES = {
   emptyFlowSeq: "a: []\n",
   emptyFlowMap: "a: {}\n",
 };
-const BLOCK_CASES = ["literal", "literalStrip", "folded", "foldedStrip", "keep", "nested", "inList"];
+
+// The exact result recorded for each family and document: { ok: true, value: <JSON> } for a parsed
+// value, { ok: false, value: <message> } for a refusal.
+const ok = (json) => ({ ok: true, value: JSON.stringify(json) });
+const refused = (message) => ({ ok: false, value: message });
+const sharedPlain = {
+  oneline: ok({ evidence: "plain", next: "x" }),
+  emptyFlowSeq: ok({ a: [] }),
+};
+const blockRefusedC = {
+  literal: refused("line 1: block scalars are not supported"),
+  literalStrip: refused("line 1: block scalars are not supported"),
+  folded: refused("line 1: block scalars are not supported"),
+  foldedStrip: refused("line 1: block scalars are not supported"),
+  keep: refused("line 1: block scalars are not supported"),
+  nested: refused("line 2: block scalars are not supported"),
+  inList: refused("line 2: block scalars are not supported"),
+};
+const EXPECTED = {
+  M: {
+    literal: ok({ evidence: 'line "one"\nline two\n', next: "x" }),
+    literalStrip: ok({ evidence: "a\nb", next: "x" }),
+    folded: ok({ evidence: "a b\n", next: "x" }),
+    foldedStrip: ok({ evidence: "a b", next: "x" }),
+    keep: refused("line 1: keep chomping (`+`) on a block scalar is not supported; use `-` or none"),
+    nested: ok({ a: { evidence: "x\ny\n", b: "1" } }),
+    inList: ok({ items: [{ note: "x\n", id: "1" }] }),
+    ...sharedPlain,
+    emptyFlowMap: refused("line 1: flow mappings are not supported"),
+  },
+  C: { ...blockRefusedC, ...sharedPlain, emptyFlowMap: refused("line 1: flow mappings are not supported") },
+  H: { ...blockRefusedC, ...sharedPlain, emptyFlowMap: ok({ a: {} }) },
+  Z: {
+    literal: refused("line 2: unexpected indentation inside a mapping"),
+    literalStrip: refused("line 2: unexpected indentation inside a mapping"),
+    folded: refused("line 2: unexpected indentation inside a mapping"),
+    foldedStrip: refused("line 2: unexpected indentation inside a mapping"),
+    keep: refused("line 2: unexpected indentation inside a mapping"),
+    nested: refused("line 3: unexpected indentation inside a mapping"),
+    inList: refused("line 3: unexpected indentation inside a sequence"),
+    ...sharedPlain,
+    emptyFlowMap: ok({ a: {} }),
+  },
+};
+
+// The only code difference recorded between family C and family H, in normalized code: the single
+// `{` line of C is replaced by the block that accepts exactly `{}`.
+const H_DIFF = {
+  removed: ['  if (first === "{") throw new YamlError("flow mappings are not supported", lineNo);'],
+  added: [
+    '  if (first === "{") {',
+    '    if (value.replace(/\\s/g, "") !== "{}") {',
+    '      throw new YamlError("flow mappings with content are not supported", lineNo);',
+    "    }",
+    "    return {};",
+    "  }",
+  ],
+};
+
+const normalize = (text) =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "")
+    .split("\n")
+    .map((line) => line.replace(/\s+$/, ""))
+    .filter((line) => line !== "");
+
+// The differing region between two line arrays: the longest common prefix and suffix are removed.
+function lineDiff(a, b) {
+  let head = 0;
+  while (head < a.length && head < b.length && a[head] === b[head]) head++;
+  let tail = 0;
+  while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail++;
+  return { removed: a.slice(head, a.length - tail), added: b.slice(head, b.length - tail) };
+}
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// All checks, over collected results. Returns the list of differences (empty means reproduced).
+function evaluate(results) {
+  const problems = [];
+  for (const r of results) {
+    if (r.family === "absent") {
+      if (!r.absent) problems.push(`${r.repo}: expected no scripts/yaml.mjs at the recorded commit`);
+      continue;
+    }
+    if (!r.blob.startsWith(r.recordedBlob)) {
+      problems.push(`${r.repo}: blob ${r.blob.slice(0, 12)} differs from recorded ${r.recordedBlob}`);
+    }
+    for (const [name, want] of Object.entries(EXPECTED[r.family])) {
+      const got = r.probe[name];
+      if (!got || got.ok !== want.ok || got.value !== want.value) {
+        const show = (x) => (x ? `${x.ok ? "accepted" : "refused"} ${x.value}` : "nothing");
+        problems.push(`${r.repo} (${r.family}) ${name}: expected ${show(want)}; got ${show(got)}`);
+      }
+    }
+  }
+  const present = results.filter((r) => r.family !== "absent");
+  const family = (f) => present.filter((r) => r.family === f);
+  const c = family("C");
+  const h = family("H");
+  const z = family("Z");
+  for (const r of c.slice(1)) {
+    if (!same(r.source, c[0].source)) problems.push(`${r.repo}: normalized code differs from ${c[0].repo}`);
+  }
+  for (const r of h) {
+    const diff = lineDiff(c[0].source, r.source);
+    if (!same(diff, H_DIFF)) {
+      problems.push(
+        `${r.repo}: code differs from family C by more or other than the {} branch: ` +
+          `removed ${JSON.stringify(diff.removed)}, added ${JSON.stringify(diff.added)}`,
+      );
+    }
+  }
+  for (const r of z) {
+    if (same(r.source, c[0].source)) problems.push(`${r.repo}: expected code different from family C`);
+  }
+  return problems;
+}
+
+// Deliberate alterations of otherwise-reproduced results; each must be noticed by `evaluate`.
+function selfTest(results) {
+  const clone = () => JSON.parse(JSON.stringify(results));
+  const find = (rs, repo) => rs.find((r) => r.repo === repo);
+  const mutations = [
+    ["H returns {} as a string", (rs) => (find(rs, "HealthAndFitnessAndNutritionStandards").probe.emptyFlowMap.value = '"{}"')],
+    ["a C refusal message changes", (rs) => (find(rs, "BettingStandards").probe.literal.value = "line 1: something else")],
+    ["Z refuses with another message", (rs) => (find(rs, "AIStandards").probe.nested.value = "line 3: other")],
+    ["a sibling accepts a block scalar", (rs) => (find(rs, "FinancialStandards").probe.folded = { ok: true, value: '{"evidence":"a b\\n"}' })],
+    ["M accepts keep chomping", (rs) => (find(rs, "MathematicsStandards").probe.keep = { ok: true, value: "{}" })],
+    ["M accepts {}", (rs) => (find(rs, "MathematicsStandards").probe.emptyFlowMap = { ok: true, value: "{}" })],
+    ["M returns wrong block content", (rs) => (find(rs, "MathematicsStandards").probe.literal.value = '{"evidence":"x"}')],
+    ["a plain scalar parses wrongly", (rs) => (find(rs, "EngineeringStandards").probe.oneline.value = '{"evidence":"other"}')],
+    ["H code gains an unrelated line", (rs) => find(rs, "HealthAndFitnessAndNutritionStandards").source.push("  extra();")],
+    ["H changes inside the {} branch", (rs) => {
+      const s = find(rs, "HealthAndFitnessAndNutritionStandards").source;
+      s[s.indexOf("    return {};")] = "    return null;";
+    }],
+    ["a C row differs by one line", (rs) => find(rs, "InnovationStandards").source.push("  other();")],
+    ["Z code equals C", (rs) => (find(rs, "AIStandards").source = [...find(rs, "BettingStandards").source])],
+    ["a blob id differs", (rs) => (find(rs, "PredictionStandards").blob = "0".repeat(40))],
+    ["StandardsEnforcer has the file", (rs) => (find(rs, "StandardsEnforcer").absent = false)],
+  ];
+  const failures = [];
+  if (evaluate(clone()).length !== 0) failures.push("the unaltered results do not pass");
+  for (const [name, alter] of mutations) {
+    const copy = clone();
+    alter(copy);
+    if (evaluate(copy).length === 0) failures.push(`not noticed: ${name}`);
+  }
+  return { failures, total: mutations.length };
+}
 
 const outDir = process.argv[2];
 if (!outDir) {
@@ -61,9 +220,6 @@ if (readdirSync(outDir).length > 0) {
   console.error(`refusing to use a non-empty directory: ${outDir}`);
   process.exit(2);
 }
-
-const problems = [];
-const note = (message) => problems.push(message);
 
 function fetchRaw(repo, sha) {
   const result = spawnSync(
@@ -77,32 +233,22 @@ function fetchRaw(repo, sha) {
 const gitBlobId = (bytes) =>
   createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 
-const stripped = (text) =>
-  text
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/.*$/gm, "")
-    .split("\n")
-    .map((line) => line.replace(/\s+$/, ""))
-    .filter((line) => line !== "")
-    .join("\n");
-
 const results = [];
+const fetchProblems = [];
 for (const [repo, sha, recordedBlob, family] of ROWS) {
   const got = fetchRaw(repo, sha);
   if (family === "absent") {
-    if (got.status === 0) note(`${repo}: expected no scripts/yaml.mjs at ${sha}, but one exists`);
-    else if (!/404|Not Found/i.test(got.error)) note(`${repo}: fetch failed for another reason: ${got.error.trim()}`);
-    results.push({ repo, family, absent: got.status !== 0 });
+    const missing = got.status !== 0 && /404|Not Found/i.test(got.error);
+    if (got.status !== 0 && !missing) fetchProblems.push(`${repo}: fetch failed for another reason: ${got.error.trim()}`);
+    results.push({ repo, family, absent: missing });
     continue;
   }
   if (got.status !== 0) {
-    note(`${repo}: could not fetch scripts/yaml.mjs at ${sha}: ${got.error.trim()}`);
+    fetchProblems.push(`${repo}: could not fetch scripts/yaml.mjs at ${sha}: ${got.error.trim()}`);
     continue;
   }
   const file = path.resolve(outDir, `${repo}.mjs`);
   writeFileSync(file, got.body);
-  const blob = gitBlobId(got.body);
-  if (!blob.startsWith(recordedBlob)) note(`${repo}: blob ${blob.slice(0, 12)} differs from recorded ${recordedBlob}`);
   const mod = await import(pathToFileURL(file).href);
   const probe = {};
   for (const [name, doc] of Object.entries(CASES)) {
@@ -112,66 +258,29 @@ for (const [repo, sha, recordedBlob, family] of ROWS) {
       probe[name] = { ok: false, value: String(error.message) };
     }
   }
-  results.push({
-    repo,
-    family,
-    blob: blob.slice(0, 12),
-    probe,
-    code: createHash("sha256").update(stripped(got.body.toString("utf8"))).digest("hex").slice(0, 12),
-  });
+  results.push({ repo, family, recordedBlob, blob: gitBlobId(got.body), probe, source: normalize(got.body.toString("utf8")) });
 }
 
-const present = results.filter((r) => !r.absent && r.probe);
+const problems = [...fetchProblems, ...evaluate(results)];
 
-// What each family is recorded to do.
-for (const r of present) {
-  if (r.family === "M") {
-    for (const name of ["literal", "literalStrip", "folded", "foldedStrip", "nested", "inList"]) {
-      if (!r.probe[name].ok) note(`${r.repo}: expected ${name} to be accepted`);
-    }
-    if (r.probe.keep.ok) note(`${r.repo}: expected keep chomping (|+) to be refused`);
-    continue;
-  }
-  for (const name of BLOCK_CASES) {
-    if (r.probe[name].ok) note(`${r.repo}: expected ${name} to be refused, it was accepted`);
-  }
-  if (!r.probe.oneline.ok) note(`${r.repo}: expected a plain scalar to parse`);
-  const wantsEmptyMap = r.family === "H" || r.family === "Z";
-  if (r.probe.emptyFlowMap.ok !== wantsEmptyMap) {
-    note(`${r.repo}: expected {} to be ${wantsEmptyMap ? "accepted" : "refused"}`);
-  }
-}
-
-// Family grouping: the C rows share one code hash; H and Z each differ from it and from each other.
-const byFamily = (f) => present.filter((r) => r.family === f);
-const cCodes = new Set(byFamily("C").map((r) => r.code));
-if (cCodes.size !== 1) note(`family C is not one code body: ${[...cCodes].join(", ")}`);
-const [cCode] = cCodes;
-for (const f of ["H", "Z"]) {
-  for (const r of byFamily(f)) {
-    if (r.code === cCode) note(`${r.repo}: expected code different from family C`);
-  }
-}
-const hCode = byFamily("H")[0]?.code;
-const zCode = byFamily("Z")[0]?.code;
-if (hCode && hCode === zCode) note("families H and Z have identical code; expected them to differ");
-
-console.log("repository".padEnd(40), "blob".padEnd(13), "fam", "code".padEnd(13), "literal", "|+", "{}");
+console.log("repository".padEnd(40), "blob".padEnd(13), "fam", "literal ", "|+      ", "{}");
 for (const r of results) {
-  if (r.absent) {
+  if (r.family === "absent") {
     console.log(r.repo.padEnd(40), "(no scripts/yaml.mjs at the recorded commit)");
     continue;
   }
   console.log(
     r.repo.padEnd(40),
-    r.blob.padEnd(13),
+    r.blob.slice(0, 12).padEnd(13),
     r.family.padEnd(3),
-    r.code.padEnd(13),
-    (r.probe.literal.ok ? "accepted" : "refused").padEnd(8),
-    (r.probe.keep.ok ? "accepted" : "refused").padEnd(8),
+    (r.probe.literal.ok ? "accepted" : "refused ").padEnd(8),
+    (r.probe.keep.ok ? "accepted" : "refused ").padEnd(8),
     r.probe.emptyFlowMap.ok ? "accepted" : "refused",
   );
 }
+
+const test = selfTest(results);
+for (const failure of test.failures) problems.push(`self-test: ${failure}`);
 
 if (problems.length > 0) {
   console.log("\nNOT REPRODUCED:");
@@ -179,3 +288,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log("\nEvery recorded value was reproduced.");
+console.log(`Self-test: every one of ${test.total} deliberate alterations was noticed.`);

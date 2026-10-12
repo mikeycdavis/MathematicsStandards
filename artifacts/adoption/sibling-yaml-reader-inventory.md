@@ -74,12 +74,21 @@ For each row it:
   commits do not change what is fetched, and for StandardsEnforcer confirms that no such file exists;
 - compares the git blob id of each file with the recorded one;
 - parses the same documents with every file (literal, folded, strip and keep chomping, nested, inside a
-  list, plain, `[]`, `{}`) and checks that every sibling refuses each block scalar while this
-  repository's reader accepts all but keep chomping;
-- groups the files by their code with comments and blank lines removed, and checks that the rows
-  marked C share one body while the rows marked H and Z differ from it and from each other;
-- checks that `{}` is accepted by the H and Z rows only.
+  list, plain, `[]`, `{}`) and compares each result with the exact result recorded for its family:
+  the parsed value for an accepted document, the error message for a refused one, including this
+  repository's own refusals of `|+` and `{}`;
+- compares the code. Rows marked C must be one body. The row marked H must differ from it by exactly
+  the branch that accepts `{}` (one line replaced by that branch) and nothing else. The row marked Z
+  must differ from C.
+
+"Normalized" code, used for those comparisons, is the file with block comments removed, everything
+from `//` to the end of the line removed, trailing whitespace removed and blank lines dropped.
+Indentation and every other character are kept. The `//` rule is crude, since it also cuts a `//`
+inside a string, but it is applied identically to every file, so equal normalized code means equal
+code apart from comments and blank lines.
 
 It prints one line per repository and exits 0 with "Every recorded value was reproduced." only when
-every check holds; otherwise it lists each difference and exits 1. The comment stripping is crude by
-design and is applied identically to every file, so identical results mean identical code.
+every check holds; otherwise it lists each difference and exits 1. After the checks it applies
+deliberate alterations to the collected results (a wrong value, a changed message, an extra code line,
+a changed blob id and the like) and requires each to be noticed, so a probe that can no longer fail is
+reported as broken.

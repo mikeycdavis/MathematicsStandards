@@ -92,5 +92,8 @@ every check holds; otherwise it lists each difference and exits 1. After the che
 deliberate alterations to the collected results (a wrong value, a changed message, an extra code line,
 a changed blob id and the like) and requires each to be noticed, so a probe that can no longer fail is
 reported as broken.
-A fetch that fails (an expired token, an unavailable revision) is listed in the same report and the run
+Every row first looks up its pinned commit, and only a row whose commit is reachable can be fetched or
+recorded as absent: GitHub also answers 404 for a repository or revision the token cannot see, so a
+missing file is accepted as absence (StandardsEnforcer) only after the commit lookup succeeded. A lookup
+or fetch that fails (an expired token, an unavailable revision) is listed in the same report and the run
 exits 1; `--simulate-fetch-failure=<Repository>` exercises that path on demand.

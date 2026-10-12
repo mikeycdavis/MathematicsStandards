@@ -226,14 +226,19 @@ if (readdirSync(outDir).length > 0) {
   process.exit(2);
 }
 
-function ghFetch(repo, sha) {
-  const result = spawnSync(
-    "gh",
-    ["api", `repos/${OWNER}/${repo}/contents/scripts/yaml.mjs?ref=${sha}`, "-H", "Accept: application/vnd.github.raw"],
-    { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 16 * 1024 * 1024 },
-  );
+// A fetcher has two lookups, both returning { status, body, error }: `commit` asks whether the
+// pinned repository and revision are accessible at all, and `file` fetches scripts/yaml.mjs at it.
+// A 404 on the file means "absent" only when the commit lookup succeeded: GitHub also answers 404
+// for a repository or revision the token cannot see, so a path-level 404 alone proves nothing.
+function ghCall(args) {
+  const result = spawnSync("gh", ["api", ...args], { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 16 * 1024 * 1024 });
   return { status: result.status, body: result.stdout, error: String(result.stderr ?? "") };
 }
+const ghFetcher = {
+  commit: (repo, sha) => ghCall([`repos/${OWNER}/${repo}/commits/${sha}`, "--jq", ".sha"]),
+  file: (repo, sha) =>
+    ghCall([`repos/${OWNER}/${repo}/contents/scripts/yaml.mjs?ref=${sha}`, "-H", "Accept: application/vnd.github.raw"]),
+};
 
 const gitBlobId = (bytes) =>
   createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
@@ -244,13 +249,20 @@ const gitBlobId = (bytes) =>
 async function collect(fetcher, dir) {
   const results = [];
   const fetchProblems = [];
-  for (const [repo, sha, recordedBlob, family] of ROWS) {
-    let got;
+  const call = (which, repo, sha) => {
     try {
-      got = fetcher(repo, sha);
+      return fetcher[which](repo, sha);
     } catch (error) {
-      got = { status: 1, body: Buffer.alloc(0), error: String(error?.message ?? error) };
+      return { status: 1, body: Buffer.alloc(0), error: String(error?.message ?? error) };
     }
+  };
+  for (const [repo, sha, recordedBlob, family] of ROWS) {
+    const commit = call("commit", repo, sha);
+    if (commit.status !== 0) {
+      fetchProblems.push(`${repo}: could not access commit ${sha}: ${commit.error.trim() || "no response"}`);
+      continue;
+    }
+    const got = call("file", repo, sha);
     if (family === "absent") {
       const missing = got.status !== 0 && /404|Not Found/i.test(got.error);
       if (got.status !== 0 && !missing) fetchProblems.push(`${repo}: fetch failed for another reason: ${got.error.trim()}`);
@@ -282,17 +294,18 @@ async function collect(fetcher, dir) {
   return { results, fetchProblems };
 }
 
-// `--simulate-fetch-failure=<Repository>` makes that repository's fetch fail, to exercise the
+// `--simulate-fetch-failure=<Repository>` makes that repository's commit lookup fail, to exercise the
 // failure path of this script.
 const simulate = process.argv.find((a) => a.startsWith("--simulate-fetch-failure="))?.split("=")[1];
-const liveFetcher = (repo, sha) =>
-  repo === simulate ? { status: 1, body: Buffer.alloc(0), error: "simulated fetch failure" } : ghFetch(repo, sha);
-
-const bodies = new Map(); // repository -> bytes, kept so the failure self-test needs no network
-const recordingFetcher = (repo, sha) => {
-  const got = liveFetcher(repo, sha);
-  if (got.status === 0) bodies.set(repo, got.body);
-  return got;
+const bodies = new Map(); // repository -> bytes, kept so the fetch self-tests need no network
+const recordingFetcher = {
+  commit: (repo, sha) =>
+    repo === simulate ? { status: 1, body: Buffer.alloc(0), error: "simulated fetch failure" } : ghFetcher.commit(repo, sha),
+  file: (repo, sha) => {
+    const got = ghFetcher.file(repo, sha);
+    if (got.status === 0) bodies.set(repo, got.body);
+    return got;
+  },
 };
 const { results, fetchProblems } = await collect(recordingFetcher, outDir);
 
@@ -316,30 +329,38 @@ for (const r of results) {
 
 const test = selfTest(results);
 if (results.length === ROWS.length && fetchProblems.length === 0) {
-  // Failure path, with an injected fetcher that fails for one repository: the run must complete,
-  // report that fetch failure, and flag the row as missing, without throwing.
+  // Fetch paths, with injected fetchers. Every case must complete without throwing:
+  //   one file fetch fails          -> that failure is reported and the row is flagged missing;
+  //   a commit lookup 404s (absent row) -> NOT reproduced (a path 404 there proves nothing);
+  //   a commit lookup 404s (present row) -> reported and the row is flagged missing;
+  //   commit 200 and file 404 (absent row) -> accepted as absent, no problem at all.
   const dir = path.join(outDir, "_failure-selftest");
   mkdirSync(dir, { recursive: true });
-  const failing = "BettingStandards";
-  const injected = (repo) =>
-    repo === failing
-      ? { status: 1, body: Buffer.alloc(0), error: "injected failure" }
-      : { status: bodies.has(repo) ? 0 : 1, body: bodies.get(repo) ?? Buffer.alloc(0), error: bodies.has(repo) ? "" : "Not Found" };
-  let outcome;
-  try {
-    const sub = await collect(injected, dir);
-    outcome = [...sub.fetchProblems, ...evaluate(sub.results)];
-  } catch (error) {
-    outcome = null;
-    test.failures.push(`fetch-failure path threw: ${error?.message ?? error}`);
+  const served = (repo) => ({
+    status: bodies.has(repo) ? 0 : 1,
+    body: bodies.get(repo) ?? Buffer.alloc(0),
+    error: bodies.has(repo) ? "" : "Not Found (HTTP 404)",
+  });
+  const commitOk = () => ({ status: 0, body: Buffer.alloc(0), error: "" });
+  const commit404 = () => ({ status: 1, body: Buffer.alloc(0), error: "Not Found (HTTP 404)" });
+  const scenarios = [
+    ["a file fetch fails", { commit: commitOk, file: (r) => (r === "BettingStandards" ? { status: 1, body: Buffer.alloc(0), error: "injected failure" } : served(r)) },
+      (o) => o.some((p) => p.startsWith("BettingStandards: could not fetch")) && o.some((p) => p.startsWith("BettingStandards: no result was collected"))],
+    ["commit lookup 404 for the absent row", { commit: (r) => (r === "StandardsEnforcer" ? commit404() : commitOk()), file: served },
+      (o) => o.some((p) => p.startsWith("StandardsEnforcer: could not access commit")) && o.some((p) => p.startsWith("StandardsEnforcer: no result was collected"))],
+    ["commit lookup 404 for a present row", { commit: (r) => (r === "AIStandards" ? commit404() : commitOk()), file: served },
+      (o) => o.some((p) => p.startsWith("AIStandards: could not access commit")) && o.some((p) => p.startsWith("AIStandards: no result was collected"))],
+    ["commit 200 and file 404 for the absent row", { commit: commitOk, file: served }, (o) => o.length === 0],
+  ];
+  for (const [name, fetcher, expected] of scenarios) {
+    test.total += 1;
+    try {
+      const sub = await collect(fetcher, dir);
+      if (!expected([...sub.fetchProblems, ...evaluate(sub.results)])) test.failures.push(`fetch scenario not handled: ${name}`);
+    } catch (error) {
+      test.failures.push(`fetch scenario threw (${name}): ${error?.message ?? error}`);
+    }
   }
-  if (outcome && !outcome.some((p) => p.startsWith(`${failing}: could not fetch`))) {
-    test.failures.push("fetch-failure path did not report the failed fetch");
-  }
-  if (outcome && !outcome.some((p) => p.startsWith(`${failing}: no result was collected`))) {
-    test.failures.push("fetch-failure path did not flag the missing row");
-  }
-  test.total += 1;
 }
 for (const failure of test.failures) problems.push(`self-test: ${failure}`);
 

@@ -1,0 +1,1503 @@
+{
+  "oracle": "scripts/yaml.mjs at 0288fceb294e49a9eedc908dc41b94e474f77267",
+  "cases": [
+    {
+      "name": "bare scalars",
+      "input": "a: 1\nb: hello world\nc: 2026-12-31\n",
+      "expected": {
+        "a": "1",
+        "b": "hello world",
+        "c": "2026-12-31"
+      }
+    },
+    {
+      "name": "double quoted",
+      "input": "a: \"x: y # not a comment\"\nb: \"say hi\"\n",
+      "expected": {
+        "a": "x: y # not a comment",
+        "b": "say hi"
+      }
+    },
+    {
+      "name": "single quoted",
+      "input": "a: 'it is'\nb: 'x # y'\n",
+      "expected": {
+        "a": "it is",
+        "b": "x # y"
+      }
+    },
+    {
+      "name": "indicator characters inside quoted and bare values",
+      "input": "a: \"|\"\nb: \">\"\nc: x>y\nd: a|b\ne: \"- item\"\n",
+      "expected": {
+        "a": "|",
+        "b": ">",
+        "c": "x>y",
+        "d": "a|b",
+        "e": "- item"
+      }
+    },
+    {
+      "name": "comments and blank lines",
+      "input": "# top\n\na: 1 # trailing\n\n  # indented comment\nb: 2\n",
+      "expected": {
+        "a": "1",
+        "b": "2"
+      }
+    },
+    {
+      "name": "nested mappings",
+      "input": "a:\n  b:\n    c: 1\n  d: 2\ne: 3\n",
+      "expected": {
+        "a": {
+          "b": {
+            "c": "1"
+          },
+          "d": "2"
+        },
+        "e": "3"
+      }
+    },
+    {
+      "name": "sequence of mappings",
+      "input": "items:\n  - id: one\n    v: 1\n  - id: two\n    v: 2\n",
+      "expected": {
+        "items": [
+          {
+            "id": "one",
+            "v": "1"
+          },
+          {
+            "id": "two",
+            "v": "2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty inline sequence",
+      "input": "a: []\nb: 1\n",
+      "expected": {
+        "a": [],
+        "b": "1"
+      }
+    },
+    {
+      "name": "empty value",
+      "input": "a:\nb: 1\n",
+      "expected": {
+        "a": null,
+        "b": "1"
+      }
+    },
+    {
+      "name": "colon in quoted key value",
+      "input": "url: \"https://example.org/x?y=1\"\n",
+      "expected": {
+        "url": "https://example.org/x?y=1"
+      }
+    },
+    {
+      "name": "CRLF document",
+      "input": "a: 1\r\nb:\r\n  c: two\r\n",
+      "expected": {
+        "a": "1",
+        "b": {
+          "c": "two"
+        }
+      }
+    },
+    {
+      "name": "no final newline",
+      "input": "a: 1\nb: 2",
+      "expected": {
+        "a": "1",
+        "b": "2"
+      }
+    },
+    {
+      "name": "quoted string ending in indicator-like text",
+      "input": "reason: \"reviewed; see > below\"\n",
+      "expected": {
+        "reason": "reviewed; see > below"
+      }
+    },
+    {
+      "name": "key that looks like a block header word",
+      "input": "literal: yes\nfolded: no\n",
+      "expected": {
+        "literal": "yes",
+        "folded": "no"
+      }
+    },
+    {
+      "name": "0288fce:project-policy.yml",
+      "input": "# This repository's own policy — the framework applied to itself.\n#\n# WHY THIS FILE IS MOSTLY not-applicable, AND WHY THAT IS THE POINT.\n#\n# MathematicsStandards is the standards framework, not a mathematical research project. It has no\n# claims ledger, no proof-assistant sources, and no open problem, so the rules that read those\n# artifacts have no subject here. That is a claim about THIS PROJECT, not about the rules, and it\n# stops being true the moment the repository gains the capability — which is why every declaration\n# below carries a revisitWhen condition naming the event that would end it (Standard 1 R2).\n#\n# Declaring them not-applicable rather than deleting them, or lowering their level until they stop\n# failing, is the mechanism the framework ships. Using it on ourselves is the only way to find out\n# whether it is usable, and it is what makes the difference between \"this rule has no subject here\"\n# and \"this rule is inconvenient\" a thing the repository has actually had to answer for.\n#\n# The rules that DO apply are the ones whose subject is the framework itself: the provenance\n# digests, the rule lifecycle, the evidence labelling on our own findings, the never-report-a-skip-\n# as-a-pass invariant, and the explainability of what we emit.\n\nstandardVersion: \"1.0.0\"\nproject: \"MathematicsStandards\"\n\napplicability:\n  # --- The claims ledger and everything that reads it (Standards 2, 3, 4) -------------------------\n  claims.ledger-exists:\n    status: not-applicable\n    reason: \"This repository is the standards framework, not a mathematical research project; it registers no claims of its own.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins making mathematical claims of its own, or a claims ledger is added.\"\n  claims.ledger-parse-valid:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.status-vocabulary:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.history-complete:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.definitions-first:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.inline-label-consistency:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists. The CLM identifiers appearing in the standards documents are format examples, not references to registered claims.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.silent-promotion:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists. There is no claim here that could be promoted.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.status-exceeds-support:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.conditional-as-unconditional:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.silent-strengthening:\n    status: not-applicable\n    reason: \"No mathematical claims are made here, so none can be strengthened.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.silent-weakening:\n    status: not-applicable\n    reason: \"No mathematical claims are made here, so no hypotheses can be weakened.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  claims.reformulation-as-progress:\n    status: not-applicable\n    reason: \"No mathematical claims are made here, so none can be reformulated.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n\n  # --- Rigor (Standards 5, 6, 13) ------------------------------------------------------------------\n  rigor.explicit-domain:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.explicit-quantifiers:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.explicit-assumptions:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.conjecture-registered:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.symbolic-validity-conditions:\n    status: not-applicable\n    reason: \"This repository contains no mathematical derivations.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact or derivation is added to this repository.\"\n  rigor.hidden-assumption:\n    status: not-applicable\n    reason: \"This repository contains no mathematical proofs.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact is added to this repository.\"\n  rigor.domain-restrictions-ignored:\n    status: not-applicable\n    reason: \"This repository contains no mathematical claims with domains.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.unjustified-division:\n    status: not-applicable\n    reason: \"This repository contains no mathematical derivations.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact or derivation is added to this repository.\"\n  rigor.unjustified-interchange:\n    status: not-applicable\n    reason: \"This repository contains no mathematical derivations.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact or derivation is added to this repository.\"\n  rigor.wlog-abuse:\n    status: not-applicable\n    reason: \"This repository contains no mathematical derivations.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact or derivation is added to this repository.\"\n  rigor.almost-all-as-all:\n    status: not-applicable\n    reason: \"This repository states no quantified mathematical results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  rigor.notation-equivocation:\n    status: not-applicable\n    reason: \"This repository contains no mathematical derivations.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact or derivation is added to this repository.\"\n\n  # --- Proof structure (Standards 7, 8, 9) ---------------------------------------------------------\n  proof.obligations-enumerated:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  proof.dependency-traceability:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  proof.circular-dependency:\n    status: not-applicable\n    reason: \"No claims ledger — there is no dependency graph here to be circular.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  proof.complete-with-open-obligations:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  proof.counterexample-search-recorded:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  proof.edge-cases-addressed:\n    status: not-applicable\n    reason: \"This repository contains no mathematical proofs.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact is added to this repository.\"\n  proof.difficulty-displacement:\n    status: not-applicable\n    reason: \"This repository pursues no mathematical result whose difficulty could move.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger or open-problem record is added to this repository.\"\n  proof.unjustified-triviality:\n    status: not-applicable\n    reason: \"This repository contains no mathematical proofs.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact is added to this repository.\"\n  proof.existence-as-construction:\n    status: not-applicable\n    reason: \"This repository contains no mathematical existence results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact is added to this repository.\"\n  proof.induction-gaps:\n    status: not-applicable\n    reason: \"This repository contains no inductive arguments.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A proof artifact is added to this repository.\"\n\n  # --- Computation (Standards 10, 11, 12) ----------------------------------------------------------\n  computation.scope-declared:\n    status: not-applicable\n    reason: \"This repository performs no mathematical computation. Its scripts check documents, not mathematics.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A verification computation is added to this repository.\"\n  computation.reproducible-runs:\n    status: not-applicable\n    reason: \"This repository performs no mathematical computation.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A verification computation is added to this repository.\"\n  computation.error-bounds-stated:\n    status: not-applicable\n    reason: \"This repository states no approximate numerical results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A numerical result is stated in this repository.\"\n  computation.evidence-as-proof:\n    status: not-applicable\n    reason: \"This repository states no mathematical claims and produces no numerical evidence for any.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  computation.finite-case-generalization:\n    status: not-applicable\n    reason: \"This repository states no universally quantified mathematical claims.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  computation.float-as-exact:\n    status: not-applicable\n    reason: \"This repository performs no floating-point mathematics.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A verification computation is added to this repository.\"\n  computation.cherry-picking:\n    status: not-applicable\n    reason: \"This repository reports no computational results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A verification computation is added to this repository.\"\n  computation.cas-output-trust:\n    status: not-applicable\n    reason: \"This repository uses no computer algebra system.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A computer algebra derivation is added to this repository.\"\n\n  # --- Literature (Standard 14) --------------------------------------------------------------------\n  literature.known-result-comparison:\n    status: not-applicable\n    reason: \"This repository claims no mathematical results to compare against the literature.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  literature.resolvable-identifiers:\n    status: not-applicable\n    reason: \"This repository cites no mathematical literature. The historical conjectures named in Standard 11 are illustrations in prose, not dependencies of any claim.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger with external references is added to this repository.\"\n  literature.fabricated-citation:\n    status: not-applicable\n    reason: \"This repository makes no citations that a mathematical result depends on.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger with external references is added to this repository.\"\n  literature.unchecked-novelty:\n    status: not-applicable\n    reason: \"This repository claims no mathematical novelty.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  literature.citation-statement-drift:\n    status: not-applicable\n    reason: \"This repository cites no mathematical results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger with external references is added to this repository.\"\n\n  # --- Formal theorem proving (Standard 16) --------------------------------------------------------\n  formal.status-declared:\n    status: not-applicable\n    reason: \"This repository contains no proof-assistant sources.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"This repository contains no proof-assistant sources.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.axiom-disclosure:\n    status: not-applicable\n    reason: \"This repository contains no proof-assistant sources.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"This repository contains no claims to formalise.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  formal.placeholder-inventory:\n    status: not-applicable\n    reason: \"This repository contains no proof-assistant sources.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.placeholder-in-chain:\n    status: not-applicable\n    reason: \"This repository asserts no machine-checked results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.parse-as-proof:\n    status: not-applicable\n    reason: \"This repository reports no proof-assistant results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.compile-as-proof:\n    status: not-applicable\n    reason: \"This repository reports no proof-assistant results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.helper-as-target:\n    status: not-applicable\n    reason: \"This repository reports no proof-assistant results.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.statement-overclaim:\n    status: not-applicable\n    reason: \"This repository states no formal theorems.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n  formal.trusted-base-enlarged:\n    status: not-applicable\n    reason: \"This repository contains no proof-assistant sources.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n\n  # --- Open problems and lifecycle (Standards 17, 18) ----------------------------------------------\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This repository is not working toward a mathematical open problem.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"mathematics.openProblemMode is set, or an open-problem record is added.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record — see problems.tracking-file.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record — see problems.tracking-file.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record — see problems.tracking-file.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record — see problems.tracking-file.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record — see problems.tracking-file.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  problems.restatement-as-solution:\n    status: not-applicable\n    reason: \"This repository pursues no mathematical conjecture.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"An open-problem record is added to this repository.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"This repository conducts no mathematical research whose routes could fail. Its own design decisions are preserved in artifacts/adr/.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No mathematical research approaches — see lifecycle.failed-routes-preserved.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No terminated approaches — see lifecycle.failed-routes-preserved.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"No mathematical research effort — see lifecycle.failed-routes-preserved.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n\n  # --- Evidence (Standards 1, 15, 19) --------------------------------------------------------------\n  evidence.applicability-declared:\n    status: not-applicable\n    reason: \"The regimes of Standard 1 describe mathematical research projects. This repository is the framework they are evaluated against, and declaring it 'informal mathematics' to satisfy a check would be a false declaration.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n  evidence.type-vocabulary:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  evidence.artifact-linked:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  evidence.equivalence-direction-proved:\n    status: not-applicable\n    reason: \"No claims ledger — see claims.ledger-exists.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"A claims ledger is added to this repository.\"\n  evidence.hidden-counterexample:\n    status: not-applicable\n    reason: \"This repository conducts no mathematical searches that could produce a counterexample.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n  evidence.discarded-failures:\n    status: not-applicable\n    reason: \"This repository runs no mathematical experiments.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository begins mathematical research of its own.\"\n\n  # --- The AI agent contract (Standard 22) ---------------------------------------------------------\n  agent.refusal-on-invariant:\n    status: not-applicable\n    reason: \"This rule governs an agent operating ON a project. It has no subject in the framework repository itself, where no verdict is being acted upon.\"\n    reviewedAt: \"2026-08-09\"\n    revisitWhen: \"This repository is itself audited by an agent acting on the verdict.\"\n\n# Everything not listed above applies at its catalog level. Those are the rules whose subject IS the\n# framework: integrity.provenance-digest, integrity.rule-lifecycle-honest, integrity.no-self-serving-\n# modification, evidence.labels, evidence.skipped-never-passed, and agent.explainable-findings.\n#\n# integrity.no-self-serving-modification is manual-review with assurance none, so it reports\n# not-evaluated in every automated run. It is deliberately NOT attested here: an attestation that the\n# authors did not weaken any standard for their own convenience, written by the authors, establishes\n# nothing. It stands as not-evaluated, which is the honest state.\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "MathematicsStandards",
+        "applicability": {
+          "claims.ledger-exists": {
+            "status": "not-applicable",
+            "reason": "This repository is the standards framework, not a mathematical research project; it registers no claims of its own.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins making mathematical claims of its own, or a claims ledger is added."
+          },
+          "claims.ledger-parse-valid": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.status-vocabulary": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.history-complete": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.definitions-first": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.inline-label-consistency": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists. The CLM identifiers appearing in the standards documents are format examples, not references to registered claims.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.silent-promotion": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists. There is no claim here that could be promoted.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.status-exceeds-support": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.conditional-as-unconditional": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.silent-strengthening": {
+            "status": "not-applicable",
+            "reason": "No mathematical claims are made here, so none can be strengthened.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.silent-weakening": {
+            "status": "not-applicable",
+            "reason": "No mathematical claims are made here, so no hypotheses can be weakened.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "claims.reformulation-as-progress": {
+            "status": "not-applicable",
+            "reason": "No mathematical claims are made here, so none can be reformulated.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.explicit-domain": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.explicit-quantifiers": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.explicit-assumptions": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.conjecture-registered": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.symbolic-validity-conditions": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical derivations.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact or derivation is added to this repository."
+          },
+          "rigor.hidden-assumption": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical proofs.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact is added to this repository."
+          },
+          "rigor.domain-restrictions-ignored": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical claims with domains.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.unjustified-division": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical derivations.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact or derivation is added to this repository."
+          },
+          "rigor.unjustified-interchange": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical derivations.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact or derivation is added to this repository."
+          },
+          "rigor.wlog-abuse": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical derivations.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact or derivation is added to this repository."
+          },
+          "rigor.almost-all-as-all": {
+            "status": "not-applicable",
+            "reason": "This repository states no quantified mathematical results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "rigor.notation-equivocation": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical derivations.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact or derivation is added to this repository."
+          },
+          "proof.obligations-enumerated": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "proof.dependency-traceability": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "proof.circular-dependency": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — there is no dependency graph here to be circular.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "proof.complete-with-open-obligations": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "proof.counterexample-search-recorded": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "proof.edge-cases-addressed": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical proofs.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact is added to this repository."
+          },
+          "proof.difficulty-displacement": {
+            "status": "not-applicable",
+            "reason": "This repository pursues no mathematical result whose difficulty could move.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger or open-problem record is added to this repository."
+          },
+          "proof.unjustified-triviality": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical proofs.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact is added to this repository."
+          },
+          "proof.existence-as-construction": {
+            "status": "not-applicable",
+            "reason": "This repository contains no mathematical existence results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact is added to this repository."
+          },
+          "proof.induction-gaps": {
+            "status": "not-applicable",
+            "reason": "This repository contains no inductive arguments.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A proof artifact is added to this repository."
+          },
+          "computation.scope-declared": {
+            "status": "not-applicable",
+            "reason": "This repository performs no mathematical computation. Its scripts check documents, not mathematics.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A verification computation is added to this repository."
+          },
+          "computation.reproducible-runs": {
+            "status": "not-applicable",
+            "reason": "This repository performs no mathematical computation.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A verification computation is added to this repository."
+          },
+          "computation.error-bounds-stated": {
+            "status": "not-applicable",
+            "reason": "This repository states no approximate numerical results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A numerical result is stated in this repository."
+          },
+          "computation.evidence-as-proof": {
+            "status": "not-applicable",
+            "reason": "This repository states no mathematical claims and produces no numerical evidence for any.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "computation.finite-case-generalization": {
+            "status": "not-applicable",
+            "reason": "This repository states no universally quantified mathematical claims.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "computation.float-as-exact": {
+            "status": "not-applicable",
+            "reason": "This repository performs no floating-point mathematics.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A verification computation is added to this repository."
+          },
+          "computation.cherry-picking": {
+            "status": "not-applicable",
+            "reason": "This repository reports no computational results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A verification computation is added to this repository."
+          },
+          "computation.cas-output-trust": {
+            "status": "not-applicable",
+            "reason": "This repository uses no computer algebra system.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A computer algebra derivation is added to this repository."
+          },
+          "literature.known-result-comparison": {
+            "status": "not-applicable",
+            "reason": "This repository claims no mathematical results to compare against the literature.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "literature.resolvable-identifiers": {
+            "status": "not-applicable",
+            "reason": "This repository cites no mathematical literature. The historical conjectures named in Standard 11 are illustrations in prose, not dependencies of any claim.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger with external references is added to this repository."
+          },
+          "literature.fabricated-citation": {
+            "status": "not-applicable",
+            "reason": "This repository makes no citations that a mathematical result depends on.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger with external references is added to this repository."
+          },
+          "literature.unchecked-novelty": {
+            "status": "not-applicable",
+            "reason": "This repository claims no mathematical novelty.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "literature.citation-statement-drift": {
+            "status": "not-applicable",
+            "reason": "This repository cites no mathematical results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger with external references is added to this repository."
+          },
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "This repository contains no proof-assistant sources.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "This repository contains no proof-assistant sources.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.axiom-disclosure": {
+            "status": "not-applicable",
+            "reason": "This repository contains no proof-assistant sources.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "This repository contains no claims to formalise.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "formal.placeholder-inventory": {
+            "status": "not-applicable",
+            "reason": "This repository contains no proof-assistant sources.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.placeholder-in-chain": {
+            "status": "not-applicable",
+            "reason": "This repository asserts no machine-checked results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.parse-as-proof": {
+            "status": "not-applicable",
+            "reason": "This repository reports no proof-assistant results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.compile-as-proof": {
+            "status": "not-applicable",
+            "reason": "This repository reports no proof-assistant results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.helper-as-target": {
+            "status": "not-applicable",
+            "reason": "This repository reports no proof-assistant results.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.statement-overclaim": {
+            "status": "not-applicable",
+            "reason": "This repository states no formal theorems.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "formal.trusted-base-enlarged": {
+            "status": "not-applicable",
+            "reason": "This repository contains no proof-assistant sources.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A .lean, .v, or .thy file is added to this repository."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This repository is not working toward a mathematical open problem.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "mathematics.openProblemMode is set, or an open-problem record is added."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record — see problems.tracking-file.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record — see problems.tracking-file.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record — see problems.tracking-file.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record — see problems.tracking-file.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record — see problems.tracking-file.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "problems.restatement-as-solution": {
+            "status": "not-applicable",
+            "reason": "This repository pursues no mathematical conjecture.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "An open-problem record is added to this repository."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "This repository conducts no mathematical research whose routes could fail. Its own design decisions are preserved in artifacts/adr/.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No mathematical research approaches — see lifecycle.failed-routes-preserved.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No terminated approaches — see lifecycle.failed-routes-preserved.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "No mathematical research effort — see lifecycle.failed-routes-preserved.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "evidence.applicability-declared": {
+            "status": "not-applicable",
+            "reason": "The regimes of Standard 1 describe mathematical research projects. This repository is the framework they are evaluated against, and declaring it 'informal mathematics' to satisfy a check would be a false declaration.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "evidence.type-vocabulary": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "evidence.artifact-linked": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "evidence.equivalence-direction-proved": {
+            "status": "not-applicable",
+            "reason": "No claims ledger — see claims.ledger-exists.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "A claims ledger is added to this repository."
+          },
+          "evidence.hidden-counterexample": {
+            "status": "not-applicable",
+            "reason": "This repository conducts no mathematical searches that could produce a counterexample.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "evidence.discarded-failures": {
+            "status": "not-applicable",
+            "reason": "This repository runs no mathematical experiments.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository begins mathematical research of its own."
+          },
+          "agent.refusal-on-invariant": {
+            "status": "not-applicable",
+            "reason": "This rule governs an agent operating ON a project. It has no subject in the framework repository itself, where no verdict is being acted upon.",
+            "reviewedAt": "2026-08-09",
+            "revisitWhen": "This repository is itself audited by an agent acting on the verdict."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:templates/project-policy.yml",
+      "input": "# Mathematics standards policy for this project.\n#\n# This file declares what applies here. It is the only place a project may say a rule does not apply,\n# is knowingly unmet, or has been satisfied by human review — and the three are different mechanisms\n# that must not be confused for one another:\n#\n#   applicability: not-applicable   the rule has no subject in this project\n#   exceptions:                     the rule applies and the project knowingly does not satisfy it\n#   attestations:                   the rule applies and a human established that it is satisfied\n#\n# A fourth outcome needs no declaration and is the most common: the rule applies, nothing evaluated\n# it, and the report says `not-evaluated` rather than pretending it passed.\n\nstandardVersion: \"1.0.0\"\nproject: \"<your project name>\"\n\nmathematics:\n  # Which of the five regimes describe this project (Standard 1 R1). A claim about the PROJECT, not\n  # about the standards — it stops being true the moment you acquire the capability you disclaimed.\n  regimes:\n    - informal\n    # - computational\n    # - formal\n    # - theorem-proving\n    # - open-problem\n\n  # Where the claims ledger lives. Default shown; change it only if you have a reason.\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\n  # Uncomment when you use a proof assistant. Scanning covers all three regardless; declaring them\n  # records what a reader of a formal claim is being asked to trust.\n  # proofAssistants:\n  #   - lean4\n\n  # Set true when working toward a major open problem. This turns on Standard 17's higher bar: the\n  # per-problem tracking record becomes required, and so do stopping criteria.\n  # openProblemMode: true\n  # openProblemsDir: \"artifacts/open-problems\"\n\n# --- Applicability -------------------------------------------------------------------------------\n#\n# Every not-applicable declaration needs a reason AND a revisitWhen naming the event that would end\n# it. `math-standards policy` rejects one without a revisit condition, because a classification with\n# no end condition is a permanent exemption wearing a temporary label.\n#\n# Example — a project with no proof assistant:\n#\n# applicability:\n#   formal.trusted-chain-tracked:\n#     status: not-applicable\n#     reason: \"This project contains no proof-assistant sources.\"\n#     reviewedAt: \"2026-01-01\"\n#     revisitWhen: \"A .lean, .v, or .thy file is added to this repository.\"\n\n# --- Exceptions ----------------------------------------------------------------------------------\n#\n# A time-bounded, approved waiver of a rule that DOES apply. An expired exception is a compliance\n# failure, not a resolution.\n#\n# An exception against a rule the catalog marks `forbidden` and `nonExemptible` is REJECTED, and the\n# rejection is itself a failure. That is what makes a prohibition a prohibition: a rule a policy\n# could waive would not be one.\n#\n# exceptions:\n#   - rule: computation.scope-declared\n#     reason: \"The 2024 scans predate this standard; they are being re-run with full metadata.\"\n#     approvedBy: \"<name>\"\n#     approvedAt: \"2026-01-01\"\n#     expires: \"2026-06-01\"\n#     reference: \"artifacts/adr/0003-rescanning-legacy-computations.md\"\n\n# --- Attestations --------------------------------------------------------------------------------\n#\n# Most of what these standards require is mathematical judgement, so this is where most of the real\n# assurance lives. An attestation is evidence, not a waiver:\n#\n#   * it never overrides an automated finding — a contradicted attestation fails;\n#   * it goes stale, back to not-evaluated, when the files it reviewed change;\n#   * it can record a REJECTION, which is a first-class outcome. A system that only lets a human\n#     record approval has decided in advance what the human will say.\n#\n# Omit `digest` on the first pass: `math-standards validate` prints the current digest so you can\n# record it.\n#\n# attestations:\n#   rigor.unjustified-division:\n#     status: approved\n#     reviewedBy: \"<name>\"\n#     reviewedAt: \"2026-01-15\"\n#     evidence: \"Checked every cancellation in proofs/clm-0002.md; each denominator is non-vanishing on the stated domain by Lemma CLM-0005.\"\n#     reviewedAgainst:\n#       paths:\n#         - \"proofs/clm-0002.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "<your project name>",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/artifact-key-approaches/project-policy.yml",
+      "input": "# RiemannHypothesis's shape: the same duty discharged at `Research/FAILED_APPROACHES.md`.\n#\n# The other half of the §0m acceptance pair. The two adopters keep the same kind of record under\n# different names in different directories, and the point of a semantic artifact key is that the\n# framework does not have to guess either one.\nstandardVersion: \"1.0.0\"\nproject: \"artifact-key-approaches\"\n\nartifacts:\n  failedRoutes: \"Research/FAILED_APPROACHES.md\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "artifact-key-approaches",
+        "artifacts": {
+          "failedRoutes": "Research/FAILED_APPROACHES.md"
+        },
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md",
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/artifact-key-attempts/project-policy.yml",
+      "input": "# PvsNP's shape: a real record of abandoned work at `docs/FAILED_ATTEMPTS.md`.\n#\n# Half of the §0m acceptance pair. The sibling fixture keeps the same duty at\n# `Research/FAILED_APPROACHES.md`, RiemannHypothesis's real path. Neither filename is a bare\n# `failed` or `attempts` path segment, so the path-shape heuristic matches nothing in either — and\n# neither fixture carries a `###` heading in problem.md, which is the heuristic's other arm. A pass\n# here can only have come from following the declared pointer.\nstandardVersion: \"1.0.0\"\nproject: \"artifact-key-attempts\"\n\nartifacts:\n  failedRoutes: \"docs/FAILED_ATTEMPTS.md\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "artifact-key-attempts",
+        "artifacts": {
+          "failedRoutes": "docs/FAILED_ATTEMPTS.md"
+        },
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md",
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/attested-no-digest/project-policy.yml",
+      "input": "# An attestation written the way the schema tells an operator to write one.\n#\n# The schema's guidance on reviewedAgainst.digest: \"Omit it on a first pass — the validator reports\n# the current digest so it can be recorded.\" This policy follows that instruction exactly.\n#\n# At 03f44d6 the digest IS computed and IS printed — 14 of 14 for the frozen RiemannHypothesis\n# specimen — in the human render, and nowhere else. RH read `--json`, saw nothing, and recorded in\n# its own policy that the validator does not report it. The observation was right for the surface\n# used; the mechanism inferred from it was not. The consequence is identical either way: an\n# attestation with no digest is permanently fresh, and nothing in the machine-readable output says\n# so or offers the value that would fix it.\nstandardVersion: \"1.0.0\"\nproject: \"attested-no-digest\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\nattestations:\n  evidence.discarded-failures:\n    status: approved\n    reviewedBy: \"A. Reviewer\"\n    reviewedAt: \"2026-06-01\"\n    evidence: \"Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped; nothing was removed after the fact.\"\n    reviewedAgainst:\n      paths:\n        - \"notes/abandoned.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "attested-no-digest",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "attestations": {
+          "evidence.discarded-failures": {
+            "status": "approved",
+            "reviewedBy": "A. Reviewer",
+            "reviewedAt": "2026-06-01",
+            "evidence": "Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped; nothing was removed after the fact.",
+            "reviewedAgainst": {
+              "paths": [
+                "notes/abandoned.md"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/declared-pointer-empty/project-policy.yml",
+      "input": "# An adopter that names a real artifact which does not discharge the duty.\n#\n# docs/FAILED_ATTEMPTS.md exists and is a placeholder: a title and a sentence saying nothing has been\n# abandoned yet. The pointer resolves; the target contains no record of an abandoned route.\n#\n# This is the specific thing §0m warns against on the other side. Replacing \"guess the artifact from\n# its path\" with \"accept whatever the adopter declares\" would reproduce the defect with better\n# manners — the rule would be satisfied by the act of naming a file. A pointer's existence is not\n# evidence; the content at the end of it is.\n#\n# As with the sibling fixture, problem.md carries a `###` heading so the rule passes at 04ba60e.\nstandardVersion: \"1.0.0\"\nproject: \"declared-pointer-empty\"\n\nartifacts:\n  failedRoutes: \"docs/FAILED_ATTEMPTS.md\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "declared-pointer-empty",
+        "artifacts": {
+          "failedRoutes": "docs/FAILED_ATTEMPTS.md"
+        },
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md",
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/declared-pointer-missing/project-policy.yml",
+      "input": "# An adopter that names the artifact discharging a duty, and names one that is not there.\n#\n# `artifacts.failedRoutes` is a semantic key, not a detector-specific one: it says what class of\n# artifact this is, so any rule that needs a record of abandoned routes can ask for it and no rule\n# has to guess a filename. The alternative spelling —\n# `lifecycleFailedRoutesPreservedPath:` — would tie the adopter's vocabulary to the framework's\n# current rule ids, which are the framework's business and not the project's.\n#\n# The rule under test passes at 04ba60e for an unrelated reason: problem.md below carries a `###`\n# heading, the framework's own thin proxy for a record of abandoned work. That is deliberate. A\n# fixture where the rule already fails would make its test green without the pointer ever being\n# followed. It also pins the ordering rule that matters here — a declaration is the subject once it\n# exists, and the proxy must not rescue a declaration that does not resolve.\nstandardVersion: \"1.0.0\"\nproject: \"declared-pointer-missing\"\n\nartifacts:\n  failedRoutes: \"docs/FAILED_ATTEMPTS.md\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "declared-pointer-missing",
+        "artifacts": {
+          "failedRoutes": "docs/FAILED_ATTEMPTS.md"
+        },
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md",
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/escape-hatch-declared/project-policy.yml",
+      "input": "# The AFTER half of the escape-hatch pair: the same repository, plus one line that is not true.\n#\n# Byte-identical to `escape-hatch-undeclared` apart from the `artifacts.failedRoutes` block below,\n# which names a file that does not exist. Step 4 made this rule stop failing and start reporting\n# `skipped / not-evaluated` — correctly, because the framework could not read the evidence and being\n# unable to look is not an observation about what would have been seen.\n#\n# But `skipped` leaves the score's denominator and the failure list, so at step 4 this fixture scored\n# HIGHER than its honest twin and was one rule away from COMPLIANT. A better verdict, bought by\n# naming a file that is not there. That is §0m one level up, and step 5 closes it:\n#\n#     score(with an unresolved required pointer) <= score(without the pointer)\n#\n# and the terminal status may never improve either. The mechanism is not to restore the failure —\n# the framework still does not know whether this project preserves its failed routes — but to give\n# the unresolved rule a zero-credit place in the denominator and to let an aggregate\n# `unresolvedRequired` condition carry the verdict.\nstandardVersion: \"1.0.0\"\nproject: \"escape-hatch-declared\"\n\nartifacts:\n  failedRoutes: \"docs/ABANDONED_ROUTES.md\"\n\nmathematics:\n  regimes:\n    - open-problem\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "escape-hatch-declared",
+        "artifacts": {
+          "failedRoutes": "docs/ABANDONED_ROUTES.md"
+        },
+        "mathematics": {
+          "regimes": [
+            "open-problem"
+          ],
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/escape-hatch-undeclared/project-policy.yml",
+      "input": "# The BEFORE half of the escape-hatch pair: one honest failure and nothing else.\n#\n# The repository keeps no record of abandoned routes and does not pretend to, so\n# `lifecycle.failed-routes-preserved` fails and the verdict is NON_COMPLIANT. The sibling fixture\n# `escape-hatch-declared` is byte-identical apart from an `artifacts.failedRoutes` pointer at a file\n# that does not exist. The pair exists to pin one property:\n#\n#     declaring an artifact that is not there must never improve the score or the terminal status.\n#\n# Everything else is declared not-applicable so the pair discriminates. With other failures present\n# both halves would be NON_COMPLIANT for unrelated reasons and the test would pass without the\n# property ever holding.\nstandardVersion: \"1.0.0\"\nproject: \"escape-hatch-undeclared\"\n\nmathematics:\n  regimes:\n    - open-problem\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "escape-hatch-undeclared",
+        "mathematics": {
+          "regimes": [
+            "open-problem"
+          ],
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/evidence-capabilities/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"evidence-capabilities\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "evidence-capabilities",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/evidence-markers/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"evidence-markers\"\n\n# Minimal on purpose: this fixture exists to produce the findings of one rule, so it declares only\n# what a verdict requires. Without a policy `evaluate` returns NOT_EVALUATED, and a test asserting\n# \"this must not be reported\" would pass against a run that never evaluated anything.\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "evidence-markers",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/formal-anchored-locator/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"sorry-certified\"\n\nmathematics:\n  regimes:\n    - formal\n    - theorem-proving\n  proofAssistants:\n    - lean4\n\n# Deliberately present and deliberately rejected: formal.placeholder-in-chain is forbidden and\n# nonExemptible, so this waiver is refused rather than honoured, and the refusal is itself a failure.\n# The fixture exists to prove that a project cannot buy its way past an invariant.\nexceptions:\n  - rule: formal.placeholder-in-chain\n    reason: \"The formalisation is nearly finished and the release is Friday.\"\n    approvedBy: \"the author\"\n    approvedAt: \"2026-03-01\"\n    expires: \"2026-12-01\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "sorry-certified",
+        "mathematics": {
+          "regimes": [
+            "formal",
+            "theorem-proving"
+          ],
+          "proofAssistants": [
+            "lean4"
+          ]
+        },
+        "exceptions": [
+          {
+            "rule": "formal.placeholder-in-chain",
+            "reason": "The formalisation is nearly finished and the release is Friday.",
+            "approvedBy": "the author",
+            "approvedAt": "2026-03-01",
+            "expires": "2026-12-01"
+          }
+        ]
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/formal-placeholder-elsewhere/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"sorry-certified\"\n\nmathematics:\n  regimes:\n    - formal\n    - theorem-proving\n  proofAssistants:\n    - lean4\n\n# Deliberately present and deliberately rejected: formal.placeholder-in-chain is forbidden and\n# nonExemptible, so this waiver is refused rather than honoured, and the refusal is itself a failure.\n# The fixture exists to prove that a project cannot buy its way past an invariant.\nexceptions:\n  - rule: formal.placeholder-in-chain\n    reason: \"The formalisation is nearly finished and the release is Friday.\"\n    approvedBy: \"the author\"\n    approvedAt: \"2026-03-01\"\n    expires: \"2026-12-01\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "sorry-certified",
+        "mathematics": {
+          "regimes": [
+            "formal",
+            "theorem-proving"
+          ],
+          "proofAssistants": [
+            "lean4"
+          ]
+        },
+        "exceptions": [
+          {
+            "rule": "formal.placeholder-in-chain",
+            "reason": "The formalisation is nearly finished and the release is Friday.",
+            "approvedBy": "the author",
+            "approvedAt": "2026-03-01",
+            "expires": "2026-12-01"
+          }
+        ]
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/locator-anchor-absent/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"gap-regular-sequences\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\napplicability:\n  formal.status-declared:\n    status: not-applicable\n    reason: \"The Lean file here is a scratch development supporting no claim.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"No claim declares formal status.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"No claim declares formal status; the Formal field is uniformly absent by intent.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This project is not working toward a major open problem.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"No approach has been abandoned yet.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "gap-regular-sequences",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "applicability": {
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "The Lean file here is a scratch development supporting no claim.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status; the Formal field is uniformly absent by intent.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This project is not working toward a major open problem.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "No approach has been abandoned yet.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/locator-anchor-and-missing-file/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"gap-regular-sequences\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\napplicability:\n  formal.status-declared:\n    status: not-applicable\n    reason: \"The Lean file here is a scratch development supporting no claim.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"No claim declares formal status.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"No claim declares formal status; the Formal field is uniformly absent by intent.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This project is not working toward a major open problem.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"No approach has been abandoned yet.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "gap-regular-sequences",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "applicability": {
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "The Lean file here is a scratch development supporting no claim.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status; the Formal field is uniformly absent by intent.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This project is not working toward a major open problem.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "No approach has been abandoned yet.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/locator-anchor-present/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"gap-regular-sequences\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\napplicability:\n  formal.status-declared:\n    status: not-applicable\n    reason: \"The Lean file here is a scratch development supporting no claim.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"No claim declares formal status.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"No claim declares formal status; the Formal field is uniformly absent by intent.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This project is not working toward a major open problem.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"No approach has been abandoned yet.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "gap-regular-sequences",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "applicability": {
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "The Lean file here is a scratch development supporting no claim.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status; the Formal field is uniformly absent by intent.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This project is not working toward a major open problem.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "No approach has been abandoned yet.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/locator-fragment-unsupported/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"gap-regular-sequences\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\napplicability:\n  formal.status-declared:\n    status: not-applicable\n    reason: \"The Lean file here is a scratch development supporting no claim.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"No claim declares formal status.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"No claim declares formal status; the Formal field is uniformly absent by intent.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This project is not working toward a major open problem.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"No approach has been abandoned yet.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "gap-regular-sequences",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "applicability": {
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "The Lean file here is a scratch development supporting no claim.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status; the Formal field is uniformly absent by intent.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This project is not working toward a major open problem.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "No approach has been abandoned yet.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/math-compliant/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"gap-regular-sequences\"\n\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\napplicability:\n  formal.status-declared:\n    status: not-applicable\n    reason: \"The Lean file here is a scratch development supporting no claim.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  formal.trusted-chain-tracked:\n    status: not-applicable\n    reason: \"No claim declares formal status.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF.\"\n  formal.gap-inventory:\n    status: not-applicable\n    reason: \"No claim declares formal status; the Formal field is uniformly absent by intent.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"A claim declares formal status.\"\n  problems.tracking-file:\n    status: not-applicable\n    reason: \"This project is not working toward a major open problem.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n  problems.proved-vs-conjectural:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.known-result-check:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.equivalence-tracking:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.difficulty-location:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  problems.barriers-recorded:\n    status: not-applicable\n    reason: \"No open-problem record.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An open-problem record is added.\"\n  lifecycle.failed-routes-preserved:\n    status: not-applicable\n    reason: \"No approach has been abandoned yet.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.terminated-approaches:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.reopening-evidence:\n    status: not-applicable\n    reason: \"No approach has been terminated.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"An approach is terminated.\"\n  lifecycle.stopping-criteria:\n    status: not-applicable\n    reason: \"Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.\"\n    reviewedAt: \"2026-01-12\"\n    revisitWhen: \"openProblemMode is set.\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "gap-regular-sequences",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "applicability": {
+          "formal.status-declared": {
+            "status": "not-applicable",
+            "reason": "The Lean file here is a scratch development supporting no claim.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "formal.trusted-chain-tracked": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim reaches FORMALIZED_THEOREM or MACHINE_CHECKED_PROOF."
+          },
+          "formal.gap-inventory": {
+            "status": "not-applicable",
+            "reason": "No claim declares formal status; the Formal field is uniformly absent by intent.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "A claim declares formal status."
+          },
+          "problems.tracking-file": {
+            "status": "not-applicable",
+            "reason": "This project is not working toward a major open problem.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          },
+          "problems.proved-vs-conjectural": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.known-result-check": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.equivalence-tracking": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.difficulty-location": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "problems.barriers-recorded": {
+            "status": "not-applicable",
+            "reason": "No open-problem record.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An open-problem record is added."
+          },
+          "lifecycle.failed-routes-preserved": {
+            "status": "not-applicable",
+            "reason": "No approach has been abandoned yet.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.terminated-approaches": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.reopening-evidence": {
+            "status": "not-applicable",
+            "reason": "No approach has been terminated.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "An approach is terminated."
+          },
+          "lifecycle.stopping-criteria": {
+            "status": "not-applicable",
+            "reason": "Recorded in PROJECT.md rather than an open-problem record; there is no open problem here.",
+            "reviewedAt": "2026-01-12",
+            "revisitWhen": "openProblemMode is set."
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/no-subject/project-policy.yml",
+      "input": "# A project that has adopted the standards and has not yet written a claims ledger.\n#\n# This is not a badly-configured repository. It is the ordinary state of a research project between\n# adopting the framework and curating its first claim, and §0 says explicitly that such a project\n# must see \"nobody checked\" rather than a red build. Every claim rule here has a detector and no\n# subject, which is precisely the pair v1.0 cannot distinguish from a clean run.\nstandardVersion: \"1.0.0\"\nproject: \"no-subject\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "no-subject",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/open-problem-gaps/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"open-problem-gaps\"\n\nmathematics:\n  regimes:\n    - open-problem\n    - computational\n  openProblemMode: true\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "open-problem-gaps",
+        "mathematics": {
+          "regimes": [
+            "open-problem",
+            "computational"
+          ],
+          "openProblemMode": "true"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/relevance-declared/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"relevance-declared\"\n\n# No relevanceScale here, deliberately, and its pair `relevance-shifted` matches it line for line\n# apart from the project name. Recording a relevance is unconditional; validating one against a\n# declared scale is not. Keeping the scale out of this pair means both runs reach a verdict at\n# v1.2.0, so the independence comparison is answerable against the baseline as well as after the\n# change — a comparison that could only be run on one side of the repair would prove nothing about\n# what the repair did.\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "relevance-declared",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/relevance-off-scale/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"relevance-off-scale\"\n\n# The only fixture that declares a scale. At v1.2.0 this policy does not merely fail to check the\n# ledger's relevance values — `mathematics` is `additionalProperties: false`, so the whole policy is\n# rejected and the run reaches no verdict at all. That is the sharpest statement of A1's absence:\n# the format cannot express the axis, never mind evaluate it.\n#\n# The scale is a set and not an order. Nothing may read `target` as worth more than `off-target`;\n# ranking the members would smuggle the epistemic ladder back in through the axis added to keep it\n# out, which is the one thing both adopters refused to do by hand.\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n  relevanceScale:\n    - target\n    - equivalent\n    - instrument\n    - off-target\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "relevance-off-scale",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md",
+          "relevanceScale": [
+            "target",
+            "equivalent",
+            "instrument",
+            "off-target"
+          ]
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/relevance-shifted/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"relevance-shifted\"\n\n# Identical to `relevance-declared` apart from the project name above. Any other difference would\n# make the pair unable to attribute a divergence to the relevance values.\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "relevance-shifted",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/silent-promotion/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"silent-promotion\"\n\n# See the note in ../unevidenced-promotion/project-policy.yml: a fixture with no policy yields\n# NOT_EVALUATED, against which \"must not block\" is true for the wrong reason.\nmathematics:\n  regimes:\n    - informal\n    - computational\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "silent-promotion",
+        "mathematics": {
+          "regimes": [
+            "informal",
+            "computational"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/sorry-certified/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"sorry-certified\"\n\nmathematics:\n  regimes:\n    - formal\n    - theorem-proving\n  proofAssistants:\n    - lean4\n\n# Deliberately present and deliberately rejected: formal.placeholder-in-chain is forbidden and\n# nonExemptible, so this waiver is refused rather than honoured, and the refusal is itself a failure.\n# The fixture exists to prove that a project cannot buy its way past an invariant.\nexceptions:\n  - rule: formal.placeholder-in-chain\n    reason: \"The formalisation is nearly finished and the release is Friday.\"\n    approvedBy: \"the author\"\n    approvedAt: \"2026-03-01\"\n    expires: \"2026-12-01\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "sorry-certified",
+        "mathematics": {
+          "regimes": [
+            "formal",
+            "theorem-proving"
+          ],
+          "proofAssistants": [
+            "lean4"
+          ]
+        },
+        "exceptions": [
+          {
+            "rule": "formal.placeholder-in-chain",
+            "reason": "The formalisation is nearly finished and the release is Friday.",
+            "approvedBy": "the author",
+            "approvedAt": "2026-03-01",
+            "expires": "2026-12-01"
+          }
+        ]
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/stale-attestation/project-policy.yml",
+      "input": "# An attestation that HAS a digest, and whose digest no longer matches what is there.\n#\n# The reviewer looked, wrote down what they looked at, and recorded the digest of it — the whole\n# mechanism working as designed. Then the file changed. The engine is right to stop honouring the\n# attestation: what was reviewed is not what is there now.\n#\n# What it does with it is the defect this fixture pins. A stale attestation returns the rule to\n# not-evaluated, and at 6eadfe0 that is indistinguishable in the output from a rule nobody ever\n# attested. Three different situations —\n#\n#     nobody reviewed this            (never attested)\n#     nothing was there to inspect    (no-subject)\n#     somebody reviewed something else (stale)\n#\n# — arrive at the same `skipped / not-evaluated` with the same message, and only the last one names\n# a person who did work that has since expired. A reader who cannot tell them apart cannot tell\n# which one they are supposed to act on.\nstandardVersion: \"1.0.0\"\nproject: \"stale-attestation\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n\nattestations:\n  evidence.discarded-failures:\n    status: approved\n    reviewedBy: \"A. Reviewer\"\n    reviewedAt: \"2026-06-01\"\n    evidence: \"Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped.\"\n    reviewedAgainst:\n      paths:\n        - \"notes/abandoned.md\"\n      digest: \"00000000000000000000000000000000\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "stale-attestation",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        },
+        "attestations": {
+          "evidence.discarded-failures": {
+            "status": "approved",
+            "reviewedBy": "A. Reviewer",
+            "reviewedAt": "2026-06-01",
+            "evidence": "Read notes/abandoned.md in full. Every route tried is recorded with the reason it was dropped.",
+            "reviewedAgainst": {
+              "paths": [
+                "notes/abandoned.md"
+              ],
+              "digest": "00000000000000000000000000000000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/unevidenced-promotion/project-policy.yml",
+      "input": "standardVersion: \"1.0.0\"\nproject: \"unevidenced-promotion\"\n\n# Minimal on purpose. This fixture exists to produce one verdict from one arm of one rule, so it\n# declares only what a verdict requires. Without a policy `evaluate` returns NOT_EVALUATED, and a\n# test asserting \"this must not block\" would pass against a run that never reached a verdict at all.\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "unevidenced-promotion",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/wrong-root-absent/project-policy.yml",
+      "input": "# An adopter with no provenance evidence of its own.\n#\n# At 03f44d6 `integrity.provenance-digest` passes here, and what it certifies is that\n# MathematicsStandards' source documents are unmodified — a true statement about the framework,\n# counted inside this project's compliance score. Every adopter gets the same row for the same\n# reason, and none of them can affect it.\n#\n# The claim: the result stays (the framework auditing itself during an adopter's run is useful, and\n# §0h says so explicitly), it says `subject: framework`, and it leaves the adopter's score. A number\n# describing this project must be computed only from rules about this project.\n#\n# See wrong-root-broken/project-policy.yml for the other half of the pair.\nstandardVersion: \"1.0.0\"\nproject: \"wrong-root-absent\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "wrong-root-absent",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/wrong-root-broken/project-policy.yml",
+      "input": "# An adopter carrying a drifted provenance record of its own.\n#\n# artifacts/provenance-digests.json here records a digest that does not match the file it names. That\n# is the exact condition `integrity.provenance-digest` exists to catch — and this fixture asserts\n# that the rule must NOT catch it, which is the opposite of the obvious reading and is the point.\n#\n# `integrity.provenance-digest` is a rule about the standards pack: its own catalog text is \"the\n# SHA-256 of each file listed in artifacts/provenance-digests.json … matches the recorded digest\",\n# meaning MathematicsStandards' source documents. An adopter does not own those documents and has no\n# rule catalog, so the §0h repair is not \"read the adopter's root instead\" — that would export the\n# framework's housekeeping as an adopter obligation. It is that the result must say whose property it\n# is about, and must not enter a score that purports to describe the adopter.\n#\n# Hence the pair, which together prove the subject separated rather than merely relocated:\n#\n#   this fixture        adopter's own record is drifted  → framework-subject result UNCHANGED\n#                                                          (an adopter cannot make the framework\n#                                                          fail its own integrity check)\n#   wrong-root-absent   adopter has no record at all     → result unchanged, and OUT of their score\n#                                                          (the framework's clean record cannot\n#                                                          flatter the adopter)\n#\n# Neither half is reachable by changing a path constant. The first requires the rule to ignore this\n# file; the second requires the score to know the difference.\nstandardVersion: \"1.0.0\"\nproject: \"wrong-root-broken\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "wrong-root-broken",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    },
+    {
+      "name": "0288fce:test/fixtures/wrong-root-clean/project-policy.yml",
+      "input": "# The third adopter state: a provenance record of its own that is CORRECT.\n#\n# The discriminating fixture for step 6's architectural question. `wrong-root-broken` shows that an\n# adopter's drifted record does not make the framework's integrity rule fail; this one shows the\n# other half, which is the half that would flatter rather than punish: an adopter's intact record\n# does not make it pass either.\n#\n# Together the three states — record absent, record drifted, record intact — settle the question a\n# single fixture cannot:\n#\n#   framework-ownership reading   the result is IDENTICAL across all three. The adopter's file is\n#                                 not the subject, and nothing the adopter does to it registers.\n#   adopter-root reading          the result VARIES with all three, and enters the adopter's score.\n#\n# Invariance across the three is a property no path constant can fake, and it is what the test\n# asserts. See design/v1.2-evidence-provenance.md §13.\nstandardVersion: \"1.0.0\"\nproject: \"wrong-root-clean\"\n\nmathematics:\n  regimes:\n    - informal\n  claimsLedger: \"artifacts/claims-ledger.md\"\n",
+      "expected": {
+        "standardVersion": "1.0.0",
+        "project": "wrong-root-clean",
+        "mathematics": {
+          "regimes": [
+            "informal"
+          ],
+          "claimsLedger": "artifacts/claims-ledger.md"
+        }
+      }
+    }
+  ]
+}

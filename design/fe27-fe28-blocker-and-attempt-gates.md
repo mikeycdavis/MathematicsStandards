@@ -28,3 +28,15 @@ Two separate representations. They share no schema, file or rule.
 - Red-first tests per criterion, then fixtures, then a new rule, then a CHANGELOG entry under Unreleased.
 - No VERSION change, tag, release, or edit to `design/v1.1-disposition.md` A2 and A3 rows beyond a pointer note.
 - #55 to #57, #60, #61 and #64 stay deferred; nothing here implements them.
+
+## Clarifications from independent review (fail-closed defaults, no new criteria)
+
+These resolve ambiguity the reviewer found; they add no acceptance criterion and change no approved behaviour.
+
+- **Gap-check precondition met.** Fresh `/ac-gap-check` runs for #58 and #59 were completed after the owner approved the criteria, at main 575d7f1 (evidence-58 and evidence-59, `ac-gap-check/report.md`). Implementation proceeds from those reports.
+- **Missing evidence is a validation error, never a downgrade.** A gate in `executed` with no execution evidence, or in `passed`/`failed` without verdict evidence, or in `unrun` with evidence attached, is reported as invalid. It is never reported or counted as `passed`.
+- **Attempt roll-up.** An attempt is "all passed" only if it has at least one gate and every gate is `passed` with valid evidence. A zero-gate attempt is reported as having no gates, not as passing.
+- **Gate names** are project-defined and must be unique within one attempt.
+- **Evidence** is a stated reference (path, URL or commit); free text alone does not count.
+- **FE-27 rejected form.** The rejection (C3) is limited to a marker the Worker defines concretely in the design's implementation step and records here before the rule lands; it must not enforce ordering or a single element on a point-or-set blocker. Empty-set and duplicate handling follow the same fail-closed rule: an absent or empty blocker section is valid only as an explicit "none".
+- "The detector" means the new rule(s) added to `rules/` and evaluated by `scripts/standards.mjs`.

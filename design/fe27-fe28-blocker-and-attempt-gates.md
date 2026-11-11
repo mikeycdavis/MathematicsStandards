@@ -1,6 +1,6 @@
 # FE-27 / FE-28 design record: programme blocker and attempt gates
 
-**Status: DRAFT, frozen on owner review.** No implementation until the owner confirms this record is frozen.
+**Status: FROZEN 2026-11-11** by owner decision (cmsg_01S962nAgzeF44i1MHDz4h1u65AMEGdGzbCRoCWgVxfadj), with the FE-28 gate-state correction below. Implementation may now proceed.
 **Authority:** owner decisions of 2026-11-11 (messages cmsg_01S962nAgzeF44i1MHDz4h1u5rLTADSsBBuq7czRFLpCCe and cmsg_01S962nAgzeF44i1MHDz4h1u7dCwAjPa2AxNQeaxemKukF). Acceptance criteria are those approved on issues #58 and #59, unchanged.
 
 Two separate representations. They share no schema, file or rule.
@@ -18,8 +18,8 @@ Two separate representations. They share no schema, file or rule.
 - **Where:** an attempt-owned record, `artifacts/research-attempts/<attempt-id>/attempt.md`. Not the claims ledger. Not project policy.
 - **No claim required.** An attempt may exist and carry gates with no claim attached (C1).
 - **Gate content is not fixed by the framework (C2).** There is no built-in gate list. A gate has a free name chosen by the project.
-- **Gate states:** exactly `run`, `passed`, `failed`, `unrun`. Mapping: `run` means executed with no verdict yet recorded; `passed` and `failed` are verdicts of an executed gate.
-- **Integrity rule (C4):** a gate with state `unrun`, or with no recorded execution evidence, must never be reported or rolled up as passed. `passed` requires a stated evidence reference; `passed` without one is rejected.
+- **Gate states, exactly four:** `unrun`, `executed`, `passed`, `failed`. `executed` means the gate ran but no verdict has been recorded.
+- **Evidence rules (C4):** every non-`unrun` state requires execution evidence. `passed` and `failed` additionally require evidence supporting that verdict. Missing execution or verdict evidence must never roll up as passed; a gate that is `unrun`, or lacks the required evidence, is never reported passed.
 - **Expressibility (C3):** RH G1 to G5 and the PvsNP per-iteration checks must both be expressible as named gates. Fixtures for both.
 - **Open for the Worker:** exact front-matter or table syntax; whether the detector reads the file through the existing vendored reader.
 

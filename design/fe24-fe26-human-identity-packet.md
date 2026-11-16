@@ -66,7 +66,7 @@ Out of scope for both options: a human who knowingly rubber-stamps an attestatio
 | Does not verify | that a human used the key | the confirmer's cryptographic identity |
 | Defeated by | agent access to the key | agent write access to where confirmations live |
 | Protection depends on | key custody | placement outside agent write access |
-| Adopter cost | high (keys, trust list, tooling) | low to moderate (one owner step) |
+| Adopter cost | high (keys, trust list, tooling) | low to moderate (one owner step). In the observed case, a single researcher plus an agent that has repository write access, B gives NO protection by default: the agent can write the confirmation file itself, which is B's own failure mode. B closes (d) for that adopter only if the owner places confirmations outside the agent's write access, which is extra setup and is not verified by the framework |
 | Offline and CI | signature check offline; provider lookup not | fully offline |
 | Zero-dependency fit | partial: `node:crypto` for raw keys; GPG or SSH needs new code or binaries | good: existing sha256 digest |
 | Migration | every declared human attestation needs signing | every declared human attestation needs confirming |
@@ -77,9 +77,9 @@ Neither mechanism establishes that a human, as opposed to an agent, performed th
 
 Marked as a recommendation only; the owner decides.
 
-Adopt B as the floor: a confirmation record bound to the attestation digest, with the framework stating in its documentation and in the report that confirmations must live where an agent cannot write, and reporting a confirmation whose file shares a write path with the attestation as "confirmation not independent of the attestation's author". B fits the zero-dependency tooling, works offline, and costs a single-owner project one step per attestation. Leave A as a later, optional layer that signs the confirmation record, if an adopter needs a stronger custody guarantee.
+Adopt B as the floor: a confirmation record bound to the attestation digest, with the framework stating in its documentation and in the report that confirmations must live where an agent cannot write. A repository tool cannot determine who can write to a path, so the framework does not try. It uses one checkable proxy instead: the confirmation must be in a file separate from the policy file that holds the attestation (a different path), and the report prints "confirmation recorded; custody of the confirmation file is not verified by the framework". That wording is the honest limit; it does not claim independence. B fits the zero-dependency tooling, works offline, and costs a single-owner project one step per attestation. Leave A as a later, optional layer that signs the confirmation record, if an adopter needs a stronger custody guarantee.
 
-Under this recommendation decision (d) would be described as: an attestation reaches full human assurance only when it declares `human-review` and carries a digest-bound owner confirmation; an unconfirmed declared `human-review` reports `attested-unconfirmed` and does not discharge. That is a further disposition and a further behaviour change for existing adopters, and would be recorded in the typed-warrant record when the owner decides.
+This recommendation must not be read as closing (d) for the observed single-researcher-plus-agent adopter: unless confirmations are kept where the agent cannot write, B there records a confirmation the agent could have authored. Under this recommendation decision (d) would be described as: an attestation reaches full human assurance only when it declares `human-review` and carries a digest-bound owner confirmation; an unconfirmed declared `human-review` reports `attested-unconfirmed` and does not discharge. That is a further disposition and a further behaviour change for existing adopters, and would be recorded in the typed-warrant record when the owner decides.
 
 ## What happens next
 

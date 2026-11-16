@@ -33,7 +33,7 @@ Revision decisions (2026-11-16), all applied below:
 
 - **Decision (d), "agent-authored attestations never get full-human assurance", is NOT enforced by this design.** It is enforced only for attestations that honestly declare a non-human kind. For an agent-authored attestation that declares `human-review`, the discharge path gives `assurance: "full"` exactly as today.
 - A configurable denylist of agent-looking strings in `reviewedBy` is not a remedy: it is a string match on a self-declared field, defeated by renaming, and it would make the framework appear to enforce what it cannot.
-- The design therefore treats the warrant as DECLARED, and says so wherever it reports one: the heading and the JSON `warrant` carry the word `declared` (see section 5). This wording is the honest state of the design, not a way to meet (d).
+- The design therefore treats the warrant as DECLARED, and says so wherever it reports one: the human heading carries the word `declared`, and the JSON carries a `warrantBasis: "declared"` field beside `warrant` (see section 5). This wording is the honest state of the design, not a way to meet (d).
 - Meeting (d) requires a mechanism that does not rest on the attestation's own say-so. Two candidates are compared in `design/fe24-fe26-human-identity-packet.md`. The choice is the owner's, and #55 and #57 implementation stays blocked until it is made.
 
 ## What exists today (read from the repository)
@@ -142,7 +142,7 @@ Evaluation order: not attestable; contradicted by an automated hit; rejected; st
 | Stale or expired | skipped | unchanged | unchanged |
 
 - A `judgement-outstanding` result lists its credited components. Credit has no effect on status, score, or the three assurance counters.
-- Per-result JSON additions: `warrant` (the declared kind, or `"unknown"`), `attestation.reviewer`, and `contributions[]` with `type` one of `machine-established`, `judgement`, `outstanding`, plus `currency` for machine-established. `denominator` gains the informational counts `unknownWarrant` and `humanJudgementOutstanding`.
+- Per-result JSON additions: `warrant` (the declared kind, or `"unknown"`), `warrantBasis` (`"declared"` whenever a `reviewer.kind` is present, `"none"` for a legacy attestation; a future verification mechanism would add a further value, so a consumer can never read `warrant` as verified), `attestation.reviewer`, and `contributions[]` with `type` one of `machine-established`, `judgement`, `outstanding`, plus `currency` for machine-established. `denominator` gains the informational counts `unknownWarrant` and `humanJudgementOutstanding`.
 - Human text: the single section is split. "Attested (human review, as declared by the attestation):" lists only discharged rules, and the wording `as declared` stays until a verification mechanism exists. "Judgement outstanding (n):" lists the second and third rows with credited components and the kind. "Unknown warrant (n):" lists legacy attestations: "attestation does not say what kind of reviewer made it; not credited as human review". `standards explain <rule>` prints the declared warrant, the independence statement, each contribution with type and currency, and what remains outstanding.
 - A rejection from any kind fails: a rejection is a finding, not a credit. Invariant behaviour is unchanged.
 - One attestation per rule in the first version; combining a human and an agent attestation for one rule is not supported.
@@ -318,7 +318,7 @@ New file `test/typed-warrants.test.mjs` (planned). Each test is written to fail 
 - Envelope `schemaVersion` is `"3.0"`; the new `denominator` keys are present.
 - `standards validate` runs the same semantic checks as `policy`.
 - Stale and expired take precedence over kind handling.
-- The warrant is labelled as declared in text and JSON. Nothing in the test list asserts that an agent-authored `human-review` attestation is refused, because the design does not do that.
+- The warrant is labelled as declared in text, and every result with a `reviewer.kind` has `warrantBasis: "declared"` in JSON (legacy: `"none"`). Nothing in the test list asserts that an agent-authored `human-review` attestation is refused, because the design does not do that.
 
 ## Owner decisions recorded in this revision
 

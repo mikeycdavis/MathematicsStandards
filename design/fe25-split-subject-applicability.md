@@ -180,7 +180,8 @@ For a rule with a split declaration:
 - the attestation must carry `reviewedAgainst.portions`, non-empty (`attestation.portions-required`);
 - every listed portion must be a member of `appliesTo`; a portion that is structurally impossible, or unknown, is invalid (`attestation.portion-not-evaluated`, exit 2);
 - `reviewedAgainst.portions` on an attestation for a rule with no split declaration is invalid (`attestation.portions-on-unsplit-rule`);
-- when the listed portions are a proper subset of `appliesTo`, the rule is not discharged: `skipped`, `notEvaluatedBecause: "portion-unattested"`, the remainder listed. When they equal `appliesTo`, the attestation is judged as today, and a pass covers exactly those portions.
+- when the listed portions are a proper subset of `appliesTo`, an APPROVED attestation does not discharge: the rule is `skipped`, `notEvaluatedBecause: "portion-unattested"`, the remainder listed. When they equal `appliesTo`, the attestation is judged as today, and a pass covers exactly those portions;
+- a REJECTED attestation fails the rule whatever the coverage: a rejection on a rule with an unclassified portion, or with portions that are a proper subset of `appliesTo`, is `attested-rejected` (a failure), not skipped. This keeps the typed-warrant rule that a rejection is effective whatever the kind (recommended answer; owner-review choice 13). A rejection's `portions` are still validated by the binding rules above.
 
 This makes invariant 5 an enforced property of what an attestation is allowed to claim. It still cannot prove the reviewer examined what they say; `reviewedAgainst.paths` and its digest are the existing, unchanged evidence of that.
 
@@ -202,7 +203,7 @@ Per-result fields (additive):
 
 - **Scoring scope, stated explicitly.** A split rule is scored on its evaluated portion only. A pass is a pass of `appliesTo`; it claims nothing about the structurally impossible portion, and the score does not credit it. The human text says so on the rule's line, `PASS (scored on: prose-record only; structurally impossible: formal-development)`, and the JSON carries `scope: "evaluated-portion-only"`. A new informational `denominator.splitSubject` count says how many scored rules are scored on a portion only.
 - The human renderer adds a `Split subject (n):` section; `standards explain <rule>` gets a `split-subject` state printing the declaration, both bases, the coverage result and the attestation's portions.
-- **Unclassified portion:** the rule is `skipped`, `disposition: "applicability-incomplete"`, `notEvaluatedBecause: "unclassified-subject"`, with the unclassified identifiers listed. It is neither passed nor not-applicable, `denominator.unclassifiedSubject` counts it, and an attestation cannot override it: the question is which portion is being judged, not whether it was judged.
+- **Unclassified portion:** the rule is `skipped`, `disposition: "applicability-incomplete"`, `notEvaluatedBecause: "unclassified-subject"`, with the unclassified identifiers listed. It is neither passed nor not-applicable, `denominator.unclassifiedSubject` counts it, and an APPROVED attestation cannot override it: the question is which portion is being judged, not whether it was judged. A rejected attestation still fails the rule (choice 13).
 - Detector hits: a split is valid only on `manual-review` rules and none of the four Lean rules has a detector, so there is no detector hit to filter; a rule with a detector is refused (`applicability.split-on-detectable-rule`), so a detected failure is never suppressed by a split.
 
 ### Envelope version
@@ -360,7 +361,9 @@ The schema fragments were applied to a scratch copy and run through `scripts/jso
 
 ## Red-first test list
 
-New file `test/split-subject.test.mjs` (planned). Every test is written to fail against current main, then made to pass.
+New file `test/split-subject.test.mjs` (planned). Every test is written to fail against current main, then made to pass, with the two exceptions marked GUARD.
+
+On current main the new keys (`mode`, `declaredSubject`, `appliesTo`, `structurallyImpossibleFor`, `reviewedAgainst.portions`) are unknown properties under `additionalProperties: false`, so a negative fixture already exits 2 for the wrong reason. Therefore every negative test must assert the SPECIFIC finding id or schema path, never only the exit code, so that it fails on main. The assertion for each is: empty arrays, `appliesTo ... must contain at least 1 item(s)` (and the `structurallyImpossibleFor` equivalent) at the path under the new key; missing subject, `appliesTo[0].subject is required but missing`; string basis, `basis expected object, found string`; missing statement, `basis.statement is required but missing`; `mode: unclear`, `mode must be one of 'split-subject'`; `profile`, assertion that the schema's key set is closed (T17) plus no `unknown property` message for any of the seven permitted keys; and, for the semantic cases, the finding ids `applicability.split-overlap`, `split-incomplete`, `unknown-subject`, `reference-malformed`, `split-missing-revisit`, `status-and-mode`, `split-on-detectable-rule`, `attestation.portions-required`, `attestation.portion-not-evaluated`, `attestation.portions-on-unsplit-rule`. A positive twin (the same file with the fault removed validates) accompanies each, which also fails on main.
 
 | Id | Test | Fixture | Criterion |
 |---|---|---|---|
@@ -370,21 +373,21 @@ New file `test/split-subject.test.mjs` (planned). Every test is written to fail 
 | T4 | A statement-only basis is accepted; a malformed reference is rejected; an unresolved repository path is reported as `reference-unresolved`, not an error | S1, malformed-reference | C1 |
 | T5 | A subject in both sets rejected | invalid-overlap | C1 |
 | T6 | A subject outside `declaredSubject` rejected; a missing `declaredSubject` rejected | two fixtures | C1 |
-| T7 | An unclassified portion yields `NOT_EVALUATED` with `unclassified-subject`, is not passed, is not `not-applicable`, and an attestation cannot override it | unclassified-portion | C1 |
+| T7 | An unclassified portion yields `NOT_EVALUATED` with `unclassified-subject`, is not passed, is not `not-applicable`, an approved attestation cannot override it, and a rejected attestation still fails the rule | unclassified-portion | C1 |
 | T8 | A split on the invariant rule `proof.induction-gaps` with no attestation still evaluates the rule (skipped awaiting judgement) and does not remove it; no dependence on the nonExemptible resolution | S1 | C1 |
 | T9 | `mode: unclear` and a `profile` key rejected | two fixtures | C0, C3 |
 | T10 | Attestation binding: portions equal to `appliesTo` is judged and the pass covers exactly them; portions missing, naming an impossible portion, or on an unsplit rule are rejected (exit 2); a proper subset is `portion-unattested` and not discharged | S2, S2b, four attestation fixtures | C1 |
 | T11 | Report: text and JSON name the evaluated and structurally-impossible portions and state the scoring scope; `explain` prints the split state | S1 | C1 |
-| T12 | `status` with `mode` rejected; `status` without `reason` rejected; `revisitWhen` missing on a split rejected | three fixtures | C1 |
+| T12 | `status` with `mode` rejected (`applicability.status-and-mode`); `revisitWhen` missing on a split rejected (`applicability.split-missing-revisit`). The `status` without `reason` part is a GUARD: it passes on main because the schema still requires `reason`, and it must keep passing after `required` is loosened | three fixtures | C1 |
 | T13 | A split on a non-manual rule rejected | invalid-detector-rule | C1 |
 | T14 | `standards validate`, `policy` and `audit` return the same exit code for every semantic negative | all semantic negatives | C1 |
 | T15 | Envelope `schemaVersion` is `"3.0"`; the new denominator keys `splitSubject` and `unclassifiedSubject` are present | S1 | none (pins the version decision) |
 | T16 | The score line states the scoring scope, and a split rule's pass is not reported as covering the structurally impossible portion | S2b | C1 |
 | T17 | The key set of `applicabilityDeclaration.properties` equals exactly `{status, reason, reviewedAt, revisitWhen, mode, declaredSubject, appliesTo, structurallyImpossibleFor}` | none | C3 |
-| T18 | The CLI exits 2 for an applicability entry of `{}` and for `status` without `reason`, in `validate`, `policy` and `audit` alike | two small fixtures | C1 |
+| T18 | GUARD, passes on current main (the schema still has `required`): the CLI exits 2 for an applicability entry of `{}` and for `status` without `reason`, in `validate`, `policy` and `audit` alike | two small fixtures | C1 |
 | T19 | BLOCKED until the owner data arrives: the four-case fixture `split-subject-lean` reports each of the four rules with its evaluated portion | `split-subject-lean` | C2 |
 
-T16 and the version half of T15 fail on main today; no test in this list is a pass-today guard.
+The guards are T18 and the `status`-without-`reason` part of T12; they pass today and exist to keep the loosening of `required` from weakening schema-only consumers. T15 (version `"3.0"`) and T16 fail on main today. T19 is BLOCKED and cannot yet be written red-first.
 
 ## Criterion map (#56)
 
@@ -411,3 +414,4 @@ Choices not fixed by the owner's decisions are listed with the alternative. "Fai
 10. **A split rule's score is scored on the evaluated portion only,** stated in text and JSON, with an informational `denominator.splitSubject`.
 11. **Stand-in fixture S1 and S2 are mechanism-only.** The four-case fixture is blocked on the data packet.
 12. **S2's attestation shape follows the typed-warrant record's ordering** (#57).
+13. **A rejection on a split rule that is not fully covered** (an unclassified portion, or `portions` a proper subset of `appliesTo`): does it fail or get skipped? Recommended, fail-closed answer: the rejection FAILS the rule, because a human finding a defect in a portion is not made void by incomplete classification elsewhere. Alternative: skip, which would let incomplete classification hide a recorded rejection. T7 and T10 add a rejected-attestation case asserting a failure.

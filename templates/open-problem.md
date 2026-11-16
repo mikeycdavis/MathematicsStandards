@@ -49,6 +49,17 @@ of the value of this file.
 Barriers encountered, each with its citation and the approaches it rules out. An approach a barrier
 already excludes is not a research direction.
 
+## Current Blocker
+
+What currently blocks the programme, as a list: one item is a point, several are a set. Order means
+nothing and nothing requires exactly one — a programme whose dependency structure is a chain may have
+a single point, and one whose structure is not may have several. Write `none` deliberately if nothing
+blocks it; an absent or empty section is reported, never read as `none`. Do not label a line
+`First unproved bridge:` — that form imposes an order and a single element, and is rejected by
+`problems.blocker-named`.
+
+- <A point that currently blocks the programme>
+
 ## Terminated Approaches
 
 One `###` heading per approach. Each carries a `Status:` line and an `Evidence required to reopen:`

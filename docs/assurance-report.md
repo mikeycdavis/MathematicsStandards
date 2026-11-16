@@ -12,8 +12,8 @@ rule catalog, so it cannot claim coverage the rules do not declare.
 
 | Figure | Value |
 | --- | --- |
-| Rules in the catalog | 84 |
-| Rules with a detector | 55 |
+| Rules in the catalog | 86 |
+| Rules with a detector | 57 |
 | Rules with no detector (report not-evaluated, never passed) | 29 |
 | Prohibitions (`forbidden` + `nonExemptible`) | 37 |
 | Standards carrying at least one rule | 22 of 22 |
@@ -306,6 +306,14 @@ A rule is removed or weakened only via its deprecatedIn, supersededBy, and remov
 
 **What the check does not establish.** Checks that lifecycle fields are present and internally consistent on the rules that exist. A rule deleted outright leaves nothing behind to check — the diff and the changelog are what make that visible, and judging whether the removal was justified is review.
 
+### `lifecycle.attempt-gates-valid`
+
+[Standard 18](../standards/18-research-lifecycle.md) · recommended · warning · structural
+
+Where an artifacts/research-attempts/<attempt-id>/attempt.md records named gates on the attempt, each gate is in exactly one of unrun, executed, passed or failed; every state other than unrun cites an execution reference (a path, URL or commit); passed and failed also cite a verdict reference; an executed gate carries no verdict evidence; an unrun gate carries no evidence; and gate names are unique within the attempt. The framework fixes no gate names and needs no claim. A gate that fails any of this is reported invalid and is never counted as passed; an unrun gate is reported unrun; an attempt with no gates is reported as having none.
+
+**What the check does not establish.** Establishes that the record is complete enough not to be mistaken for a pass. It does not resolve a cited reference, so a path that does not exist still counts as stated, and it cannot establish that a gate was actually run or that a verdict is correct. design/fe27-fe28-blocker-and-attempt-gates.md defines the syntax.
+
 ### `lifecycle.failed-routes-preserved`
 
 [Standard 18](../standards/18-research-lifecycle.md) · required · error · document
@@ -369,6 +377,14 @@ A claim asserts novelty and carries no citation-type evidence recording a prior-
 The Known Barriers section records each barrier encountered, its citation, and which approaches it rules out.
 
 **What the check does not establish.** Establishes that the section exists and says something. It cannot know which barriers apply to this problem.
+
+### `problems.blocker-named`
+
+[Standard 17](../standards/17-open-problems.md) · recommended · warning · structural
+
+Each open-problem record has a Current Blocker section that is either a list of one or more points or an explicit none. The framework imposes no order and no cardinality: a point and a set are both valid. A line labelled First unproved bridge is the rejected form and is reported. An absent or empty section is reported, never read as none.
+
+**What the check does not establish.** Establishes the shape of the section and the absence of the rejected label. It does not establish that the named points are the true blockers, that they are current, or that a first-unproved-bridge was not written without the label. design/fe27-fe28-blocker-and-attempt-gates.md defines the syntax and the marker.
 
 ### `problems.difficulty-location`
 

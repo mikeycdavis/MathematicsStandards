@@ -1,0 +1,7 @@
+# FE-28 fail-closed fixture: every gate here is wrong in a different way, and none may read as passed.
+standardVersion: "1.0.0"
+project: "attempt-gates-invalid"
+
+mathematics:
+  regimes:
+    - open-problem

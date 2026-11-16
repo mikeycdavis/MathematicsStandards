@@ -1,0 +1,7 @@
+# FE-28 fixture: an attempt with no gates is reported as having no gates, not as passing.
+standardVersion: "1.0.0"
+project: "attempt-gates-none"
+
+mathematics:
+  regimes:
+    - open-problem

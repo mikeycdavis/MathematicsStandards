@@ -167,7 +167,7 @@ declared separately and defended in that standard's `## Additions` section.
 | `proof.*` | The ledger graph | Dangling dependencies, cycles (which is circular reasoning, including the variant routed through freshly minted lemmas), proved-rank claims with open obligations |
 | `computation.*` | Ledger + verification scripts | Proved-rank claims whose only evidence is computational; universal statements supported by bounded checks; floating-point arithmetic behind an "exact" claim |
 | `formal.*` | `*.lean`, `*.v`, `*.thy` | Placeholder tokens (`sorry`, `admit`, `Admitted`, `oops`), undisclosed `axiom` declarations, and the flagship rule: a `MACHINE_CHECKED_PROOF` claim whose cited artifact bears a placeholder |
-| `problems.*`, `lifecycle.*` | `artifacts/open-problems/` | Required sections present and non-empty; terminated approaches carrying reopening evidence |
+| `problems.*`, `lifecycle.*` | `artifacts/open-problems/`, `artifacts/research-attempts/` | Required sections present and non-empty; terminated approaches carrying reopening evidence; a named current blocker (a point or a set, never ordered); attempt gates carrying the evidence their state requires |
 | `evidence.*` | The ledger | Evidence type vocabulary, artifact resolvability, equivalence direction |
 | `integrity.*` | The repository itself | Provenance digests unchanged |
 

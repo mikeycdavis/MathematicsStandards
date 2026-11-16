@@ -51,6 +51,8 @@ import {
   hasFormalBlock,
 } from "./claims.mjs";
 import { undischargedAssertions } from "./markers.mjs";
+import { parseBlocker } from "./blocker.mjs";
+import { parseAttempt, rollup } from "./attempts.mjs";
 
 /**
  * This file names the very tokens it searches for — `sorry`, `Admitted`, `native_decide`. Scanning
@@ -1487,6 +1489,77 @@ function detectOpenProblems() {
   }
 }
 
+/**
+ * FE-27 (#58). Each open-problem record names what currently blocks the programme, as a point or a
+ * set. The detector reads the Current Blocker section through `parseBlocker`, which neither orders nor
+ * counts. See design/fe27-fe28-blocker-and-attempt-gates.md.
+ */
+function detectBlockers() {
+  const dir = path.join(root, OPEN_PROBLEMS_DIR);
+  const problemFiles = files.filter(
+    (f) => f.startsWith(dir + path.sep) && path.basename(f) === "problem.md",
+  );
+  const evidence = [];
+  for (const file of problemFiles) {
+    for (const problem of parseBlocker(contents.get(file) ?? "").problems) {
+      evidence.push(`${rel(file)} — ${problem}`);
+    }
+  }
+  if (evidence.length === 0) return;
+  report("problems.blocker-named", {
+    message:
+      `${evidence.length} problem(s) with the current-blocker section of the open-problem record. A blocker is a point ` +
+      `or a set, in no particular order; an absent section is not read as 'none'.`,
+    evidence,
+    label: "OBSERVED",
+  });
+}
+
+/** The attempt records, parsed once: `artifacts/research-attempts/<id>/attempt.md` (FE-28). */
+const ATTEMPT_FILE = /^artifacts\/research-attempts\/([^/]+)\/attempt\.md$/;
+const researchAttempts = files
+  .map((f) => ({ file: f, match: ATTEMPT_FILE.exec(rel(f)) }))
+  .filter((e) => e.match && contents.has(e.file))
+  .map((e) => {
+    const attempt = parseAttempt(contents.get(e.file));
+    return { id: e.match[1], path: rel(e.file), attempt, rollup: rollup(attempt) };
+  })
+  .sort((a, b) => a.path.localeCompare(b.path));
+
+/** The attempt records as the audit reports them: reported states and the roll-up, never declared ones. */
+function attemptReport() {
+  return researchAttempts.map(({ id, path: file, attempt, rollup: summary }) => ({
+    id,
+    path: file,
+    rollup: summary.status,
+    counts: summary.counts,
+    errors: attempt.errors,
+    gates: attempt.gates.map((g) => ({ name: g.name, declared: g.declared, reported: g.reported, errors: g.errors })),
+  }));
+}
+
+/**
+ * FE-28 (#59). Every gate carries the evidence its state requires. A gate that does not is reported
+ * invalid, and nothing here ever counts it as passed.
+ */
+function detectAttemptGates() {
+  const evidence = [];
+  for (const { path: file, attempt } of researchAttempts) {
+    for (const error of attempt.errors) evidence.push(`${file} — ${error}`);
+    for (const gate of attempt.gates) {
+      for (const error of gate.errors) evidence.push(`${file} — gate '${gate.name}' ${error}`);
+    }
+  }
+  if (evidence.length === 0) return;
+  report("lifecycle.attempt-gates-valid", {
+    message:
+      `${evidence.length} problem(s) with the gates recorded on research attempts. A gate missing the evidence its state ` +
+      `requires is reported invalid and is never counted as passed.`,
+    evidence,
+    label: "OBSERVED",
+  });
+}
+
 const ABANDONED = /(^|\/)(abandoned|failed|dead-ends?|attempts?)(\/|$)/i;
 
 /**
@@ -1832,6 +1905,8 @@ detectLiterature(dangling);
 detectFormal(proofs);
 detectOpenProblems();
 detectFailedRoutes();
+detectBlockers();
+detectAttemptGates();
 detectEvidenceShape();
 detectLocatorFragments();
 detectApplicability();
@@ -1862,6 +1937,15 @@ function renderHuman(fileCount) {
   }
   lines.push(`  Proof-assistant files: ${proofs.length === 0 ? "none" : proofs.length}`);
   lines.push(`  Open-problem records: ${files.filter((f) => path.basename(f) === "problem.md").length}`);
+  lines.push(`  Research-attempt records: ${researchAttempts.length === 0 ? "none" : researchAttempts.length}`);
+  for (const attempt of attemptReport()) {
+    const shown = ["unrun", "executed", "passed", "failed", "invalid"]
+      .filter((state) => attempt.counts[state] > 0)
+      .map((state) => `${attempt.counts[state]} ${state}`);
+    const roll = attempt.rollup === "no-gates" ? "no gates" : attempt.rollup === "all-passed" ? "all passed" : "not all passed";
+    lines.push(`    ${attempt.id}: ${roll}${shown.length > 0 ? ` (${shown.join(", ")})` : ""}`);
+    for (const gate of attempt.gates) lines.push(`      ${gate.name}: ${gate.reported}`);
+  }
 
   const attention = [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   lines.push("");
@@ -2309,6 +2393,10 @@ if (!VALIDATING) {
           verdictComputed: false,
           verdict: null,
           note: "Audit only — no compliance verdict was computed. Run `validate` for one.",
+          // FE-28 (#59). Each gate as it is REPORTED, which is not always as it was declared: a gate
+          // lacking the evidence its state requires is `invalid`, an unrun gate is `unrun`, and an
+          // attempt with no gates is `no-gates`. Nothing here is ever a pass by omission.
+          researchAttempts: attemptReport(),
           findings,
         },
         null,
@@ -2478,6 +2566,8 @@ const resolveSurface = (surface) => {
       return resolved(proofs.map((p) => rel(p.file)).sort());
     case "open-problems":
       return resolved(problemPaths);
+    case "research-attempts":
+      return resolved(researchAttempts.map((a) => a.path));
     case "repository-paths":
       return resolved(relativeFiles);
     case "declared-failed-routes":

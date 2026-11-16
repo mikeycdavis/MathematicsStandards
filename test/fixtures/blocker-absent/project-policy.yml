@@ -1,0 +1,8 @@
+# A problem record with no Current Blocker section at all (FE-27 fail-closed: absence is not `none`).
+standardVersion: "1.0.0"
+project: "blocker-absent"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

@@ -1,0 +1,7 @@
+# RH's shape (FE-28): one attempt, five gates G1 to G5, no claim attached to the attempt.
+standardVersion: "1.0.0"
+project: "attempt-gates-rh"
+
+mathematics:
+  regimes:
+    - open-problem

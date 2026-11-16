@@ -1,0 +1,9 @@
+# The rejected form (FE-27 C3): a blocker declared as THE first unproved bridge, which imposes an
+# order and a single element on a programme whose frontier may be either.
+standardVersion: "1.0.0"
+project: "blocker-first-unproved-bridge"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

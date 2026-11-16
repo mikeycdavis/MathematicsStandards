@@ -11,6 +11,28 @@ is one of the arms protecting Standard 21 (see `standards/21-standards-integrity
 
 ## Unreleased
 
+**A programme can name its blocker, and a research attempt can carry gates (FE-27 #58, FE-28 #59).**
+Two new `recommended` / `warning` rules, both `introducedIn: "3.2.0"`, a number prepared and not
+assigned (the 3.1.0 precedent). Design: `design/fe27-fe28-blocker-and-attempt-gates.md`, whose
+"Implementation clarifications" section defines the syntax and the rejected-form marker.
+
+- `problems.blocker-named` (Standard 17). A `## Current Blocker` section of `problem.md` is a list of
+  points, or an explicit `none`. One item is a point and several are a set; nothing reads order or
+  requires exactly one. The rejected first-unproved-bridge form is a line labelled `First unproved
+  bridge`. An absent or empty section is reported, never read as `none`.
+- `lifecycle.attempt-gates-valid` (Standard 18). `artifacts/research-attempts/<id>/attempt.md` holds
+  named gates, with no claim required and no built-in gate list. States are exactly `unrun`, `executed`,
+  `passed`, `failed`. Every state but `unrun` needs a stated reference (path, URL or `commit <sha>`);
+  `passed` and `failed` also need verdict evidence; `executed` carries execution evidence only. A gate
+  missing its evidence is `invalid`, never `passed`. `audit` now lists each attempt's gates as reported
+  and a roll-up (`no gates`, `all passed`, `not all passed`), and its JSON gains a `researchAttempts`
+  key.
+
+Facts for classification, which is not decided here: two `recommended` rules are added, none removed,
+weakened or reclassified; no existing verdict, score or fixture result moves, and with no problem record
+or attempt record both rules report `not-evaluated`. References are checked for shape and are not
+resolved. No `VERSION` change is made.
+
 **The policy reader accepts block scalars, so an attestation can hold its reasoning at length.**
 Until now `scripts/yaml.mjs` refused `|` and `>`, which forced an attestation's `evidence` onto one
 physical line with no double quotes (FE-32, #63). The reader now accepts a block scalar as the value

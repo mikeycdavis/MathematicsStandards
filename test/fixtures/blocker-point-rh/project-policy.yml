@@ -1,0 +1,8 @@
+# RH's shape (FE-27): the blocker is a single point, because its dependency structure is a chain.
+standardVersion: "1.0.0"
+project: "blocker-point-rh"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

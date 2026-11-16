@@ -82,6 +82,9 @@ export const SURFACES = new Set([
   "prose",
   "proof-sources",
   "open-problems",
+  // The attempt records, `artifacts/research-attempts/<id>/attempt.md` (FE-28). Observed-empty when
+  // the project keeps none, which is the honest answer and reports the rule not-evaluated.
+  "research-attempts",
   "repository-paths",
   // The one surface the project names rather than the framework discovers. Its resolution is
   // therefore three-valued in a way the others are not: nothing declared is observed-empty, a
@@ -182,6 +185,9 @@ export const RULE_SURFACES = new Map([
   ["problems.equivalence-tracking", { subject: P, surfaces: ["open-problems"] }],
   ["problems.difficulty-location", { subject: P, surfaces: ["open-problems"] }],
   ["problems.barriers-recorded", { subject: P, surfaces: ["open-problems"] }],
+  // FE-27. The Current Blocker section of each record. A record with no such section is the finding,
+  // so the surface is the record, not the section.
+  ["problems.blocker-named", { subject: P, surfaces: ["open-problems"] }],
 
   // Lifecycle. `failed-routes-preserved` reads PATH NAMES rather than content — which is §0m stated
   // as a surface: a rule looking for a record of abandoned work is matching the shape of a path.
@@ -205,6 +211,9 @@ export const RULE_SURFACES = new Map([
   ["lifecycle.terminated-approaches", { subject: P, surfaces: ["open-problems"] }],
   ["lifecycle.reopening-evidence", { subject: P, surfaces: ["open-problems"] }],
   ["lifecycle.stopping-criteria", { subject: P, surfaces: ["open-problems"] }],
+  // FE-28. The attempt records, which are separate from the open-problem records on purpose: an
+  // attempt carries no claim and belongs to no problem file.
+  ["lifecycle.attempt-gates-valid", { subject: P, surfaces: ["research-attempts"] }],
 
   // Evidence.
   ["evidence.applicability-declared", { subject: P, surfaces: ["project-policy"] }],
@@ -259,6 +268,7 @@ export const SURFACE_LABELS = {
   prose: "prose documents",
   "proof-sources": "proof-assistant sources",
   "open-problems": "open-problem records",
+  "research-attempts": "research-attempt records",
   "repository-paths": "repository paths",
   "declared-failed-routes": "declared record of abandoned routes",
   "project-policy": "policy declarations",

@@ -1,0 +1,8 @@
+# PvsNP's shape (FE-27): the blocker is a set, because its dependency structure is an antichain.
+standardVersion: "1.0.0"
+project: "blocker-set-pvsnp"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

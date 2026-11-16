@@ -1,0 +1,7 @@
+# PvsNP's shape (FE-28): a per-iteration attempt carrying its own four named checks.
+standardVersion: "1.0.0"
+project: "attempt-gates-pvsnp"
+
+mathematics:
+  regimes:
+    - open-problem

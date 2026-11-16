@@ -220,6 +220,46 @@
       "supersededBy": null,
       "removedIn": null,
       "$assuranceNote": "Establishes that the section is non-empty. It cannot establish that the criteria were written in advance rather than reconstructed, which only the commit history shows."
+    },
+    {
+      "id": "problems.blocker-named",
+      "title": "The programme names what currently blocks it, as a point or a set",
+      "standard": 17,
+      "category": "problems",
+      "level": "recommended",
+      "severity": "warning",
+      "validationType": "structural",
+      "assurance": "partial",
+      "nonExemptible": false,
+      "introducedIn": "3.2.0",
+      "description": "Each open-problem record has a Current Blocker section that is either a list of one or more points or an explicit none. The framework imposes no order and no cardinality: a point and a set are both valid. A line labelled First unproved bridge is the rejected form and is reported. An absent or empty section is reported, never read as none.",
+      "rationale": "A programme that cannot say what blocks it cannot tell progress from motion. Both measured adopters have the need and no shape in common: one programme's frontier is a single point because its dependency structure is a chain, the other's is a set because its structure is an antichain. A rule that required one element, or an order, would push a project back toward a serialisation it had already identified and corrected.",
+      "remediation": "Add a '## Current Blocker' section to problem.md. List each current blocking point as a list item, in any order; one item is a point and several are a set. If nothing blocks the programme, write 'none' deliberately. Do not label a line 'First unproved bridge'.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Establishes the shape of the section and the absence of the rejected label. It does not establish that the named points are the true blockers, that they are current, or that a first-unproved-bridge was not written without the label. design/fe27-fe28-blocker-and-attempt-gates.md defines the syntax and the marker."
+    },
+    {
+      "id": "lifecycle.attempt-gates-valid",
+      "title": "Checks on a research attempt carry the evidence their state requires",
+      "standard": 18,
+      "category": "lifecycle",
+      "level": "recommended",
+      "severity": "warning",
+      "validationType": "structural",
+      "assurance": "partial",
+      "nonExemptible": false,
+      "introducedIn": "3.2.0",
+      "description": "Where an artifacts/research-attempts/<attempt-id>/attempt.md records named gates on the attempt, each gate is in exactly one of unrun, executed, passed or failed; every state other than unrun cites an execution reference (a path, URL or commit); passed and failed also cite a verdict reference; an executed gate carries no verdict evidence; an unrun gate carries no evidence; and gate names are unique within the attempt. The framework fixes no gate names and needs no claim. A gate that fails any of this is reported invalid and is never counted as passed; an unrun gate is reported unrun; an attempt with no gates is reported as having none.",
+      "rationale": "Some checks apply to a research attempt rather than to any claim. Two adopters have them, in the same role and with entirely different content, so the framework fixes the vocabulary of states and what each state must be able to show, and leaves the content to the project. Without that, a gate that was never run is indistinguishable from one that passed.",
+      "remediation": "In attempt.md, give each gate a '### <name>' heading with a 'State:' line. Add 'Execution evidence:' for any state but unrun, and 'Verdict evidence:' as well for passed and failed. Cite a path, a URL or 'commit <sha>'; free text alone does not count.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Establishes that the record is complete enough not to be mistaken for a pass. It does not resolve a cited reference, so a path that does not exist still counts as stated, and it cannot establish that a gate was actually run or that a verdict is correct. design/fe27-fe28-blocker-and-attempt-gates.md defines the syntax."
     }
   ]
 }

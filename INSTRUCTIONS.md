@@ -135,6 +135,20 @@ statuses, the five conclusions an agent may reach, and the duty to stop. The one
 If your workflow punishes those answers, you have built a system that selects for overstatement, and
 no amount of checking downstream will fix it.
 
+## Naming a blocker, and gating an attempt
+
+Two optional records, each checked by one `recommended` rule. Syntax and reasoning are in
+`design/fe27-fe28-blocker-and-attempt-gates.md`.
+
+- **The current blocker.** Add a `## Current Blocker` section to `problem.md`: a list of points (one is a
+  point, several are a set, in any order) or an explicit `none`. A line labelled `First unproved bridge:`
+  is rejected, and an absent or empty section is reported. Rule: `problems.blocker-named`.
+- **Gates on an attempt.** Record checks that belong to an attempt rather than a claim in
+  `artifacts/research-attempts/<attempt-id>/attempt.md`, from `templates/research-attempt.md`. Gate names
+  are yours; the framework has none. Each gate is `unrun`, `executed`, `passed` or `failed`, and each state
+  other than `unrun` must cite a path, URL or `commit <sha>`. A gate lacking its evidence is reported
+  `invalid` and never counts as passed. Rule: `lifecycle.attempt-gates-valid`.
+
 ## Current limitations
 
 Stated plainly, because a tool that overstated its own coverage would be committing the error it

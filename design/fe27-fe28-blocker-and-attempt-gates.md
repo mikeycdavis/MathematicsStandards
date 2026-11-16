@@ -36,6 +36,7 @@ These resolve ambiguity the reviewer found; they add no acceptance criterion and
 - **Gap-check precondition met.** Fresh `/ac-gap-check` runs for #58 and #59 were completed after the owner approved the criteria, at main 575d7f1 (evidence-58 and evidence-59, `ac-gap-check/report.md`). Implementation proceeds from those reports.
 - **Missing evidence is a validation error, never a downgrade.** A gate in `executed` with no execution evidence, or in `passed`/`failed` without verdict evidence, or in `unrun` with evidence attached, is reported as invalid. It is never reported or counted as `passed`.
 - **Attempt roll-up.** An attempt is "all passed" only if it has at least one gate and every gate is `passed` with valid evidence. A zero-gate attempt is reported as having no gates, not as passing.
+- **`executed` carries execution evidence only.** A gate in `executed` that carries verdict evidence is invalid; the author must record `passed` or `failed` instead.
 - **Gate names** are project-defined and must be unique within one attempt.
 - **Evidence** is a stated reference (path, URL or commit); free text alone does not count.
 - **FE-27 rejected form.** The rejection (C3) is limited to a marker the Worker defines concretely in the design's implementation step and records here before the rule lands; it must not enforce ordering or a single element on a point-or-set blocker. Empty-set and duplicate handling follow the same fail-closed rule: an absent or empty blocker section is valid only as an explicit "none".

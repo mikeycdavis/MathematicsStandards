@@ -127,7 +127,7 @@ The schema evaluator cannot express "exactly one of `status` or `mode`", set ove
 | 2 explicit subject and basis | schema, then semantic | `required: ["subject","basis"]`, `minLength: 1`. Semantic: `basis` must satisfy `hasReference` from `scripts/attempts.mjs` (`applicability.basis-not-a-reference`). |
 | 3 no overlap | semantic | A subject appearing in both arrays is invalid (`applicability.split-overlap`). A subject repeated within one array is invalid (`applicability.split-duplicate`). |
 | 4 covers the declared subject | semantic and engine | Declared subject = `mathematics.subjectPortions`. Every identifier in it must appear in exactly one array. A split declaration with `mathematics.subjectPortions` absent is invalid (`applicability.no-declared-subject`). A subject in either array that is not in `subjectPortions` is invalid (`applicability.unknown-subject`). An unclassified portion is not a configuration error that stops the run; it is the reported state `NOT_EVALUATED` (see below). |
-| 5 only `appliesTo` evaluated | engine | Rule evaluation reports and scores the `appliesTo` portions only; the evaluated portions are named in the result. |
+| 5 only `appliesTo` evaluated | engine | Rule evaluation reports and scores the `appliesTo` portions only; the evaluated portions are named in the result. No mechanism ties an attestation's `reviewedAgainst.paths` to a portion (choice 15). |
 | 6 no `unclear` | schema | `mode` enum has one value. |
 | 7 no bundles | schema | `additionalProperties: false`; no `profile`, `bundle` or named-set key exists. |
 
@@ -155,7 +155,7 @@ Per-result fields (additive):
 ```
 
 - A pass covers the evaluated portion only. The human text says so on the rule's line: `PASS (evaluated: prose-record; structurally impossible: formal-development)`. The result never reads as a pass of the whole subject.
-- Automated detector hits are not filtered by portion. A split declaration narrows what a human is asked to judge; it does not suppress a detected failure.
+- A split declaration narrows what a human is asked to judge. Because it is valid only on `manual-review` rules, and none of the four Lean rules has a detector, no detector hit exists to filter; if a future manual rule gained a detector the split would be refused (`applicability.split-on-detectable-rule`), so a detected failure is never suppressed by a split.
 - The human renderer adds a `Split subject (n):` section listing each rule with its evaluated and structurally-impossible portions. `standards explain <rule>` gets a `split-subject` state that prints the declaration, both bases, and the coverage result.
 - Unclassified portion (invariant 4): the rule is `skipped`, `disposition: "applicability-incomplete"`, `notEvaluatedBecause: "unclassified-subject"`, with the unclassified identifiers listed in `applicability.unclassified`. It is excluded from neither bucket silently: a new informational `denominator.unclassifiedSubject` count reports it, and it is not passed and not not-applicable. An attestation cannot override it, because the question is which portion is being judged, not whether it was judged.
 - Envelope `schemaVersion` stays `"2.0"`: every addition is a new optional field or new disposition value, which the repository's versioning precedent treats as additive (FE-41 was the only change that advanced it). A test pins this.
@@ -245,10 +245,10 @@ Same directory contents as F1 plus an attestation for `proof.induction-gaps`. Th
 ```yaml
 attestations:
   proof.induction-gaps:
-    status: approved
+    status: rejected
     reviewedBy: Example Reviewer
     reviewedAt: "2026-11-16"
-    evidence: Read the induction sketch in BARRIERS.md and checked the base case is stated.
+    evidence: Read the induction sketch in BARRIERS.md; it states no base case, so the rule is not met.
     reviewer:
       kind: human-review
     reviewedAgainst:
@@ -256,7 +256,9 @@ attestations:
         - BARRIERS.md
 ```
 
-Expected: the attestation is judged against the `appliesTo` portion only, and the result shows `applicability.evaluated: [prose-record]`. Test T10.
+The attestation is a rejection, because F1's stand-in `BARRIERS.md` is deliberately an induction with no base case; an approval would pass `proof.induction-gaps` against a file built to fail it. Expected: the rule fails with `attested-rejected`, and the result shows `applicability.evaluated: [prose-record]` alongside. Test T10.
+
+Limit, stated plainly: nothing in the schema or engine ties an attestation's `reviewedAgainst.paths` to a subject portion, and this record specifies no such mechanism. T10 therefore checks that an attestation on a split rule is recorded and reported together with the evaluated portion; it does not check that the attestation examined only that portion. Invariant 5 is enforced for what the framework itself evaluates and reports (the portions named in the result), not for what a human reviewer looked at. A mechanism (for example a `portion` field on `reviewedAgainst`) would be a new design choice and is listed under "Choices for owner review".
 
 ### Negative fixtures
 
@@ -382,7 +384,7 @@ The proposed schema fragments were applied to a scratch copy of the schema and t
 
 ## Red-first test list
 
-New file `test/split-subject.test.mjs` (planned). Each test is written to fail against current main, then made to pass.
+New file `test/split-subject.test.mjs` (planned). Each test other than the two marked GUARD is written to fail against current main, then made to pass. The guards pass today and exist to keep a choice from regressing.
 
 | Id | Test | Fixture | Criterion |
 |---|---|---|---|
@@ -393,31 +395,33 @@ New file `test/split-subject.test.mjs` (planned). Each test is written to fail a
 | T5 | A free-text-only basis is rejected | invalid-free-text-basis | C1 |
 | T6 | A subject in both sets is rejected | invalid-overlap | C1 |
 | T7 | An unclassified portion yields `NOT_EVALUATED` with `unclassified-subject`, is not passed, is not `not-applicable`, and an attestation cannot override it | unclassified-portion | C1 |
-| T8 | A split on a `nonExemptible` rule still evaluates the rule and still reports an invariant breach found by a detector or attestation rejection | F1 variant | C1 |
+| T8 | A split on a `nonExemptible` rule (`proof.induction-gaps`) still evaluates the rule and an attestation rejection still fails it. (No detector half: these rules have none.) | F2 | C1 |
 | T9 | `mode: unclear` and a `profile` key are rejected | invalid-unclear, invalid-profile-key | C0, C3 |
-| T10 | An attestation is judged on the `appliesTo` portion only and the result shows it | F2 | C2 |
+| T10 | An attestation on a split rule is recorded and the result reports the evaluated portion alongside it (display only; see the F2 limit) | F2 | C2 |
 | T11 | Report: the human text and JSON name the evaluated and structurally-impossible portions; `explain` prints the split state | F1 | C2 |
 | T12 | `status` with `mode` is rejected; `status` without `reason` is rejected | invalid-status-and-mode | C1 |
 | T13 | A split on a non-manual rule is rejected | invalid-detector-rule | C1 |
 | T14 | `standards validate` rejects the semantic-layer invalid fixtures, not only `policy` | all semantic negatives | C1 |
-| T15 | Envelope `schemaVersion` remains `"2.0"` | F1 | none (guards the versioning choice) |
-| T16 | The four Lean rule ids exist in the catalog as `manual-review` | none | C2 |
+| T15 | GUARD, passes on current main: envelope `schemaVersion` remains `"2.0"` | F1 | none (guards the versioning choice) |
+| T16 | GUARD, passes on current main: the four Lean rule ids exist in the catalog as `manual-review` | none | C2 |
+| T17 | The key set of `applicabilityDeclaration.properties` equals exactly `{status, reason, reviewedAt, revisitWhen, mode, appliesTo, structurallyImpossibleFor}`, so no bundle or profile key can be added unnoticed | none | C3 |
+| T18 | The CLI exits 2 for an applicability entry of `{}` and for one with `status` but no `reason`, in `validate`, `policy` and `audit` alike (loosening `required` must not weaken schema-only consumers) | two small fixtures | C1 |
 
 ## Criterion map (#56)
 
 Criteria quoted from `finalized-criteria-2026-11-16.md`, unchanged. This record adds none.
 
 - **C0:** the design selects split-subject applicability rather than an `unclear` value. Met by this record: "Binding model", invariant 6. Verified by review of this record. Test T9 pins that `unclear` is rejected.
-- **C1:** the declaration identifies the applicable portion, the structurally impossible portion, and the basis. Met by the schema fragment and validation rules. Tests T2 to T8, T12 to T14.
+- **C1:** the declaration identifies the applicable portion, the structurally impossible portion, and the basis. Met by the schema fragment and validation rules. Tests T2 to T8, T12 to T14, T18.
 - **C2:** the four Lean cases are the initial fixture and report their applicable portions instead of a blanket `not-applicable`. Met by F1, F2 and the report design. Tests T1, T10, T11, T16. The fixture content is stand-in pending NEEDS-OWNER-DATA.
-- **C3:** no named profile bundles are introduced. Met by `additionalProperties: false` and the absence of any named-set key. Tests T1 (no bundle key in the schema diff) and T9.
+- **C3:** no named profile bundles are introduced. Met by `additionalProperties: false` and the absence of any named-set key. Tests T17 (closed key set) and T9.
 
 ## Choices for owner review
 
 Everything the owner's model does not determine took the fail-closed option.
 
 1. **The declared subject is project-declared** (`mathematics.subjectPortions`). Alternatives: derive it from `mathematics.regimes`, or from paths. Needed so that coverage is checkable; without a declared universe invariant 4 cannot be tested.
-2. **`basis` must state a reference** (path, URL, or `commit <sha>`), using the FE-28 predicate. Free text alone is refused. The owner may relax this.
+2. **`basis` must state a reference** (path, URL, or `commit <sha>`), using the FE-28 predicate. Free text alone is refused. **This NARROWS the owner's model**, which says `basis: <evidence or reference>`: evidence text without a reference would be accepted there and is rejected here. Alternative: accept evidence text and record whether a reference was stated.
 3. **Split is allowed on `manual-review` rules only.** Applying it to a detector-backed rule would narrow detection.
 4. **`required` is loosened on `applicabilityDeclaration` and restored by a semantic layer.** Alternative: add `oneOf` to the vendored evaluator (a change to checking code).
 5. **Invariant violations are exit 2** (invalid configuration), like schema errors. The unclassified portion is the exception: a reported evaluation state.
@@ -428,3 +432,7 @@ Everything the owner's model does not determine took the fail-closed option.
 10. **The validator is shared** between `policy` and `standards validate`, which closes the present gap where `validate` runs the schema only.
 11. **F2's attestation shape is ordering-dependent** on #57.
 12. **Fixture content is a stand-in** until the owner supplies the real PvsNP portion names, paths and per-rule bases.
+13. **Serialization is per rule** (`applicability.<ruleId>.mode`), as the owner's model shows `applicability:` with `mode:` directly. The alternative is a single project-level split block.
+14. **`subjectPortions` is global**, so every split declaration must classify every portion in the list, including portions irrelevant to that rule. Alternative: a per-rule universe.
+15. **No attestation-to-portion mechanism.** `reviewedAgainst.paths` is not tied to a portion; invariant 5 is enforced on what the framework evaluates and reports, not on what a reviewer examined (see F2). Alternative: a `portion` field on `reviewedAgainst`, checked against `appliesTo`.
+16. **Pre-existing, relied on by F2:** the schema description says an attestation never reaches a `forbidden` and `nonExemptible` rule, but `judgeAttestation` has no such check, so F2's rejection on `proof.induction-gaps` is judged. This record does not change that.

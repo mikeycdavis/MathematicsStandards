@@ -1,7 +1,7 @@
 # FE-24 / FE-26 design record: typed evidence contributions and reviewer warrants
 
 **Status: DRAFT, awaiting owner freeze.** Nothing here is implemented. The pull request that carries this record changes no schema, rule, fixture, VERSION or CHANGELOG file; every schema fragment, fixture and test below is proposed text.
-**Authority:** the owner's finalized criteria for #55 (C0 to C3) and #57 (C0 to C4), `finalized-criteria-2026-11-16.md`, and the four binding owner decisions (a) to (d) below, reproduced as given. Every other point is resolved fail-closed and listed under "Choices for owner review". This record adds no acceptance criterion.
+**Authority:** the owner's finalized criteria for #55 (C0 to C3) and #57 (C0 to C4), `finalized-criteria-2026-11-16.md`, and the four binding owner decisions (a) to (d) below, reproduced as given. Every other point is listed under "Choices for owner review"; most take the fail-closed option, and the exceptions (choices 3 and 12) are named there as lenient. This record adds no acceptance criterion.
 **Evidence base:** the gap-check reports for #55, #56 and #57 and the live repository at main 14562f6. #55 (FE-24, typed evidence contributions) and #57 (FE-26, reviewer warrants) are designed jointly because the discharge rule needs both: a contribution has a type, an attestation has a warrant, and what discharges a manual rule is a statement about warrants.
 
 ## Scope
@@ -41,7 +41,9 @@ reviewer:
 ```
 
 - `kind` is one of `human-review`, `agent-judgement`, `agent-mechanical-review`, `automated-tooling`. It is the warrant: what sort of act the attestation records, and so what it can establish.
-- `reviewedBy` is kept, still required, and still says WHO or WHAT. `kind` says what sort. The framework cannot check that the two agree, and says so in the schema description.
+- Naming note: the schema KEY is `machineEstablished` (camelCase, like the rest of the policy) and the reported `type` VALUE is `machine-established` (kebab-case, like dispositions); they are the same type, mapped one to one. `judgement` and `outstanding` are identical in both spellings.
+
+`reviewedBy` is kept, still required, and still says WHO or WHAT. `kind` says what sort. The framework cannot check that the two agree, and says so in the schema description.
 - `independence` is optional structured metadata and is never read to decide whether a review stands. Absent is reported as "independence: not recorded". An explicit `unknown` is reported as "independence: unknown (recorded)". The two are different statements and render differently. No tool treats independence as a prerequisite (decision (d)).
 
 ### 2. Legacy detection and the "require" rule
@@ -221,6 +223,8 @@ In `$defs` add:
 }
 ```
 
+Implementer note (pre-existing, relied on here): the policy schema's `attestations` description says an attestation never reaches a rule that is `forbidden` and `nonExemptible`, but `judgeAttestation` in `scripts/compliance.mjs` has no such check. The RH migration (rejections on invariant rules) and the F2 fixture in the #56 record depend on attestations being judged on such rules. This record does not change that; the description and the code should be reconciled separately.
+
 `reviewer` is not added to `required` in the schema: a schema-level requirement would make every legacy attestation invalid. The requirement is the version-gated semantic check in section 2.
 
 ### Verification performed
@@ -292,11 +296,11 @@ New file `test/typed-warrants.test.mjs` (planned), plus additions noted. Each te
 
 ## Choices for owner review
 
-Everything not fixed by decisions (a) to (d) took the fail-closed option.
+Points not fixed by decisions (a) to (d) mostly took the fail-closed option. Two do not, and are flagged: choice 3 (the gate) and choice 12 (no cross-check of `reviewedBy` and `kind`) are the lenient options.
 
 1. **Legacy attestations do not discharge.** They are schema-valid but report `unknown warrant` and are `skipped`. This is the fail-closed reading of "remain valid". Alternative: a transitional window in which legacy still passes but is labelled.
 2. **`reviewedBy` is kept as identity**, with `reviewer.kind` the new warrant. Alternative: `reviewer.name` replaces `reviewedBy`.
-3. **The "require" gate is `standardVersion >= 3.2.0`**, a placeholder the owner holds.
+3. **The "require" gate is `standardVersion >= 3.2.0`**, a placeholder the owner holds. EXPLICIT OWNER DECISION, and the lenient option: the repository VERSION is 3.1.0 and an adopter can stay below the gate indefinitely, so until the owner sets the gate, decision (a)'s "new attestations REQUIRE `reviewer.kind`" is unenforced. Alternative: require `reviewer.kind` for any attestation whose `reviewedAt` is after a fixed date, or in all policies from the first release carrying this change.
 4. **Contributions are a map keyed by type**, not a flat typed list, because the schema evaluator has no `oneOf`.
 5. **Judgement contributions are refused under the mechanical and tooling kinds.**
 6. **Any rejection fails, whatever the kind.**
@@ -305,6 +309,6 @@ Everything not fixed by decisions (a) to (d) took the fail-closed option.
 9. **Envelope stays `"2.0"`.** The legacy behaviour change is a release-classification matter for the owner.
 10. **Migration default for the 14 RH attestations is `agent-judgement`** with `not-independent`.
 11. **Independence is an object** with `status` and optional `basis`, rather than a string or a boolean.
-12. **`reviewedBy` and `kind` are not cross-checked**; the framework cannot tell whether they agree.
+12. **`reviewedBy` and `kind` are not cross-checked**; the framework cannot tell whether they agree. This is the lenient option and it weakens decision (d): an agent-authored attestation labelled `human-review` is discharged with full assurance, and nothing detects the mislabel. Alternative: refuse `human-review` when `reviewedBy` matches a configurable list of agent identities, or require `independence` for `human-review`.
 13. **Machine-established contributions are always reported as asserted**; the framework does not re-run tools.
 14. **Currency is `unknown` when no digest is recorded**, and an unknown-currency contribution is credited but labelled; a stale one is not credited.

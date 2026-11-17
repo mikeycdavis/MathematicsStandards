@@ -190,8 +190,10 @@ for (const [name, field] of [
 ]) {
   test(`C1/R · ${name} is rejected with exit 2 naming ${field} [RED-FIRST]`, () => {
     const dir = fixture(name);
-    const v = validateRaw(dir);
+    // The human render names the schema error; the --json envelope carries only the exit code.
+    const v = run(["validate", `--dir=${dir}`]);
     assert.equal(v.code, 2, v.out);
+    assert.equal(validateRaw(dir).code, 2, "validate --json also exits 2");
     assert.ok(v.out.includes(field), `validate output does not name ${field}:\n${v.out}`);
     assert.match(v.out, /required/);
     const p = policyCli(path.join(dir, "project-policy.yml"));

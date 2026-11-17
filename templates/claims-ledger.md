@@ -13,6 +13,9 @@ Three things to know before editing it:
    promotion looks like from the outside.
 3. **Referring to a claim by identifier in your writing asserts nothing.** Putting a status word next
    to it — `Theorem (CLM-0001)` — asserts that status, and the audit compares it against this file.
+4. **A computation at a single parameter value is declared with `scope: point;` as the first words of its
+   evidence entry.** It still names its arithmetic, and the entry must not also claim a range or an
+   exhaustive or universal check. Saying "single point" in `Quantifiers` is not a declaration.
 
 Delete the example below once you have a real claim. Identifiers are never reused, including after a
 claim is withdrawn.
@@ -78,6 +81,22 @@ A second example, showing the fields that only appear at higher ranks. Uncomment
   - checked: 2026-02-10, `lake build` clean, `#print axioms sq_nonneg'` output at `formal/axioms.txt`
 - **History:**
   - 2026-02-10 THEOREM → MACHINE_CHECKED_PROOF (formalised and checked, `formal/axioms.txt`)
+
+## CLM-0005 — A certified bound at one parameter value
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** The interval-arithmetic bound B(s0) < 1 holds at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; certified interval arithmetic at s0 = 1/2, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-03-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
 -->
 
 ## References

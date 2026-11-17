@@ -38,6 +38,12 @@ The requirement is deliberately mundane. Almost every dispute about a computatio
 to be a dispute about one of these seven lines, and none of them requires mathematical judgement to
 record.
 
+A computation that checks one point rather than a range declares `scope: point` as the first words of the
+evidence entry's description. It still records the arithmetic, the program and the other items above,
+and it does not also state a range, an exhaustive check or a universal claim (such a contradiction is
+reported). The declaration is read from that exact form; descriptions elsewhere (including
+`Quantifiers`) are not read as declarations.
+
 ### R2 — Numerical evidence is evidence, at its own rank
 
 From the source, the standards must cover:

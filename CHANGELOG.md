@@ -11,6 +11,23 @@ is one of the arms protecting Standard 21 (see `standards/21-standards-integrity
 
 ## Unreleased
 
+**`computation.scope-declared` accepts an explicit structured `scope: point` (FE-33, #64).** A
+`computational` or `numerical` evidence entry whose description begins with the exact lower-case key
+`scope: point;` (or `scope: point,`) is accepted as declaring a single-point scope, so it no longer
+needs range wording. Arithmetic is still required. The rule is modified in place: no new rule id, still
+`required` / `error`, `introducedIn` unchanged. Design: `design/fe64-explicit-point-scope.md` (frozen).
+
+- Free-text `Quantifiers` is never read for scope (a mutation guard pins this).
+- A description that begins with `scope:` but fails the grammar is reported as `scope-malformed`; a
+  value other than `point` as `scope-unrecognised`; neither falls back to range wording elsewhere in
+  the entry. A `scope: point` entry that also states an exhaustive, universal or range claim is reported
+  as `scope-contradiction` (a lexical check with accepted false positives and no suppression syntax).
+  The existing `states no range` and `states no arithmetic` lines are unchanged.
+- Existing ledgers are unaffected unless an evidence description already begins with `scope:`.
+
+Classification, recorded here and not acted on: the owner classifies this change MAJOR (eventual
+4.0.0). **No `VERSION` change, tag or release is made by this entry**; `VERSION` stays 3.1.0.
+
 **A programme can name its blocker, and a research attempt can carry gates (FE-27 #58, FE-28 #59).**
 Two new `recommended` / `warning` rules, both `introducedIn: "3.2.0"`, a number prepared and not
 assigned (the 3.1.0 precedent). Design: `design/fe27-fe28-blocker-and-attempt-gates.md`, whose

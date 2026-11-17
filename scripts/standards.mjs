@@ -45,6 +45,7 @@ import {
   findReferences,
   looksUniversal,
   looksBounded,
+  findScopeContradiction,
   isPathShaped,
   containingFile,
   evidenceCan,
@@ -1031,10 +1032,26 @@ function detectComputationEvidence() {
     for (const item of entry.evidence) {
       const computational = evidenceCan(item.type, "is-computation");
       if (computational) {
-        const hasRange = looksBounded(item.detail) || /\ball\b|\bsample|\brandom|\bexhaustive/i.test(item.detail);
-        const hasArithmetic = /\b(exact|integer|rational|interval|floating[- ]point|float)\b/i.test(item.detail);
-        if (!hasRange || !hasArithmetic) {
-          noScope.push(`${LEDGER_PATH}:${entry.line} ${entry.id} — ${item.type} evidence states no ${!hasRange ? "range" : "arithmetic"}`);
+        // FE-33 (#64). An explicit structured `scope: point` at the head of the item's own detail is
+        // the only way to declare a point; Quantifiers, Statement and Domain are never read. A key
+        // that fails the grammar or names another value is reported on its own line, with no fallback
+        // to range words elsewhere in the detail.
+        const where = `${LEDGER_PATH}:${entry.line} ${entry.id} — ${item.type} evidence`;
+        const scopeKind = item.scope.kind;
+        const declaresPoint = scopeKind === "point";
+        const contradicted = declaresPoint ? findScopeContradiction(item.scope.rest) : null;
+        if (scopeKind === "malformed") {
+          noScope.push(`${where} begins with "scope:" but is not a valid scope declaration; the key is written "scope: point;" or "scope: point," as the first words, followed by the rest of the description`);
+        } else if (scopeKind === "unrecognised") {
+          noScope.push(`${where} declares scope "${item.scope.value}"; the only structured scope value is "point"`);
+        } else if (contradicted) {
+          noScope.push(`${where} declares scope: point but also states "${contradicted.text}"; a point declaration cannot be combined with a range, exhaustive or universal claim (scope-contradiction)`);
+        } else {
+          const hasRange = declaresPoint || looksBounded(item.detail) || /\ball\b|\bsample|\brandom|\bexhaustive/i.test(item.detail);
+          const hasArithmetic = /\b(exact|integer|rational|interval|floating[- ]point|float)\b/i.test(item.detail);
+          if (!hasRange || !hasArithmetic) {
+            noScope.push(`${where} states no ${!hasRange ? "range" : "arithmetic"}`);
+          }
         }
       }
       for (const artifact of item.artifacts) {

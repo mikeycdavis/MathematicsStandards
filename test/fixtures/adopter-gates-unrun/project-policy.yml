@@ -1,0 +1,15 @@
+# FE-61: a gate reference that was never run. Reported unexecuted, with no result.
+standardVersion: "1.0.0"
+project: "adopter-gates-unrun"
+
+mathematics:
+  regimes:
+    - formal
+
+adopterGates:
+  - id: lean-axiom-audit
+    version: "2.4.0"
+    execution:
+      state: unrun
+    result:
+      outcome: not-recorded

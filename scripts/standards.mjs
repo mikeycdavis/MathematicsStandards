@@ -54,6 +54,7 @@ import {
 import { undischargedAssertions } from "./markers.mjs";
 import { parseBlocker } from "./blocker.mjs";
 import { hasReference, parseAttempt, rollup } from "./attempts.mjs";
+import { buildGateReport, classifyGates, gateSurfaceReason, renderGateLines } from "./adopter-gates.mjs";
 import { parseBarriers } from "./barriers.mjs";
 
 /**
@@ -1557,6 +1558,13 @@ function attemptReport() {
 }
 
 /**
+ * FE-61 (#61). The policy's adopter-run gate references as the audit reports them. Credit-inert: the
+ * records feed this report and the surface reason, and nothing else. The framework executes none.
+ */
+const adopterGates = policy.document?.adopterGates ?? [];
+const adopterGateReport = () => buildGateReport(classifyGates(adopterGates));
+
+/**
  * FE-28 (#59). Every gate carries the evidence its state requires. A gate that does not is reported
  * invalid, and nothing here ever counts it as passed.
  */
@@ -1999,6 +2007,8 @@ function renderHuman(fileCount) {
     lines.push(`    ${attempt.id}: ${roll}${shown.length > 0 ? ` (${shown.join(", ")})` : ""}`);
     for (const gate of attempt.gates) lines.push(`      ${gate.name}: ${gate.reported}`);
   }
+  // FE-61 (#61). Recorded, never credited: no verdict, score or assurance count reads these.
+  lines.push(...renderGateLines(adopterGateReport()));
   // FE-29 (#60). Item counts only: never summed, compared or scored, and never a verdict.
   const barrierRecords = barrierReport();
   if (barrierRecords.length > 0) {
@@ -2084,12 +2094,16 @@ function renderProvenance(report) {
         surface.state === "unresolved"
           ? `  — not resolved: ${surface.reason ?? "no reason recorded"}`
           : surface.count === 0
-            ? "  — nothing of this kind was present"
+            ? `  — ${(surface.surface === "adopter-gates" ? surface.reason : null) ?? "nothing of this kind was present"}`
             : "";
       out.push(`    ${surface.label}: ${surface.count}${note}`);
     }
     if (inspected.state === "no-subject") {
-      out.push("  Nothing to inspect, so the rule was not evaluated. This is not a failure.");
+      out.push(
+        inspected.surfaces.some((s) => s.surface === "adopter-gates" && s.reason)
+          ? "  Adopter-asserted records are listed by `audit`; they are not inspected as evidence."
+          : "  Nothing to inspect, so the rule was not evaluated. This is not a failure.",
+      );
     } else if (inspected.state === "unresolved") {
       out.push("  At least one surface could not be resolved, which is not the same as finding nothing.");
     }
@@ -2464,6 +2478,9 @@ if (!VALIDATING) {
           // lacking the evidence its state requires is `invalid`, an unrun gate is `unrun`, and an
           // attempt with no gates is `no-gates`. Nothing here is ever a pass by omission.
           researchAttempts: attemptReport(),
+          // FE-61 (#61). The adopter-run gate references as REPORTED: every one adopter-asserted or
+          // unexecuted, none executed by the framework. Never an input to a verdict.
+          adopterGates: adopterGateReport(),
           // FE-29 (#60). Each open-problem record's barrier profiles. There is no verdict, prohibition
           // or score key, and a test pins the key set.
           barrierProfiles: barrierReport(),
@@ -2638,6 +2655,10 @@ const resolveSurface = (surface) => {
       return resolved(problemPaths);
     case "research-attempts":
       return resolved(researchAttempts.map((a) => a.path));
+    case "adopter-gates":
+      // Always empty: an adopter-asserted record is not framework evidence, so no input gives the rule
+      // a subject. The reason carries the counts into `validate --json` and `--provenance`.
+      return resolved([], { reason: gateSurfaceReason(adopterGates) });
     case "repository-paths":
       return resolved(relativeFiles);
     case "declared-failed-routes":

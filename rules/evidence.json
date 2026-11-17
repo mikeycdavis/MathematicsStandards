@@ -180,6 +180,26 @@
       "supersededBy": null,
       "removedIn": null,
       "$assuranceNote": "No detector, for the same structural reason as evidence.hidden-counterexample. Established by review against the preserved-failures location Standard 18 requires."
+    },
+    {
+      "id": "evidence.adopter-gates-recorded",
+      "title": "Adopter-run verification gates are recorded with identity, version, provenance and result",
+      "standard": 19,
+      "category": "evidence",
+      "level": "recommended",
+      "severity": "warning",
+      "validationType": "structural",
+      "assurance": "none",
+      "nonExemptible": false,
+      "introducedIn": "3.2.0",
+      "description": "A verification gate the project runs itself is referenced by an identity and the version that ran, with its execution provenance and its result. Every recorded gate is reported adopter-asserted, or unexecuted when it was not run; the framework executes none and gives none any assurance credit.",
+      "rationale": "A project that runs its own checks (a CI job, a kernel audit) has evidence the framework cannot reproduce. Recording it without a version, a subject, a command or a result lets a bare claim pass for a check, and recording it as framework evidence would let the adopter raise its own verdict. The record is kept and reported, and it credits nothing.",
+      "remediation": "Give each gate an id, the version that ran, an execution block (state, and for an executed gate: by, at, subject, command, evidence) and a result (outcome and its evidence). Cite a path, a URL or 'commit <sha>'; free text alone does not count. Write a gate you have not run as state: unrun with outcome: not-recorded.",
+      "aliases": [],
+      "deprecatedIn": null,
+      "supersededBy": null,
+      "removedIn": null,
+      "$assuranceNote": "Evaluates nothing: the rule never produces a result other than not-evaluated, and gate records are reported by audit, not scored. It does not establish that a gate reference is complete or, in this iteration, anything else. It cannot establish that the gate was run, that a cited reference exists, that the subject commit is the one audited, or that a result is correct. Every recorded gate is adopter-asserted. design/fe61-adopter-verification-gates.md defines the record."
     }
   ]
 }

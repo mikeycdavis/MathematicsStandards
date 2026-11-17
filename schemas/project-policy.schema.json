@@ -101,10 +101,75 @@
           "items": { "type": "string", "minLength": 1 }
         }
       }
+    },
+
+    "adopterGates": {
+      "description": "Adopter-run verification gates the project references. The framework records identity, version, execution provenance and result, and reports every one as adopter-asserted; it executes none. A reference is a record of what the adopter says it ran. It is not framework evidence: it never raises a verdict, discharges a rule, or counts toward a score.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/adopterGate" }
     }
   },
 
   "$defs": {
+    "adopterGate": {
+      "type": "object",
+      "required": ["id", "version", "execution", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "The gate's identity, chosen by the project. Unique within the policy, compared trimmed and case-folded.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "version": {
+          "description": "The version of the gate that was run. Required, never inferred. A string rather than semver: an adopter script may be versioned by a tag or a commit.",
+          "type": "string",
+          "minLength": 1
+        },
+        "execution": {
+          "description": "Execution provenance. `unrun`, or `executed` with by, at, subject, command and evidence (the rule requires them together).",
+          "type": "object",
+          "required": ["state"],
+          "additionalProperties": false,
+          "properties": {
+            "state": { "type": "string", "enum": ["unrun", "executed"] },
+            "by": {
+              "description": "Who or what ran it, as the adopter states it. Self-declared; never read as framework execution.",
+              "type": "string",
+              "minLength": 1
+            },
+            "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+            "subject": {
+              "description": "The repository state the gate ran against: `commit <sha>`, 7 to 40 hex digits.",
+              "type": "string",
+              "pattern": "^commit:? [0-9a-f]{7,40}$"
+            },
+            "command": { "type": "string", "minLength": 1 },
+            "evidence": {
+              "description": "A record of the run: a repository path, an http(s) URL, or `commit <sha>`. Shape is checked by the rule; the reference is never resolved.",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "result": {
+          "description": "The recorded result. `not-recorded` exactly when execution.state is unrun (the rule checks the pairing).",
+          "type": "object",
+          "required": ["outcome"],
+          "additionalProperties": false,
+          "properties": {
+            "outcome": { "type": "string", "enum": ["not-recorded", "passed", "failed"] },
+            "evidence": {
+              "description": "A record of the run: a repository path, an http(s) URL, or `commit <sha>`. Shape is checked by the rule; the reference is never resolved.",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+
     "ruleId": {
       "description": "Canonical rule identity: `category.kebab-case-name`, dot-separated, lower-case throughout, with no hyphen in the category segment. The pattern rejects any other spelling by construction, which is deliberate — the reference framework this toolchain is vendored from needed an alias mechanism to reconcile two spellings that had both been written, and the cheapest way never to need one is to make the second spelling impossible from the first commit.",
       "type": "string",

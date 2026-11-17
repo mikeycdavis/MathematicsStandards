@@ -98,3 +98,27 @@ mathematics:
 #     reviewedAgainst:
 #       paths:
 #         - "proofs/clm-0002.md"
+
+# --- Adopter verification gates -------------------------------------------------------------------
+#
+# Checks YOU run (a CI job, a script, a kernel audit) and want recorded here. The framework does not
+# run them. Every gate is reported "adopter-asserted": it is your record of what ran, not framework
+# evidence, and it never raises a verdict, discharges a rule, or counts toward a score.
+#
+# A reference needs an identity (id), the version of the gate that ran, how it was run (execution) and
+# its result. A gate you have not run is written `state: unrun` with `outcome: not-recorded`. Cite
+# evidence as a path, a URL, or `commit <sha>`; free text alone does not count.
+#
+# adopterGates:
+#   - id: lean-axiom-audit
+#     version: "2.4.0"
+#     execution:
+#       state: executed            # unrun | executed
+#       by: adopter-ci             # who ran it, as you state it
+#       at: "2026-11-10"
+#       subject: "commit 4f3a9c1d2e"   # the repository state it ran against
+#       command: "lake exe audit-manifest"
+#       evidence: "artifacts/gate-runs/2026-11-10-axioms.log"
+#     result:
+#       outcome: passed            # not-recorded | passed | failed
+#       evidence: "artifacts/gate-runs/2026-11-10-axioms.log"

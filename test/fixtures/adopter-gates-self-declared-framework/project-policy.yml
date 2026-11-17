@@ -1,0 +1,18 @@
+# FE-61 C2: the adopter writes that the framework ran the gate. The claim is data, not an
+# observation: the framework has no execution path, so the gate is still reported adopter-asserted.
+standardVersion: "1.0.0"
+project: "adopter-gates-self-declared-framework"
+
+adopterGates:
+  - id: pvsnp-check
+    version: "1.3.0"
+    execution:
+      state: executed
+      by: math-standards
+      at: "2026-11-10"
+      subject: "commit 4f3a9c1d2e"
+      command: "node scripts/standards.mjs audit ."
+      evidence: "artifacts/gate-runs/2026-11-10-check.log"
+    result:
+      outcome: passed
+      evidence: "artifacts/gate-runs/2026-11-10-check.log"

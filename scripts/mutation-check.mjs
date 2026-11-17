@@ -309,6 +309,17 @@ Object.freeze({
   to: "",
   gate: () => runTest("yaml.test.mjs"),
 }),
+
+// FE-33 (#64), owner Choice 8. If the free-text Quantifiers field began supplying point scope, the
+// point-scope suite must notice (C2.1 and C2.2 fail). The guard mutates the detector path only; it
+// does not mutate the parser.
+Object.freeze({
+  name: "scope: let Quantifiers supply point scope",
+  file: "scripts/standards.mjs",
+  from: '        const declaresPoint = scopeKind === "point";\n',
+  to: '        const declaresPoint = scopeKind === "point" || /single point|scope:\\s*point/i.test(entry.quantifiers);\n',
+  gate: () => runTest("fe64-point-scope.test.mjs"),
+}),
 ]);
 
 /**

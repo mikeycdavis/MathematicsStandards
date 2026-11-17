@@ -137,7 +137,7 @@ no amount of checking downstream will fix it.
 
 ## Naming a blocker, and gating an attempt
 
-Two optional records, each checked by one `recommended` rule. Syntax and reasoning are in
+Optional records, each checked by one `recommended` rule. Syntax and reasoning for the first two are in
 `design/fe27-fe28-blocker-and-attempt-gates.md`.
 
 - **The current blocker.** Add a `## Current Blocker` section to `problem.md`: a list of points (one is a
@@ -148,6 +148,16 @@ Two optional records, each checked by one `recommended` rule. Syntax and reasoni
   are yours; the framework has none. Each gate is `unrun`, `executed`, `passed` or `failed`, and each state
   other than `unrun` must cite a path, URL or `commit <sha>`. A gate lacking its evidence is reported
   `invalid` and never counts as passed. Rule: `lifecycle.attempt-gates-valid`.
+- **Adopter-run verification gates.** A check you run yourself (a CI job, a script, a kernel audit) can be
+  recorded in `project-policy.yml` under `adopterGates`, from the commented block in
+  `templates/project-policy.yml`. Each gate has an `id`, the `version` that ran, an `execution` block
+  (`unrun`, or `executed` with by, at, subject, command and evidence) and a `result` (`not-recorded`,
+  `passed` or `failed`, with evidence). The framework runs nothing: every record is reported
+  `adopter-asserted`, or `unexecuted` for a gate not run, and an incomplete one is `invalid`. `audit` lists
+  them and `audit --json` carries them under `adopterGates`. A record is never framework evidence: it
+  raises no verdict, discharges no rule and counts toward no score, so a recorded failure is shown and not
+  scored. Rule: `evidence.adopter-gates-recorded` (always not evaluated). Design:
+  `design/fe61-adopter-verification-gates.md`.
 
 ## Current limitations
 

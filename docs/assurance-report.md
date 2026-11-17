@@ -12,12 +12,12 @@ rule catalog, so it cannot claim coverage the rules do not declare.
 
 | Figure | Value |
 | --- | --- |
-| Rules in the catalog | 87 |
-| Rules with a detector | 58 |
+| Rules in the catalog | 88 |
+| Rules with a detector | 59 |
 | Rules with no detector (report not-evaluated, never passed) | 29 |
 | Prohibitions (`forbidden` + `nonExemptible`) | 37 |
 | Standards carrying at least one rule | 22 of 22 |
-| Standards fully machine-represented | 7 of 22 |
+| Standards fully machine-represented | 6 of 22 |
 
 A standard counts as fully machine-represented only when every rule it contributes is evaluated by
 a detector **and** carries assurance above `none`. The strict definition is deliberate: a looser one
@@ -549,6 +549,14 @@ A CAS simplification, solution, or closed form is used without checking the vali
 The reported computation describes the parameter ranges where the pattern held while omitting ranges that were tested and did not.
 
 **What the check does not establish.** No detector and there cannot be one: selective reporting is a property of what was omitted, and omissions leave no artifact. Established by a reviewer comparing reported runs against the runs the repository still contains, which is why Standard 18 requires failures to be preserved.
+
+### `evidence.adopter-gates-recorded`
+
+[Standard 19](../standards/19-evidence-requirements.md) · recommended · warning · structural
+
+A verification gate the project runs itself is referenced by an identity and the version that ran, with its execution provenance and its result. Every recorded gate is reported adopter-asserted, or unexecuted when it was not run; the framework executes none and gives none any assurance credit.
+
+**What the check does not establish.** Evaluates nothing: the rule never produces a result other than not-evaluated, and gate records are reported by audit, not scored. It does not establish that a gate reference is complete or, in this iteration, anything else. It cannot establish that the gate was run, that a cited reference exists, that the subject commit is the one audited, or that a result is correct. Every recorded gate is adopter-asserted. design/fe61-adopter-verification-gates.md defines the record.
 
 ### `evidence.discarded-failures`
 

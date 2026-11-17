@@ -29,6 +29,31 @@ assigned). Design: `design/fe60-barrier-profiles.md` (frozen). `audit --json` ga
 
 **No `VERSION` change, tag or release is made by this entry.**
 
+**New recommended rule `evidence.adopter-gates-recorded`: adopter-run verification gates are recorded, never credited (FE-30, #61).**
+`project-policy.yml` may carry an `adopterGates` list: each gate has an id, the version that ran, an
+`execution` block (`unrun`, or `executed` with by, at, subject, command and evidence) and a `result`
+(`not-recorded`, `passed` or `failed`, with evidence). The framework runs nothing and names no gate.
+Every record is reported `adopter-asserted` (or `unexecuted`); an incomplete or inconsistent one is
+reported `invalid` and never as passed. Option A of the frozen design: credit-inert by construction.
+The rule is `recommended` / `warning` / `structural` / assurance `none`, `introducedIn` `3.2.0`
+(prepared, not assigned). Design: `design/fe61-adopter-verification-gates.md` (frozen).
+
+- The rule never produces a hit or a pass: its surface `adopter-gates` always resolves empty, so it is
+  `skipped / not-evaluated / no-subject` for every input and at every level. No verdict, score, Cover
+  figure, assurance count or denominator moves, and the `validate` envelope and its `schemaVersion` are
+  unchanged. A recorded failure is shown, not scored.
+- Reported in `audit` (an `Adopter-run gates:` block) and `audit --json` (a new `adopterGates` key); the
+  count of recorded, failed and invalid gates is the surface `reason` in `validate --json` and `--provenance`.
+- Catalog effect, owner-accepted: 87 to 88 rules catalogued, 58 to 59 evaluated, and **7 of 22 standards
+  fully machine-represented becomes 6**, because Standard 19 gains an evaluated rule that carries no
+  assurance. This is the truthful result of Option A, not a regression. The assurance report gains one
+  "Requires expert judgement" entry.
+- An attestation against this rule is refused (`invalid-attestation`); it is not attestable.
+- `isGateReference` is a stricter check composed over FE-28's `hasReference` (unchanged). It checks shape
+  only and resolves nothing, so a well-formed path to a file that does not exist is accepted.
+
+**No `VERSION` change, tag or release is made by this entry.**
+
 **`computation.scope-declared` accepts an explicit structured `scope: point` (FE-33, #64).** A
 `computational` or `numerical` evidence entry whose description begins with the exact lower-case key
 `scope: point;` (or `scope: point,`) is accepted as declaring a single-point scope, so it no longer

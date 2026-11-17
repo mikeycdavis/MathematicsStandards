@@ -1,0 +1,10 @@
+# FE-61 C1: a gate named with no version. Rejected by the schema (exit 2).
+standardVersion: "1.0.0"
+project: "adopter-gates-no-version"
+
+adopterGates:
+  - id: pvsnp-check
+    execution:
+      state: unrun
+    result:
+      outcome: not-recorded

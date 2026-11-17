@@ -1,0 +1,13 @@
+# FE-61 C4: a gate marked unrun that nonetheless records a passing result. Schema-valid,
+# rule-invalid: reported invalid, never passed.
+standardVersion: "1.0.0"
+project: "adopter-gates-unrun-with-result"
+
+adopterGates:
+  - id: pvsnp-check
+    version: "1.3.0"
+    execution:
+      state: unrun
+    result:
+      outcome: passed
+      evidence: "artifacts/gate-runs/2026-11-10-check.log"

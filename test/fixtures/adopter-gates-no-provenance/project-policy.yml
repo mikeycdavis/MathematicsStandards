@@ -1,0 +1,10 @@
+# FE-61 rider: a result with no execution block. Rejected by the schema (exit 2).
+standardVersion: "1.0.0"
+project: "adopter-gates-no-provenance"
+
+adopterGates:
+  - id: pvsnp-check
+    version: "1.3.0"
+    result:
+      outcome: passed
+      evidence: "artifacts/gate-runs/2026-11-10-check.log"

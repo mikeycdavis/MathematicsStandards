@@ -1,0 +1,11 @@
+# FE-61 C1: a version that names no version. Schema-valid, rule-invalid: reported invalid.
+standardVersion: "1.0.0"
+project: "adopter-gates-placeholder-version"
+
+adopterGates:
+  - id: pvsnp-check
+    version: latest
+    execution:
+      state: unrun
+    result:
+      outcome: not-recorded

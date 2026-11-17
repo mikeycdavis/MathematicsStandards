@@ -1,0 +1,14 @@
+# FE-61 rider: executed, but the provenance is thin (no command, no subject commit, no evidence)
+# and the passing result cites none. Schema-valid, rule-invalid: reported invalid, never passed.
+standardVersion: "1.0.0"
+project: "adopter-gates-thin-provenance"
+
+adopterGates:
+  - id: pvsnp-check
+    version: "1.3.0"
+    execution:
+      state: executed
+      by: adopter-ci
+      at: "2026-11-10"
+    result:
+      outcome: passed

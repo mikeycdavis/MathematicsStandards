@@ -1,0 +1,27 @@
+# FE-61 C4 block, appended by the test to a temporary copy of test/fixtures/math-compliant (an
+# otherwise COMPLIANT, 100% baseline). Every gate is recorded passed.
+adopterGates:
+  - id: lean-axiom-audit
+    version: "2.4.0"
+    execution:
+      state: executed
+      by: adopter-ci
+      at: "2026-11-10"
+      subject: "commit 4f3a9c1d2e"
+      command: "lake exe audit-manifest"
+      evidence: "artifacts/gate-runs/2026-11-10-axioms.log"
+    result:
+      outcome: passed
+      evidence: "artifacts/gate-runs/2026-11-10-axioms.log"
+  - id: planted-sorry-self-test
+    version: "1.0.0"
+    execution:
+      state: executed
+      by: adopter-ci
+      at: "2026-11-10"
+      subject: "commit 4f3a9c1d2e"
+      command: "pwsh ./check.ps1 -SelfTest"
+      evidence: "artifacts/gate-runs/2026-11-10-selftest.log"
+    result:
+      outcome: passed
+      evidence: "artifacts/gate-runs/2026-11-10-selftest.log"

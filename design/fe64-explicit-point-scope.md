@@ -1,7 +1,7 @@
 # FE-33 design record: explicit point scope
 
-**Status: DRAFT, awaiting owner freeze.** Implementation is not authorized until the owner freezes this record.
-**Authority:** the owner-finalized criteria of 2026-11-16 (cmsg_01S962nAgzeF44i1MHDz4h1uY1YFLzdLBAfNL6C61NiNhq), recorded verbatim in `F:\GitHub Evidence\MathematicsStandards\evidence-64\decisions\finalized-criteria-2026-11-16.md`, and the owner decision that this item is a design-only record for an explicit structured `scope: point`. Issue: #64 (FE-33).
+**Status: DRAFT, owner-decided, awaiting freeze after fresh review.** The twelve choices below were decided by the owner on 2026-11-17 and this revision records them. They are decisions, not defaults awaiting a yes. The record is not frozen: a fresh review of this revision is required first, and implementation is not authorized until the owner then freezes it.
+**Authority:** the owner-finalized criteria of 2026-11-16 (cmsg_01S962nAgzeF44i1MHDz4h1uY1YFLzdLBAfNL6C61NiNhq), recorded verbatim in `F:\GitHub Evidence\MathematicsStandards\evidence-64\decisions\finalized-criteria-2026-11-16.md`, the owner decision that this item is a design-only record, and the owner's twelve choice decisions of 2026-11-17 (section "Owner decisions"), which are authoritative over any earlier default in this record's history for an explicit structured `scope: point`. Issue: #64 (FE-33).
 **Baseline:** `origin/main` at 3475ec4, VERSION 3.1.0. The gap check (`evidence-64/ac-gap-check/report.md`) was taken at 14562f6; every code location it cites was re-read at 3475ec4 and still holds (detector at `scripts/standards.mjs:1030-1038` and `1073-1077`, evidence parser at `scripts/claims.mjs:468-474`).
 
 This record changes no code, schema, rule, fixture, `VERSION` or `CHANGELOG`. Everything below that looks like code, a fixture or a schema is a *proposal*, and the validation record shows each proposal was exercised in a scratch copy that is not committed.
@@ -12,7 +12,7 @@ This record changes no code, schema, rule, fixture, `VERSION` or `CHANGELOG`. Ev
 - **C2:** Do not infer point scope by parsing the free-text `Quantifiers` field.
 - **C3:** Missing scope remains a refusal condition.
 
-No acceptance criterion is added here. Where this record has to decide something the criteria leave open, it is a numbered choice in "Choices for owner review", with a fail-closed default.
+No acceptance criterion is added here. Where this record has to decide something the criteria leave open, it is a numbered choice in "Owner decisions", each now decided by the owner (2026-11-17). Choice 7 adds a consistency check (`scope-contradiction`) that the 2026-11-16 draft had proposed to omit; it is a check on the declaration against explicit text in the same evidence item and is not an inference of point scope (see C2 below).
 
 ## How scope and `Quantifiers` are read today (re-verified at 3475ec4)
 
@@ -26,7 +26,7 @@ No acceptance criterion is added here. Where this record has to decide something
 
 ## Proposed design
 
-### Representation (recommended; see Choice 1)
+### Representation (owner-decided, Choices 1 and 2)
 
 A **structured key at the head of a computational evidence item's detail**:
 
@@ -35,40 +35,80 @@ A **structured key at the head of a computational evidence item's detail**:
   - computational — scope: point; certified interval arithmetic at s0 = 1/2, `computations/check.py`
 ```
 
-Grammar, exact:
+Grammar, exact (Choice 2: spelling, case, position and value are all required exactly):
 
-- After the evidence type and the em/en dash or hyphen, the detail text is matched against `^scope:[ \t]*([^;,\s]*)[ \t]*(?:[;,]|$)`. The first capture is the *scope value*. If the detail does not start with `scope:` the item has `scope: null`.
-- The key is lower-case `scope:` and it must be the **first** token of the detail. A `scope:` anywhere else is prose and is never read. `Scope:`, `SCOPE:` and `scope :` are not the key.
-- The only recognised value is the exact lower-case string `point`. Any other captured value (`points`, `range`, empty) is reported, not ignored.
-- The key must be followed by `;`, `,` or the end of the detail. `scope:point;` (no space after the colon) **is** accepted. `scope: point at s0 = 1/2; ...` and `scope: point exact interval ...` do **not** match (the value is followed by a space and more words), so `scope` is `null` and the item falls to the ordinary range test and the existing `states no range` line, which is misleading for an author who believed they had declared a point. The catalog `remediation` therefore must say that the key is written `scope: point;` or `scope: point,` and followed by `;` or `,` before any other words (Choice 12 offers a dedicated message instead).
-- The sketched `parseEvidence()` is **not** type-gated: it yields `scope` for every evidence type, so `proof — scope: point; ...` parses with `scope === "point"`. Only the detector ignores it, because it reads `scope` only inside its computational/numerical branch (`evidenceCan(type, "is-computation")`). On any other evidence type the text is prose to every rule. (Gating the parser with `evidenceCan`, exported at `scripts/claims.mjs:170`, is an equivalent alternative; the tests below hold either way.)
-- Nothing about `Quantifiers`, `Statement` or `Domain` is consulted to decide scope. This is C2.
+- **Key.** The evidence item's detail (the text after the evidence type and the em/en dash or hyphen) is matched against `^scope:[ \t]*([^;,\s]*)[ \t]*(?:[;,]|$)`. The key is the lower-case literal `scope:` at character 0 of the detail. The first capture is the *scope value*. `Scope:`, `SCOPE:`, `scope :` and a leading space or other token before `scope:` are not the key.
+- **Value.** The only accepted value is the exact lower-case string `point`. `Point`, `points`, `range` and the empty value are not accepted (see "Classification of a detail" below for what is reported).
+- **Terminator.** The value must be followed by optional blanks and then `;`, `,` or the end of the detail. `scope:point;` (no space after the colon) is accepted, because blanks after the colon are optional.
+- **Position.** A `scope:` anywhere other than the start of the detail is prose and is never read.
+- **Scope of the parser.** The sketched `parseEvidence()` is not type-gated: it yields `scope` for every evidence type, so `proof — scope: point; ...` parses with `scope === "point"`. Only the detector ignores it, because it reads `scope` only inside its computational/numerical branch (`evidenceCan(type, "is-computation")`). On any other evidence type the text is prose to every rule. (Gating the parser with `evidenceCan`, exported at `scripts/claims.mjs:170`, is an equivalent alternative; the tests hold either way.)
+- Nothing about `Quantifiers`, `Statement` or `Domain` is consulted to decide scope. This is C2 (Choice 8 adds the mutation guard).
 
-Implementation sketch (illustrative; the real change is made only after freeze):
+#### Classification of a detail (Choices 3 and 12)
 
-- `scripts/claims.mjs` `parseEvidence()` returns one more field, `scope` (string or null).
-- `detectComputationEvidence()`: when `item.scope === "point"`, the *range* test is satisfied by the declaration; the *arithmetic* test is unchanged. When `item.scope` is non-null and not `point`, the item is reported once with an unrecognised-scope line and the range/arithmetic tests are not also run for that item (so one item yields one evidence line). When `item.scope` is null, behaviour is byte-for-byte what it is today.
+Every computational/numerical evidence item falls into exactly one class, tested in this order, and yields at most **one** evidence line:
+
+| Class | Condition | Result |
+| --- | --- | --- |
+| `none` | detail does not start with the literal `scope:` | ordinary path, byte-for-byte today's behaviour (`states no range`, `states no arithmetic`, or accepted). Wrong-case keys (`Scope:`) and `scope:` in the middle of the text land here. |
+| `malformed` | detail starts with the literal `scope:` and the key regex above does **not** match (for example `scope: point at s0 = 1/2; ...`, `scope: point exact interval ...`, `scope: point.`) | one `scope-malformed` line (wording in "Report wording"). The range and arithmetic tests are not run, and there is no fallback to range wording elsewhere in the detail. |
+| `unrecognised` | key regex matches and the value is not exactly `point` (`points`, `range`, `Point`, empty) | one `scope-unrecognised` line. No fallback: a word such as `all` elsewhere in the detail does not rescue it. |
+| `point` | key regex matches and value is `point` | range test satisfied by the declaration; then the contradiction check below; then the arithmetic test, which is unchanged. |
+
+For a `point` item the order is contradiction first, then arithmetic, so an item with both defects shows the contradiction and the arithmetic line appears once the contradiction is fixed. This keeps one line per item, as the existing rule already does for range-then-arithmetic.
+
+#### Contradiction check: `scope-contradiction` (Choice 7)
+
+Owner decision: a structured point declaration may control scope, but explicit contradictory language in the same evidence item must not be silently accepted. This is consistency checking of the declaration against the item's own words. It never supplies, infers or widens point scope from any text, and it never reads `Quantifiers`, `Statement` or `Domain`; C2 is untouched.
+
+*Text scanned.* Only for items of class `point`: the detail with (a) the leading key and its terminator removed and (b) every backtick code span removed (so a program path such as `` `computations/exhaustive_all.py` `` is not read as language).
+
+*Detection.* The item has a `scope-contradiction` if the scanned text matches any of these case-insensitive patterns; the first match found, in this order, is quoted in the message:
+
+1. `\bexhaustive(?:ly)?\b`
+2. universal quantification: `\b(for all|for every|for each|for any|universal(?:ly)?)\b` or `∀`
+3. `all` over a domain word: `\ball\s+(?:\w+\s+){0,2}?(?:n|m|k|s|x|t|integers?|naturals?|reals?|values?|parameters?|inputs?|cases?|primes?|numbers?)\b`
+4. an explicit range: `looksBounded(text)` as it exists today (`n <= 10^9`, `up to 100`, `first 1000 primes`, `10^9`, `range 1`, `exhaustive up to`).
+
+The bare word `all` alone is deliberately not a trigger (see limits). The patterns reuse the vocabulary the framework already uses (`looksUniversal`, `looksBounded`); nothing new is invented except pattern 3 and the code-span stripping.
+
+*Consequence.* A contradicted item is reported and is **not** treated as declaring a point. Status and exit effect: the finding belongs to `computation.scope-declared`, so the rule result is the same refusal as today: `audit` reports an `error` finding, label `INFERRED` (exit 0 by default, 1 under `--strict`); `validate` reports the rule `failed`, `severity: error`, `level: required`, and a failed required rule prevents a compliant verdict. No new rule id, no new severity, no new verdict (Choice 10).
+
+*Message.* See "Report wording".
+
+*False-positive limits (stated, accepted, and the way out).*
+
+- The check is lexical. `scope: point; all values are exact rationals, certified at s0 = 1/2` matches pattern 3 (`all values`) although the sentence is about arithmetic, and `up to 50 digits of precision` matches pattern 4. The message quotes the matched text so the author can rephrase; there is no suppression syntax, by design (a suppression key would be a second unaudited declaration).
+- Not triggers, and pinned as such by tests: the bare words `all` (`all arithmetic is exact`), `every` outside `for every`, `random`, `sample`, a tolerance such as `10^-9` (the pattern needs a digit directly after `^`), and anything inside backticks.
+- Not detected (false negatives, accepted): range or universal language that is not in the patterns (`for arbitrary n`, `across the full range`, `entire interval`), and a contradiction expressed only in `Statement`, `Domain` or `Quantifiers`. A point declaration beside a universally quantified claim is a claim-level question for the existing universal-claim rules, not for this check. CLM-0003 in the fixtures pins that `Quantifiers` is not read.
+- Prose in a language other than English is not scanned.
+
+Implementation sketch (illustrative; the real change is made only after freeze, and the contradiction and malformed branches have not been exercised yet: see "Validation record"):
+
+- `scripts/claims.mjs` `parseEvidence()` returns one more field, `scope`, an object `{ kind: "none" | "malformed" | "unrecognised" | "point", value, rest }` (or equivalent), where `rest` is the detail after the key.
+- `detectComputationEvidence()` branches on `item.scope.kind` exactly as the classification table says. For `none` the existing code runs untouched.
 
 ### What `scope: point` does and does not do
 
 | Item | Effect |
 | --- | --- |
 | Range requirement | Satisfied by the declaration. No range text is needed. |
-| Arithmetic requirement | **Still required.** `scope: point` with no arithmetic word is reported (`states no arithmetic`). |
+| Arithmetic requirement | **Still required** (Choice 4). `scope: point` with no arithmetic word is reported (`states no arithmetic`). |
+| Contradictory language in the item | **Reported** (Choice 7). `scope: point; exhaustive up to 10^9, exact` is a `scope-contradiction`, not accepted. |
 | Program, environment, seed, outcome (R1 items) | Unchanged. The rule never checked them and still does not. |
-| The point's value | **Not machine-checked.** The declaration says the scope is a point; it does not say which, and the detector cannot verify that the program ran there. R1 still asks the author to record what was checked, and the rule's assurance stays `partial`. |
+| The point's value | **Not a new required field and not machine-checked** (Choice 5). The declaration says the scope is a point; it does not say which, and the detector cannot verify that the program ran there. R1 still asks the author to record what was checked, and the rule's assurance stays `partial`. |
 | Claim status, rank, other rules | None. The key is read by this one detector only. |
-| Existing ledgers | No change. A ledger with no `scope:` key produces the same findings as before (by construction: `scope` is `null`, so no existing code path changes). |
+| Existing ledgers | No change. A ledger with no `scope:` key produces the same findings as before (by construction: class `none`, so no existing code path changes). |
 
 ### Why per evidence item, not per claim or in policy (alternatives considered)
 
-- **A. Evidence-item key (recommended).** The rule iterates evidence items, so the declaration sits on the thing it excuses. A claim with a range computation and a point computation declares the point only where it applies. Fail-closed: a claim-wide declaration could never be wider than its evidence.
+- **A. Evidence-item key (owner-decided, Choice 1).** The rule iterates evidence items, so the declaration sits on the thing it excuses. A claim with a range computation and a point computation declares the point only where it applies. Fail-closed: a claim-wide declaration could never be wider than its evidence.
 - **B. Claim field `- **Scope:** point` beside `Quantifiers`.** Reuses the ledger's existing field syntax, and `applyField` already ignores it harmlessly (probed). But it is claim-wide: one declaration would excuse every computational item on the claim, including a range computation that omitted its range. Also a field with the same visual weight as `Quantifiers` invites the reading C2 prohibits.
 - **C. Policy declaration, e.g. `mathematics.computationScope: { CLM-0010: point }`.** Keeps the ledger grammar untouched, but moves a per-evidence fact into a second file, needs a schema change (fragment validated below), and a policy edit becomes the way to satisfy a ledger rule. The framework has been moving the other way (`relevance` is a ledger field, not policy).
 
 ### Schema and template fragments
 
-**No schema change under the recommended option.** `schemas/project-policy.schema.json` describes the policy file only; the ledger is Markdown and has no schema. Fragments proposed for the files that do change:
+**No schema change under the decided option.** `schemas/project-policy.schema.json` describes the policy file only; the ledger is Markdown and has no schema. Fragments proposed for the files that do change:
 
 1. `templates/claims-ledger.md`, in the Evidence example for a point result (added after the existing CLM-0001 example, or as a commented block like CLM-0002):
 
@@ -77,13 +117,13 @@ Implementation sketch (illustrative; the real change is made only after freeze):
      - computational — scope: point; certified interval arithmetic at s0 = 1/2, `computations/check.py`
    ```
 
-   plus one sentence in the numbered notes: "A computation at a single parameter value is declared with `scope: point` as the first words of its evidence entry; it still names its arithmetic. Saying 'single point' in `Quantifiers` is not a declaration."
-2. `standards/10-computational-and-numerical-evidence.md` R1, after the table: "A computation that checks one point rather than a range declares `scope: point` as the first words of the evidence entry's description. It still records the arithmetic, the program and the other items above. The declaration is read from that exact form; descriptions elsewhere (including `Quantifiers`) are not read as declarations." Also `standards/03-claims-ledger.md` (the ledger grammar) gains the same sentence under Evidence.
-3. `rules/computation.json` `computation.scope-declared`: `description` gains "or declares `scope: point`"; `remediation` gains "for a single-point computation, begin the evidence entry with `scope: point;` and still state the arithmetic"; `$assuranceNote` gains "A `scope: point` declaration is accepted as stated; the detector does not check that the program ran at one point." Then `npm run assurance` regenerates `docs/assurance-report.md` (checked by `assurance:check`).
-4. `CHANGELOG.md` Unreleased entry; no `VERSION` change (see Choice 6).
+   plus one sentence in the numbered notes: "A computation at a single parameter value is declared with `scope: point;` as the first words of its evidence entry; it still names its arithmetic, and the entry must not also claim a range or an exhaustive or universal check. Saying 'single point' in `Quantifiers` is not a declaration."
+2. `standards/10-computational-and-numerical-evidence.md` R1, after the table: "A computation that checks one point rather than a range declares `scope: point` as the first words of the evidence entry's description. It still records the arithmetic, the program and the other items above, and it does not also state a range, an exhaustive check or a universal claim (such a contradiction is reported). The declaration is read from that exact form; descriptions elsewhere (including `Quantifiers`) are not read as declarations." Also `standards/03-claims-ledger.md` (the ledger grammar) gains the same sentence under Evidence.
+3. `rules/computation.json` `computation.scope-declared`: `description` gains "or declares `scope: point`"; `remediation` gains "for a single-point computation, begin the evidence entry with `scope: point;` (exact spelling, then `;` or `,`), still state the arithmetic, and do not also state a range or an exhaustive or universal check"; `$assuranceNote` gains "A `scope: point` declaration is accepted as stated; the detector does not check that the program ran at one point." Then `npm run assurance` regenerates `docs/assurance-report.md` (checked by `assurance:check`).
+4. `CHANGELOG.md` Unreleased entry that records the behaviour change and states that the eventual behavioural release is classified MAJOR (4.0.0) (Choice 6). No `VERSION` change, tag or release action is part of this item now.
 5. `design/v1.1-candidates.md` section 0f gets a pointer note only.
 
-Alternative C schema fragment, **validated** against the vendored evaluator (`scripts/jsonschema.mjs`) in the scratch copy, kept here only so the owner can compare; it is not recommended:
+Alternative C schema fragment, **validated** against the vendored evaluator (`scripts/jsonschema.mjs`) in the scratch copy, kept here only so the owner can compare; it is not chosen:
 
 ```json
 "computationScope": {
@@ -96,69 +136,98 @@ Alternative C schema fragment, **validated** against the vendored evaluator (`sc
 
 placed under `properties.mathematics.properties`. Evaluator results: `CLM-0010: point` valid; `CLM-0010: points` rejected (`must be one of 'point'`); `clm-10: point` rejected (`'clm-10' is not a valid key here`).
 
-### Report wording
+### Report wording (Choice 11)
 
-Unchanged: the rule message, `label: INFERRED`, severity `error`, and the existing evidence lines `states no range` and `states no arithmetic` (RH adoption evidence under `artifacts/adoption/` quotes the first verbatim, and no test asserts either string). New evidence line, one per offending item:
+Preserved verbatim, because RH adoption evidence under `artifacts/adoption/` quotes the first and no test asserts either: the rule message, `label: INFERRED`, severity `error`, and the existing evidence lines `states no range` and `states no arithmetic`. Three new scope-specific evidence lines are added. Each is one line per offending item; `<loc>` is `<ledger>:<claim line> <id>`.
 
-```
-<ledger>:<claim line> <id> — <type> evidence declares scope "<value>"; the only structured scope value is "point"
-```
+| Kind | Line |
+| --- | --- |
+| `scope-unrecognised` | `<loc> — <type> evidence declares scope "<value>"; the only structured scope value is "point"` (an empty value reads `declares scope ""`) |
+| `scope-malformed` | `<loc> — <type> evidence begins with "scope:" but is not a valid scope declaration; the key is written "scope: point;" or "scope: point," as the first words, followed by the rest of the description` |
+| `scope-contradiction` | `<loc> — <type> evidence declares scope: point but also states "<matched text>"; a point declaration cannot be combined with a range, exhaustive or universal claim (scope-contradiction)` |
 
-For an empty value the line reads `declares scope ""`. Remediation text (catalog) is the only place the new form is advertised to an author who hit `states no range`. Verified output, scratch copy, `scope-point-malformed`:
+(`<matched text>` is the substring that matched, extended to the end of its token and capped at 40 characters, so `n <= 1000` is quoted whole rather than as `n <= 1`; the author can see what to rephrase.) The existing `states no arithmetic` line is also used for a `point` item without an arithmetic word, unchanged. Choice 12: a detail that begins with `scope:` and fails the grammar gets the `scope-malformed` line and never collapses into `states no range`. Remediation text (catalog) additionally advertises the new form to an author who hit `states no range`.
 
-```
-CLM-0020 — computational evidence states no arithmetic
-CLM-0021 — computational evidence declares scope "points"; the only structured scope value is "point"
-CLM-0022 — computational evidence states no range
-CLM-0023 — computational evidence states no range
-CLM-0024 — computational evidence declares scope "range"; the only structured scope value is "point"
-CLM-0025 — computational evidence declares scope ""; the only structured scope value is "point"
-```
+The rule's aggregate `message` ("N computational evidence entr(ies) do not record their scope ...") is kept; it still reads correctly for all kinds.
 
-The scratch prototype was adjusted so an unrecognised value yields that one line and skips the range and arithmetic tests for the item, giving the one-line-per-item behaviour specified above.
+Expected output for the fixtures is given in "Validation record" and is **proposed, not yet exercised** except where stated.
 
 ## Criteria mapped to tests, fixtures and wording
 
-Test file: `test/fe64-point-scope.test.mjs`, written before the change, using `HOME` and `run` from `test/helpers/cli.mjs` and the repository's `audit --dir=<fixture> --json` convention (as `test/fe28-attempt-gates.test.mjs` does). Layers: unit (`parseLedger`) and CLI integration.
+Test file: `test/fe64-point-scope.test.mjs`, written before the change, using `HOME` and `run` from `test/helpers/cli.mjs` and the repository's `audit --dir=<fixture> --json` convention (as `test/fe28-attempt-gates.test.mjs` does). Layers: unit (`parseLedger` and the contradiction pattern table) and CLI integration. Unit tests assert the parse shape sketched above (`scope.kind` and `scope.value`); that shape is part of what the owner freezes.
 
-"Baseline" is the result on 3475ec4. **Red** means it fails before the change. Several C2/C3 tests are characterization pins that are **green on the baseline** by design: C2 and C3 describe behaviour that must not change, so their tests guard against regression rather than drive new code. They are marked so, and the owner should not read them as red-first.
+**Labelling.** "Baseline" is the result on 3475ec4.
+
+- **RED-FIRST**: fails on the baseline. These drive the change and are written and committed failing before any code.
+- **PASS-TODAY**: passes on the baseline and must keep passing. These are characterization pins. C2 and C3 describe behaviour that must not change, so most of their tests guard against regression and are not red-first. They are not evidence that the change works, and the owner should not read them as such.
+- **MUTATION**: fails only under a deliberate mutation of the implementation (Choice 8).
 
 ### C1 — `computation.scope-declared` accepts an explicit structured `scope: point`
 
-| # | Test | Baseline |
+| # | Test | Baseline label |
 | --- | --- | --- |
-| C1.1 | `parseLedger` on a ledger whose evidence is `computational — scope: point; certified interval arithmetic ...` gives that item `scope === "point"`. | red (no such field) |
-| C1.2 | `audit` on `scope-point-declared` reports no `computation.scope-declared` finding naming CLM-0001. | red |
-| C1.3 | `validate` on `scope-point-declared` gives `computation.scope-declared` `status: passed` (not `failed`). | red |
-| C1.4 | `scope: point` with no arithmetic word (`scope-point-malformed`, CLM-0020) is still reported, as `states no arithmetic`. | green pin |
-| C1.5a | The ordinary range claim in the same fixture (CLM-0002) is still accepted. | green pin |
-| C1.5b | `parseLedger` on an evidence item with no `scope:` key gives `scope === null`. | red (baseline returns `undefined`) |
-| C1.5c | `scope:point;` (no space) parses as `point`; `scope: point at s0 = 1/2; ...` and `scope: point exact interval` parse as `null` and are reported with the ordinary range line. | red for the first, green pin for the other two |
-| C1.6 | A non-computational item (`proof — scope: point; ...`) adds no finding and does not exempt anything; at parse level it carries `scope === "point"` under the sketched parser (or `null` if the parser is type-gated), and the detector ignores it either way. Asserts the finding set, not the parse value. | green pin |
+| C1.1 | `parseLedger` on `computational — scope: point; certified interval arithmetic ...` gives `scope.kind === "point"`. | RED-FIRST (no such field) |
+| C1.2 | `audit` on `scope-point-declared` reports no `computation.scope-declared` line naming CLM-0001, CLM-0002, CLM-0003 or CLM-0004. | RED-FIRST (0001, 0003, 0004 are reported today) |
+| C1.3 | `validate` on `scope-point-declared` gives `computation.scope-declared` `status: passed`. | RED-FIRST |
+| C1.4a | `scope-point-malformed` CLM-0020 (`scope: point;` with no arithmetic word) is reported. | PASS-TODAY (reported today as `states no range`) |
+| C1.4b | The CLM-0020 line is exactly the preserved `states no arithmetic` string. | RED-FIRST (today it says `states no range`) |
+| C1.5a | The ordinary range claim CLM-0002 is still accepted. | PASS-TODAY |
+| C1.5b | An evidence item with no `scope:` key gives `scope.kind === "none"`. | RED-FIRST |
+| C1.5c | `scope:point;` (no space) and `scope: point,` parse as kind `point`. | RED-FIRST |
+| C1.6 | A non-computational item (`proof — scope: point; ...`) adds no finding and exempts nothing. Asserts the finding set, not the parse value (the parser may or may not be type-gated). | PASS-TODAY |
 
 ### C2 — Do not infer point scope by parsing the free-text `Quantifiers` field
 
-| # | Test | Baseline |
+| # | Test | Baseline label |
 | --- | --- | --- |
-| C2.1 | `scope-point-missing` CLM-0010: `Quantifiers: single point`, no structured scope, is reported. | green pin |
-| C2.2 | CLM-0011: `Quantifiers: scope: point` (the structured text placed in the wrong field) is reported. | green pin |
-| C2.3 | CLM-0012: the point stated only in `Statement` and `Domain` is reported. | green pin |
-| C2.4 | `scope-point-declared` CLM-0003: structured `scope: point` with `Quantifiers: universal over n in the stated range` is accepted, so `Quantifiers` cannot change the outcome in either direction. | red (the baseline rejects CLM-0003 for lack of a range) |
-| C2.5 | Mutation guard: in a temp copy, the detector is changed to also accept a ledger whose `Quantifiers` matches `/single point/`; tests C2.1 to C2.3 must then fail. Added to the repository's mutation-check list if the owner wants it (Choice 8). | n/a |
-| C2.6 | The evidence-item key must be first: CLM-0023 (`... (this is scope: point)`) and CLM-0022 (`Scope: point`, wrong case) are reported. | green pin |
+| C2.1 | `scope-point-missing` CLM-0010: `Quantifiers: single point`, no structured scope, is reported with the preserved `states no range` line. | PASS-TODAY |
+| C2.2 | CLM-0011: `Quantifiers: scope: point` (structured text in the wrong field) is reported with `states no range`. | PASS-TODAY |
+| C2.3 | CLM-0012: the point stated only in `Statement` and `Domain` is reported. | PASS-TODAY |
+| C2.4 | `scope-point-declared` CLM-0003: structured `scope: point` with `Quantifiers: universal over n in the stated range` is accepted, so `Quantifiers` cannot change the outcome in either direction (and the contradiction check does not read it). | RED-FIRST (the baseline rejects CLM-0003 for lack of a range) |
+| C2.5 | Mutation guard (Choice 8, specified below): if `Quantifiers` begins supplying point scope, the suite fails. | MUTATION |
+| C2.6 | The key must be first and exactly cased: `scope-point-malformed` CLM-0022 (`Scope: point;`) and CLM-0023 (`... (this is scope: point)`) are reported with the preserved `states no range` line, not with `scope-malformed` (class `none`). | PASS-TODAY |
+
+**Mutation guard (Choice 8, owner-decided).** One new entry in the `MUTATIONS` list in `scripts/mutation-check.mjs`:
+
+- `name`: `scope: let Quantifiers supply point scope`.
+- `file`: `scripts/standards.mjs`; `from`: a literal anchor at the line in `detectComputationEvidence()` that decides the `point` class (chosen at implementation, literal including newlines, per the file's own rule on anchors); `to`: the same line with `|| /single point|scope:\s*point/i.test(entry.quantifiers)` added to the point condition.
+- `gate`: `() => runTest("fe64-point-scope.test.mjs")`, which must exit non-zero. Tests C2.1 to C2.3 are the ones that fail.
+- `test/mutation-targets.test.mjs` already asserts every listed anchor still reaches its target without running the suite; the new entry is covered by that existing test with no new test code.
+- A mutation that makes the suite pass is a defect in the guard and fails `npm run mutation-check`.
 
 ### C3 — Missing scope remains a refusal condition
 
-| # | Test | Baseline |
+| # | Test | Baseline label |
 | --- | --- | --- |
-| C3.1 | `audit` on `scope-point-missing` reports exactly three findings lines, CLM-0010, CLM-0011, CLM-0012, each `error` / `INFERRED`. | green pin (this is the test the gap check found missing) |
-| C3.2 | `validate` on `scope-point-missing` reports `computation.scope-declared` as `status: failed`, `severity: error`, `level: required`. | green pin |
-| C3.3 | `scope-point-malformed`: all six claims are reported; none is accepted. Unrecognised values (`points`, `range`, empty) are reported with the unrecognised-scope wording, exactly one line per item. | red for the wording and the one-line rule, green for the six being reported |
-| C3.4 | The rule's catalog entry is unchanged in `level`, `severity`, `validationType`, `nonExemptible`, `assurance` (a regression guard on "remains a refusal condition"; the description, remediation and note text change). | green pin |
+| C3.1 | `audit` on `scope-point-missing` reports exactly three lines, CLM-0010, CLM-0011, CLM-0012, each `error` / `INFERRED`. | PASS-TODAY (this is the test the gap check found missing) |
+| C3.2 | `validate` on `scope-point-missing` reports `computation.scope-declared` as `status: failed`, `severity: error`, `level: required`. | PASS-TODAY |
+| C3.3 | `scope-point-malformed` reports exactly one line per claim for CLM-0020 to CLM-0028 and accepts none. Preserved lines: 0020 `states no arithmetic`, 0022 and 0023 `states no range`. Dedicated lines: 0021, 0024, 0028 `scope-unrecognised` (values `points`, `range`, `Point`); 0025 `scope-unrecognised` with empty value; 0026, 0027 `scope-malformed`. | RED-FIRST for the wording and for 0024 being reported (0024 is accepted today because it states a range); PASS-TODAY for 0021, 0022, 0023 being reported |
+| C3.4 | Choice 3, no fallback: 0024 (`scope: range; exhaustive up to 10^9, exact integer arithmetic`) and 0027 (`scope: point exact interval, exhaustive up to 10^9`) are reported although unrelated range wording is present. | RED-FIRST |
+| C3.5 | Choice 12, no collapse: for 0026 and 0027 the line is the `scope-malformed` wording and does not contain `states no range`. | RED-FIRST |
+| C3.6 | The rule's catalog entry is unchanged in `level`, `severity`, `validationType`, `nonExemptible`, `assurance`, and `introducedIn` (description, remediation and note text change). | PASS-TODAY |
+| C3.7a | Choice 10: on `scope-point-missing`, `validate --json` contains no `BLOCKED` verdict and the refusal is the rule-level `failed` / `error`; `audit` exits 0 and `audit --strict` exits 1. | PASS-TODAY |
+| C3.7b | The same assertions on `scope-point-malformed` (no `BLOCKED`, `failed` / `error`, exit 0, and 1 under `--strict`). | PASS-TODAY |
+| C3.7c | The same assertions on `scope-point-contradictory`. | RED-FIRST (today its claims state a range word and are accepted, so strict exits 0); same test as C7.3 |
+
+### C7 — Contradiction check (`scope-contradiction`, Choice 7)
+
+This group is owner-decided and not tied to one of the three criteria; it is consistency checking of an explicit declaration. It is listed separately so no reader mistakes it for scope inference.
+
+| # | Test | Baseline label |
+| --- | --- | --- |
+| C7.1 | `scope-point-contradictory` CLM-0030 (`exhaustive`), 0031 (`for all n`), 0032 (`n <= 1000`), 0033 (`universally`), 0035 (`all values`) are each reported with exactly one `scope-contradiction` line quoting the matched text. | RED-FIRST |
+| C7.2 | CLM-0034 (contradiction and no arithmetic) yields exactly one line, the contradiction; the `states no arithmetic` line does not also appear. | RED-FIRST |
+| C7.3 | `validate` on `scope-point-contradictory`: `computation.scope-declared` `failed`, `error`, `required`; `audit` exit 0, `--strict` exit 1. A contradicted item is not accepted as a point. | RED-FIRST |
+| C7.4 | Negative controls, no false positive: `scope-point-declared` CLM-0004 (`all arithmetic is exact rational`, `tolerance 10^-9`, path `computations/exhaustive_all.py` in backticks) is accepted. | RED-FIRST (reported today for lack of a range) |
+| C7.5 | Data-driven unit test on the pattern function over a table of strings. Match: `exhaustive check`, `exhaustively`, `for all n`, `for every`, `∀ s`, `universally valid`, `all values`, `all integers`, `n <= 100`, `up to 100`, `first 1000 primes`, `10^9`. No match: `all arithmetic is exact`, `every interval is certified`, `random seed 7`, `sample point`, `tolerance 10^-9`, `` `computations/exhaustive_all.py` ``, `up to` with no digit. | RED-FIRST |
+| C7.6 | The check runs only for class `point`: CLM-0002 (no key, range text) is accepted as today, and CLM-0027 (malformed key plus `exhaustive up to 10^9`) yields only the `scope-malformed` line, one line. | PASS-TODAY for 0002; RED-FIRST for 0027 |
+| C7.7 | The check reads only the item's own detail after the key: the `Quantifiers`, `Statement` and `Domain` of CLM-0003 contain universal words and it is accepted (same test as C2.4). | RED-FIRST |
+
+Known failing-by-design cases are recorded in "False-positive limits" above, not hidden: `all values are exact rationals` and `up to 50 digits of precision` are reported. The unit table in C7.5 includes them in a second list labelled "accepted false positives" so a future change to the patterns shows up as a deliberate edit.
 
 ## Fixtures (full contents)
 
-Three directories under `test/fixtures/`, each shaped like `numerics-as-proof` (`artifacts/claims-ledger.md` and a placeholder program). No `project-policy.yml` is needed, because `audit` reads the ledger without a policy and `validate` reports rule-level results either way (probed). If the owner prefers `validate` to return a verdict instead of `NOT_EVALUATED`, Choice 9 adds a policy; it was left out so the fixtures stay minimal. The placeholder program is the same in all three (`computations/check.py`):
+Four directories under `test/fixtures/`, each shaped like `numerics-as-proof` (`artifacts/claims-ledger.md` and a placeholder program). No `project-policy.yml` is needed, because `audit` reads the ledger without a policy and `validate` reports rule-level results either way (probed). If the owner prefers `validate` to return a verdict instead of `NOT_EVALUATED`, Choice 9 (owner-decided) keeps the fixtures minimal with no policy file. The placeholder program is the same in all four (`computations/check.py`):
 
 ```python
 # fixture placeholder: this program is never run
@@ -170,7 +239,7 @@ print('checked')
 ````markdown
 # Claims ledger
 
-CLM-0001 checks one parameter value and declares scope: point; computation.scope-declared must NOT report it. CLM-0002 is an ordinary range claim and must also not be reported. CLM-0003 declares scope: point while its Quantifiers prose says otherwise; Quantifiers is never read, so it is not reported either.
+CLM-0001 checks one parameter value and declares scope: point; computation.scope-declared must NOT report it. CLM-0002 is an ordinary range claim and must also not be reported. CLM-0003 declares scope: point while its Quantifiers prose says otherwise; Quantifiers is never read, so it is not reported either. CLM-0004 is a negative control for the contradiction check: it uses words that look like range language (`all`, `exhaustive`, `10^-9`) but none of them is a contradiction, so it must not be reported.
 
 ## CLM-0001 — Certified bound at one parameter value
 
@@ -216,6 +285,22 @@ CLM-0001 checks one parameter value and declares scope: point; computation.scope
 - **Equivalences:** none
 - **Evidence:**
   - computational — scope: point; certified interval arithmetic at s0 = 1/2, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0004 — Declared point, no contradiction (negative control)
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; all arithmetic is exact rational, tolerance 10^-9, certified at s0 = 1/2, `computations/exhaustive_all.py`
 - **Formal:** none
 - **History:**
   - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
@@ -282,7 +367,7 @@ Every claim here is a point in fact and says so in prose. None declares a struct
 ````markdown
 # Claims ledger
 
-Each claim attempts a structured scope and gets it wrong in one way. computation.scope-declared must report every one. None may be treated as a declared point scope.
+Each claim attempts a structured scope and gets it wrong in one way, or (CLM-0022, CLM-0023) does not attempt the key at all. computation.scope-declared must report every one, with one line each. None may be treated as a declared point scope.
 
 ## CLM-0020 — Point declared, arithmetic not stated
 
@@ -348,7 +433,7 @@ Each claim attempts a structured scope and gets it wrong in one way. computation
 - **History:**
   - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
 
-## CLM-0024 — Scope value of a kind that is not a point
+## CLM-0024 — Scope value that is not a point, with range wording present (no fallback)
 
 - **Status:** COMPUTATIONAL_VERIFICATION
 - **Statement:** B(s0) < 1 at s0 = 1/2.
@@ -359,7 +444,7 @@ Each claim attempts a structured scope and gets it wrong in one way. computation
 - **Obligations:** none
 - **Equivalences:** none
 - **Evidence:**
-  - computational — scope: range; certified interval arithmetic at s0 = 1/2, `computations/check.py`
+  - computational — scope: range; exhaustive up to 10^9, exact integer arithmetic, `computations/check.py`
 - **Formal:** none
 - **History:**
   - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
@@ -379,39 +464,219 @@ Each claim attempts a structured scope and gets it wrong in one way. computation
 - **Formal:** none
 - **History:**
   - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0026 — Key begins with scope: but fails the grammar (words after the value)
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point at s0 = 1/2; certified interval arithmetic, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0027 — Malformed key with range wording present (no fallback)
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point exact interval, exhaustive up to 10^9, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0028 — Right key, wrong case of the value
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: Point; certified interval arithmetic at s0 = 1/2, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+````
+
+### `test/fixtures/scope-point-contradictory/artifacts/claims-ledger.md`
+
+````markdown
+# Claims ledger
+
+Each claim has a well-formed `scope: point;` key and also says something in the same evidence entry that contradicts it. computation.scope-declared must report each with exactly one scope-contradiction line and must not accept any as a declared point. Quantifiers, Statement and Domain are never read by the check.
+
+## CLM-0030 — Point and exhaustive
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; exhaustive check, exact rational arithmetic, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0031 — Point and for all
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; for all n, certified exact interval arithmetic, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0032 — Point and an explicit range
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; exact integer arithmetic, n <= 1000, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0033 — Point and universal
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; exact interval arithmetic, universally valid, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0034 — Contradiction and no arithmetic (one line, the contradiction)
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; exhaustive check at s0 = 1/2, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
+
+## CLM-0035 — Point and all over a domain word
+
+- **Status:** COMPUTATIONAL_VERIFICATION
+- **Statement:** B(s0) < 1 at s0 = 1/2.
+- **Domain:** s = s0 = 1/2
+- **Quantifiers:** single point
+- **Assumptions:** none
+- **Depends:** none
+- **Obligations:** none
+- **Equivalences:** none
+- **Evidence:**
+  - computational — scope: point; all values checked, exact rational arithmetic, `computations/check.py`
+- **Formal:** none
+- **History:**
+  - 2026-11-01 → COMPUTATIONAL_VERIFICATION (the computation ran, `computations/check.py`)
 ````
 
 The fixtures use block-style Markdown that the vendored ledger reader (`parseLedger`) accepts. They contain no YAML, so the vendored YAML reader's block-scalar rules do not come into play.
 
-## Validation record (scratch copy, not committed)
+## Validation record
 
-A copy of `scripts/`, `rules/`, `schemas/`, `standards/`, `templates/`, `test/` at 3475ec4 was made in the session scratchpad. The sketch above was applied as two small edits (about 10 lines) to the scratch `scripts/claims.mjs` and `scripts/standards.mjs`. The repository was not touched.
+Two parts, kept apart so the owner can see what was and was not exercised.
 
-| Fixture | Baseline (3475ec4) | With the sketch |
+**Part 1: exercised in the earlier draft (scratch copy, not committed).** A copy of `scripts/`, `rules/`, `schemas/`, `standards/`, `templates/`, `test/` at 3475ec4 was made in the session scratchpad and the first sketch (point key, unrecognised value) applied as two small edits to the scratch `scripts/claims.mjs` and `scripts/standards.mjs`. The repository was not touched.
+
+| Fixture | Baseline (3475ec4) | With the first sketch |
 | --- | --- | --- |
-| `scope-point-declared` | CLM-0001 `states no range`; CLM-0003 `states no range` (red) | no finding |
+| `scope-point-declared` (CLM-0001..0003) | CLM-0001 `states no range`; CLM-0003 `states no range` | no finding |
 | `scope-point-missing` | CLM-0010, CLM-0011, CLM-0012 `states no range` | same three, unchanged |
-| `scope-point-malformed` | six items, all `states no range` (wording differs for 0020/0021/0024/0025 with the sketch) | six items reported; none accepted |
+| `scope-point-malformed` (CLM-0020..0025) | six items, all `states no range` | six items reported; none accepted |
 
-Other probes: `validate` on `scope-point-declared` with the sketch gave `computation.scope-declared` `passed/evaluated`; on `scope-point-missing` `failed`, `error`, `required`, `INFERRED`. A claim-level `**Scope:** point` field on the baseline is ignored without any finding (so Option B needs a parser change too). The alternative C schema fragment was run through `scripts/jsonschema.mjs` with the results listed above. The full existing suite was not run against the scratch copy, because the copy omits files some tests read (`INSTRUCTIONS.md`); running it is part of the implementation step.
+Other probes then: `validate` on `scope-point-declared` gave `computation.scope-declared` `passed/evaluated`; on `scope-point-missing` `failed`, `error`, `required`, `INFERRED`. A claim-level `**Scope:** point` field on the baseline is ignored without any finding. The alternative C schema fragment was run through `scripts/jsonschema.mjs` with the results listed above. The full existing suite was not run against the scratch copy (it omits files some tests read, such as `INSTRUCTIONS.md`); running it is part of the implementation step.
 
-## Choices for owner review (fail-closed defaults)
+**Part 2: added by the 2026-11-17 revision.** Not run against the repository and not run in a scratch copy of the detector. What was checked is only the classification and the four contradiction patterns, by running the regular expressions given above over the evidence strings of the fixtures in a throwaway script (no repository code). It gave, for the key grammar and patterns as specified:
 
-None of these adds an acceptance criterion; each fills a gap the three criteria leave. The default is the stricter reading in every choice except 5, 6 and 7. In 5 (the point's value is not required) and 7 (no contradiction cross-check: `scope: point; exhaustive up to 10^9, exact` is accepted) the default is deliberately **looser** and is flagged as such; Choice 6 is a classification question, not a strictness one.
+| Evidence string (abbreviated) | Class and result |
+| --- | --- |
+| CLM-0001 `scope: point; certified interval arithmetic ...` | point, accepted |
+| CLM-0004 `scope: point; all arithmetic is exact rational, tolerance 10^-9, ... \`computations/exhaustive_all.py\`` | point, accepted (no false positive) |
+| CLM-0020 `scope: point; checked at ...` | point, `states no arithmetic` |
+| CLM-0021 `scope: points; ...` | unrecognised (`points`) |
+| CLM-0022 `Scope: point; ...` | none (ordinary path, `states no range`) |
+| CLM-0024 `scope: range; exhaustive up to 10^9, exact integer ...` | unrecognised (`range`), no fallback |
+| CLM-0025 `scope: ; ...` | unrecognised (empty) |
+| CLM-0026 `scope: point at s0 = 1/2; ...` | malformed |
+| CLM-0027 `scope: point exact interval, exhaustive up to 10^9, ...` | malformed, no fallback |
+| CLM-0028 `scope: Point; ...` | unrecognised (`Point`) |
+| CLM-0030 `exhaustive`; 0031 `for all`; 0032 `n <= 1`(000); 0033 `universally`; 0034 `exhaustive`; 0035 `all values` | contradiction, matching the quoted text |
 
-1. **Where the declaration lives.** Default: A, a leading `scope: point` key on the computational evidence item. Alternatives: B claim field, C policy. Fail-closed reason: the declaration cannot be wider than the evidence it excuses.
-2. **Strictness of the key.** Default: exact lower-case `scope:` first in the detail, value exactly `point`; case variants, later positions and unknown values do not count. Alternative: accept `Scope: Point` case-insensitively. Looser forms add forms to explain and test; a missed variant is reported, not silently passed.
-3. **Unrecognised value.** Default: reported as an error (`points`, `range`, empty), even when range text is also present. Alternative: ignore the key and fall back to the range test. Default chosen so a typo is not silently rescued by an unrelated word like `all`.
-4. **Arithmetic under a point.** Default: still required. Alternative: a point declaration also waives the arithmetic test. R1 asks for the arithmetic regardless of scope.
-5. **The point's value.** Default: not required and not checked (the criteria say only that a declared point is valid). Alternative: require `scope: point at <value>` and fail without it. That would add a requirement not in C1.
-6. **Rule edit versus new rule, and version.** Default: modify `computation.scope-declared` in place, no new rule id, `required` and `error` unchanged, `introducedIn` stays 1.0.0. **The version bump is UNDECIDED and owner-held; no `VERSION` change is made here.** `CHANGELOG.md` lines 7-8 say "removing, weakening, or reclassifying any rule is MAJOR", and accepting a new form on a `required` rule arguably weakens it, so MAJOR, MINOR and no bump are all live readings. Alternative: a separate rule; rejected here because it would make a point claim pass one rule and need another, which is the duplication the standards avoid.
-7. **Contradiction check.** Default: no cross-check. `scope: point` is accepted even if the evidence text elsewhere says `exhaustive` or `all n`, and even if `Quantifiers` says universal (test C2.4). Reading free text to overrule the declaration would be inferring from it, which C2 forbids in spirit. Alternative: a separate warning when the detail also states a range. Recorded because it can hide a claim that is mislabelled as a point.
-8. **Mutation guard C2.5.** Default: include it in `scripts/mutation-check.mjs` targets so a future edit that reads `Quantifiers` is caught mechanically. Alternative: behavioural pins only (C2.1 to C2.3).
-9. **Fixtures with a policy.** Default: no policy file (minimal). Alternative: add a `project-policy.yml` per fixture so `validate` returns a verdict (`NON_COMPLIANT`) rather than `NOT_EVALUATED`; it adds three policy files to maintain.
-10. **What "refusal" means.** Default: the existing meaning, a rule-level `failed` / `error` finding that prevents a compliant verdict. Alternative: also surface a `BLOCKED` verdict, which would be a new behaviour and is not proposed.
-11. **Evidence-line wording.** Default: existing strings unchanged; only the new unrecognised-scope line is added; the new form is advertised in `remediation`. Alternative: append `(a single point is declared with scope: point)` to `states no range`, which edits a string the RH adoption record quotes.
-12. **Near-miss key.** Default: a `scope:` key that does not match the grammar (e.g. `scope: point at s0 = 1/2;`) falls to the ordinary `states no range` line, with the fix explained in `remediation`. Alternative: report a dedicated line when the detail starts with `scope:` but does not match, which is clearer but adds a message form.
+The pre-existing items (CLM-0001..0003, 0010..0012, 0020..0025) keep the fixture text they had in the earlier draft except CLM-0024, whose evidence now carries range wording. The detector change, the parser change, the messages, the exit and status effects, the mutation guard and every test in this record are **unexercised design**. Before freeze the reviewer should ask for Part 2 to be exercised in a scratch copy, as Part 1 was; this record does not claim it has been.
+
+## Owner decisions (2026-11-17)
+
+All twelve choices were decided by the owner on 2026-11-17. They are recorded here as decisions, not defaults awaiting a yes. They add no acceptance criterion. The record remains a draft: it awaits a fresh review of this revision and then the owner's freeze.
+
+| # | Decision | Where specified |
+| --- | --- | --- |
+| 1 | The declaration is a leading lower-case `scope: point;` key on the computational evidence item (option A; claim field B and policy C rejected). | Representation, alternatives |
+| 2 | Exact spelling, case, position and value are required. `Scope:`, later positions, `Point`, and other values do not count. | Grammar |
+| 3 | An unknown or empty value is an error. There is no fallback to unrelated range wording elsewhere in the detail. | Classification table, C3.4 |
+| 4 | Arithmetic remains required under a point. | Table, C1.4 |
+| 5 | The point's own value is not a new required field and is not checked. | Table |
+| 6 | Modify `computation.scope-declared` in place: no new rule id, `required`, `error` and `introducedIn` unchanged. The eventual behavioural release is classified MAJOR (4.0.0). No `VERSION` change, tag or release action now; the CHANGELOG Unreleased entry records the classification only. | Schema and template fragments (4), C3.6 |
+| 7 | The proposed "no contradiction check" is **rejected**. A structured point declaration may control scope, but explicit contradictory language in the same evidence item is not silently accepted: a `scope-contradiction` finding for clear range or universal claims (`exhaustive`, `all`, an explicit range, universal quantification). This is consistency checking, not inference of point scope from `Quantifiers`. | Contradiction check, Report wording, C7 |
+| 8 | A mutation guard fails the suite if `Quantifiers` begins supplying point scope. | C2.5 and "Mutation guard" |
+| 9 | Fixtures stay minimal, with no policy file. | Fixtures |
+| 10 | The existing `failed` / `error` refusal behaviour is preserved. `BLOCKED` is not introduced. | Contradiction check (consequence), C3.7 |
+| 11 | Existing evidence strings are preserved; the new scope-specific messages are added. | Report wording |
+| 12 | A detail beginning with `scope:` that fails the grammar gets a dedicated `scope-malformed` message and does not collapse into `states no range`. | Classification table, Report wording, C3.5 |
+
+Residual points the reviewer may want to confirm, none of which changes a decision above:
+
+- Choice 2 means `Scope: point;` (wrong case) still falls to the ordinary `states no range` line, because the owner's rule for the dedicated message is strings beginning with the exact `scope:`. An author who mis-cases the key sees the older, less helpful line; the remediation text covers it.
+- The contradiction check scans only the evidence item's own detail. A point declaration next to a universally quantified claim (as in CLM-0003) is accepted by this rule, by design and by C2.
+- Choice 6 records the owner's MAJOR (4.0.0) classification as stated; this record does not argue it and takes no release action.
 
 ## Delivery rules once frozen
 
-Red-first tests (above), then fixtures, then the detector and parser change, then the standards, template, catalog and assurance-report updates, then a CHANGELOG entry under Unreleased. No `VERSION` change, tag or release. #55 to #57, #60 and #61 stay deferred; nothing here implements them.
+Freeze requires a fresh review of this revision first. Then: red-first tests (above, those labelled RED-FIRST failing on the baseline, PASS-TODAY pins committed alongside), then fixtures, then the detector and parser change, then the mutation-check entry, then the standards, template, catalog and assurance-report updates, then a CHANGELOG entry under Unreleased that records the MAJOR (4.0.0) classification. No `VERSION` change, tag or release. #55 to #57, #60 and #61 stay deferred; nothing here implements them.

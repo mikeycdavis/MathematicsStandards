@@ -85,6 +85,10 @@ export const SURFACES = new Set([
   // The attempt records, `artifacts/research-attempts/<id>/attempt.md` (FE-28). Observed-empty when
   // the project keeps none, which is the honest answer and reports the rule not-evaluated.
   "research-attempts",
+  // FE-61. The policy's `adopterGates` records. Resolves empty for every input, on purpose: an
+  // adopter-asserted record is not framework evidence, so no gate gives the rule a subject. The
+  // records appear in the surface `reason` and in `audit`.
+  "adopter-gates",
   "repository-paths",
   // The one surface the project names rather than the framework discovers. Its resolution is
   // therefore three-valued in a way the others are not: nothing declared is observed-empty, a
@@ -220,6 +224,8 @@ export const RULE_SURFACES = new Map([
 
   // Evidence.
   ["evidence.applicability-declared", { subject: P, surfaces: ["project-policy"] }],
+  // FE-61. Credit-inert: the surface is always resolved-empty (design/fe61-adopter-verification-gates.md).
+  ["evidence.adopter-gates-recorded", { subject: P, surfaces: ["adopter-gates"] }],
   ["evidence.type-vocabulary", { subject: P, surfaces: ["claims-ledger"] }],
   ["evidence.artifact-linked", { subject: P, surfaces: ["claims-ledger", "cited-artifacts"] }],
   // FE-44. `requires` is load-bearing and is the whole of how parser incapability stays the
@@ -272,6 +278,7 @@ export const SURFACE_LABELS = {
   "proof-sources": "proof-assistant sources",
   "open-problems": "open-problem records",
   "research-attempts": "research-attempt records",
+  "adopter-gates": "adopter-run gate references",
   "repository-paths": "repository paths",
   "declared-failed-routes": "declared record of abandoned routes",
   "project-policy": "policy declarations",

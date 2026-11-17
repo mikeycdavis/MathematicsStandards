@@ -67,6 +67,7 @@ export const EVALUATED_RULES = [
   "lifecycle.stopping-criteria",
   "lifecycle.attempt-gates-valid",
   "evidence.applicability-declared",
+  "evidence.adopter-gates-recorded",
   "evidence.type-vocabulary",
   "evidence.artifact-linked",
   "evidence.locator-fragment-resolves",

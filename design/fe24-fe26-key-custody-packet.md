@@ -72,7 +72,7 @@ L2 for local verification if the owner is willing to run a second Windows accoun
 - Agent edits the config (adds its own public key): this is the central attack on the whole design. Mitigation is the write barrier chosen above; detection is a recorded hash of the config (section 8 asks the owner to keep one outside the agent's reach and compare it).
 - Local and CI configs drift: CI trusts a revoked key or rejects a new one. Mitigation: one source of truth, copied, with the recorded hash compared after every copy.
 - Config deleted or unreadable: every human-review attestation reports `no-trust-config` and does not discharge (fail closed, specified).
-- Expiry (`notAfter`) passes unnoticed: signatures begin failing as `key-expired`. Mitigation: calendar reminder owned by the owner, set before adoption.
+- Expiry (`notAfter`) passes unnoticed: signatures begin failing as `key-expired`. Mitigation: calendar reminder owned by Michael Davis (decision 8), set before adoption.
 
 ## 2. Private-key generation and storage
 
@@ -131,7 +131,7 @@ Important: the verifier trusts whichever config it is pointed at. An agent runni
 
 The owner signs on the custody machine (K3) after reviewing the attestation themselves (section 6). An agent may PREPARE the attestation and the payload text; it must never receive the passphrase, the key, or a signing capability (including a signing service reachable from the agent environment, a long-running ssh-agent or similar). The payload to sign is rebuilt on the signing machine from the attestation content, not accepted from the agent's description of it.
 
-### 3.4 Honest residual limit
+### 3.4 Honest residual limit (DECIDED 2026-11-17, decision 10: accepted as stated)
 
 A valid signature proves that the holder of a trusted private key approved this exact content. It does not prove the signer is human, nor that they read the attestation. If the key is ever usable by an agent, an agent can produce a valid signature, and decision (d) is then not enforced. The framework cannot verify custody. Three further residuals: (1) a human who signs without reviewing is out of scope; (2) an agent that convinces the owner to sign a misleading attestation is not stopped by any signature; (3) the repository's own history shows nothing about where the key lives. The report wording specified in the typed-warrant record ("signed by <name>", and "full-human assurance" only for `verified-signature`) must therefore be read as "a trusted key signed", with custody an owner-asserted fact recorded in the adoption checklist.
 
@@ -190,7 +190,7 @@ Revoked key: all its signatures invalid regardless of date. Revoked confirmation
 ### 5.2 Planned rotation, step by step (owner actions; nothing here is run before approval)
 
 1. On the custody machine, generate the new key (only after its own dated owner statement in the form of 8.2 item 11, naming this key; the original item 11 does not cover it unless it explicitly names rotation keys) and compute its public key and key identifier there; never on an agent machine.
-2. Add the new signer entry to the trust config copy on the custody side, with `notBefore` set to the activation date and a `notAfter` the owner chooses (recommended in 5.4).
+2. Add the new signer entry to the trust config copy on the custody side, with `notBefore` set to the activation date and a `notAfter` 12 months after `notBefore` (decided in 5.4).
 3. Overlap: both signers trusted. Re-sign each discharged attestation with the new key (workflow in section 6).
 4. Move the updated config to the authoritative locations (local custody path, CI secret), and compare the recorded hash.
 5. Run an owner-controlled verification and confirm discharges still hold.
@@ -207,7 +207,7 @@ Revoked key: all its signatures invalid regardless of date. Revoked confirmation
 
 - W1: short windows (for example 12 months), forcing periodic rotation and re-signing; limits blast radius, costs a recurring owner task. **DECIDED 2026-11-17: W1, 12 months; Michael Davis owns reminders at 60, 30 and 7 days before expiry.**
 - W2: long windows (multiple years); less work, longer exposure after an unnoticed compromise.
-- Recommended: W1, 12 months, with the reminder in 1.4. This is a recommendation only; the owner chooses.
+- Original recommendation was W1, 12 months, with the reminder in 1.4; this is now the decided option (see the decided line above).
 
 ### 5.5 One key or one key per repository (DECIDED 2026-11-17: one key per repository)
 
@@ -290,7 +290,7 @@ T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred onl
 Approved as written, including notification: affected adopters are notified whenever a published release relied on a compromised key. The original recommendation text follows.
 
 
-Adopt the table and steps as written; decide in advance who is told (the owner alone, or adopters, if a published release relied on a compromised key). The framework cannot notify anyone.
+Adopt the table and steps as written; decided: affected adopters are notified whenever a published release relied on a compromised key. The framework cannot notify anyone.
 
 ### 7.4 Failure modes
 
@@ -342,12 +342,12 @@ The table shows the original recommendations. The owner's recorded decisions of 
 
 | Topic | Recommendation |
 |---|---|
-| Config location | L2 (separate account) locally, L4 for CI; L1 with ACL only if no second account |
+| Config location | L2 (separate account) locally, L4 for CI (decided) |
 | Repo binding | B1 plus B2 as an accident guard (B2 needs its own design approval) |
 | Key storage | K3 offline machine; K1 only after raw-Ed25519 capability shown |
 | Agent boundary | machine separation plus separate-account config; deny rules as defence in depth; owner or CI result authoritative |
 | Backup | R3 cold spare |
-| Validity and scope | 12-month windows (W1); one key across repositories only with strict per-repository configs |
-| Signing tool | T1 or T2 outside the repository; no framework signer |
+| Validity and scope | 12-month windows (W1); one key per repository (decided) |
+| Signing tool | T1 outside the repository (decided); no framework signer |
 | Loss/compromise | section 7 as written |
 | Approvals | the eleven items in 8.2: items 1 to 3 and 5 to 10 decided 2026-11-17, item 4 undecided, item 11 withheld; no key before item 11 |

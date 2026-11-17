@@ -1,7 +1,7 @@
 # FE-24 / FE-26 design record: typed evidence contributions and reviewer warrants
 
-**Status: DRAFT, awaiting owner freeze. The owner has NOT frozen this record; PR #119 stays a draft.** Revised 2026-11-16 to apply the owner's binding decisions below. Nothing here is implemented. The pull request that carries this record changes no schema, rule, fixture, VERSION or CHANGELOG file; every schema fragment, fixture and test below is proposed text.
-**IMPLEMENTATION OF #55 AND #57 IS BLOCKED** until the owner chooses a human-confirmation mechanism; see "Known gap: a self-declared `human-review`" and `design/fe24-fe26-human-identity-packet.md`.
+**Status: design-complete pending exact-head review; implementation not begun and blocked until the signature design is complete and the real Lean-data packet exists. PR #119 stays a draft.** Revised 2026-11-16 to apply the owner's binding decisions below, including the signed-human-confirmation decision. Nothing here is implemented. The pull request that carries this record changes no schema, rule, fixture, VERSION or CHANGELOG file, generates no key and defines no signing ceremony; every schema fragment, fixture and test below is proposed text.
+**IMPLEMENTATION OF #55 AND #57 IS BLOCKED** until the signature design in "Signed human confirmation" is reviewed complete, the owner adopts external key custody (if it is not adopted, #55 and #57 stay blocked), and the real Lean-data packet for #56 exists (see `design/fe25-split-subject-applicability.md`). The mechanism decision is recorded in `design/fe24-fe26-human-identity-packet.md`: Option A (signature) adopted for discharge, Option B (owner confirmation) provenance only.
 **Authority:** the owner's finalized criteria for #55 (C0 to C3) and #57 (C0 to C4), `finalized-criteria-2026-11-16.md`, the four original binding decisions (a) to (d), and the owner's revision decisions. This record adds no acceptance criterion.
 **Evidence base:** the gap-check reports for #55, #56 and #57 and the live repository at main 14562f6. #55 (typed evidence contributions) and #57 (reviewer warrants) are designed jointly because the discharge rule needs both: a contribution has a type, an attestation has a warrant, and what discharges a manual rule is a statement about warrants.
 
@@ -25,16 +25,121 @@ Revision decisions (2026-11-16), all applied below:
 - Requiring `reviewer.kind` is a BREAKING change, classified for 4.0.0 (a compatibility classification only; no VERSION, tag or release action). The placeholder 3.2.0 is withdrawn.
 - Envelope `schemaVersion` advances to `"3.0"`: new dispositions and a changed verdict for legacy attestations are not safely additive.
 - Contributions are keyed by type. A `judgement` contribution is rejected under the mechanical and tooling kinds. A rejection is effective whatever the kind. Every manual-review rule requires human judgement. One attestation per rule in the first version. Independence stays structured metadata. Machine-established contributions stay explicitly author-asserted unless re-run. A contribution of unknown currency may be displayed and credited as evidence but cannot discharge a rule; a stale contribution receives no credit.
-- A self-declared `human-review` cannot establish that an agent did not author the attestation. This design does NOT claim to enforce decision (d)'s first sentence until a verifiable human-confirmation mechanism is chosen.
+- Human confirmation (owner decision, 2026-11-16): Option A adopted for discharge, Option B as provenance only. A `human-review` attestation discharges only with a valid Ed25519 signature from an externally trusted signer; see "Signed human confirmation". Legacy and unsigned declarations stay valid evidence with unknown or unconfirmed warrant. An owner-confirmation event is never called full-human assurance.
+- A rejection with incomplete split coverage still fails and the result shows BOTH (decided; fe25 T7). `nonExemptible` prohibits exceptions and waivers, not evidence-bearing attestations (decided; section 9).
 
-## Known gap: a self-declared `human-review`
+## Signed human confirmation (owner decision 2026-11-16)
 
-`reviewer.kind: human-review` is a string the attestation's author writes. Nothing in this design verifies it. An AI agent can write `kind: human-review`, and `reviewedBy` is free text. Consequently:
+**Decision.** A `human-review` attestation reaches full-human assurance only with a valid Ed25519 signature from an externally trusted signer. Verification uses the built-in `node:crypto`; no dependency is added. The trust anchor comes from owner-controlled configuration OUTSIDE the repository. A missing, invalid, revoked or untrusted signature fails closed and cannot discharge. If external key custody is not adopted by the owner, #55 and #57 stay blocked.
 
-- **Decision (d), "agent-authored attestations never get full-human assurance", is NOT enforced by this design.** It is enforced only for attestations that honestly declare a non-human kind. For an agent-authored attestation that declares `human-review`, the discharge path gives `assurance: "full"` exactly as today.
-- A configurable denylist of agent-looking strings in `reviewedBy` is not a remedy: it is a string match on a self-declared field, defeated by renaming, and it would make the framework appear to enforce what it cannot.
-- The design therefore treats the warrant as DECLARED, and says so wherever it reports one: the human heading carries the word `declared`, and the JSON carries a `warrantBasis: "declared"` field beside `warrant` (see section 5). This wording is the honest state of the design, not a way to meet (d).
-- Meeting (d) requires a mechanism that does not rest on the attestation's own say-so. Two candidates are compared in `design/fe24-fe26-human-identity-packet.md`. The choice is the owner's, and #55 and #57 implementation stays blocked until it is made.
+**What this does and does not establish.** A valid signature proves that the holder of a trusted private key approved exactly this attestation content for this repository, rule, kind and date. It does not prove that the signer is human: an agent that can use the private key can sign. Decision (d), "agent-authored attestations never get full-human assurance", is therefore enforced to the extent the private key is held outside any agent's reach, which the framework cannot verify. This is the stated residual limit. A string denylist on `reviewedBy` is not part of the design: it would be a match on a self-declared field.
+
+An owner-confirmation event may be recorded as auditable provenance, but without a trusted signature it is non-discharging and is never called full-human assurance.
+
+### Signed payload and canonicalization
+
+The signature is over the UTF-8 bytes of this text, LF line endings, one `name: value` line each, in this exact order, ending with a final LF:
+
+```
+mathstd-attestation-signature/1
+repository: <repository identity>
+rule: <rule id>
+kind: <reviewer.kind>
+digest: <attestation content digest>
+reviewed: <reviewedAt, YYYY-MM-DD>
+confirmation: <confirmation identifier>
+```
+
+The first line is a domain-separation tag. The verifier BUILDS this text itself; none of its values is taken on trust from the signature:
+
+- `repository` is the `repository` value of the external trust configuration (not anything in the repository);
+- `rule` is the key of the attestation in the `attestations` map;
+- `kind` is the attestation's own `reviewer.kind`;
+- `digest` is computed by the framework from the attestation as read (below);
+- `reviewed` is the attestation's `reviewedAt`;
+- `confirmation` is `signature.confirmation`.
+
+Any of these differing from what the signer signed makes the signature fail, so a signature cannot be moved to another rule, repository, kind, date or content.
+
+**Attestation content digest.** SHA-256, lower-case hex, the full 64 characters (not the 32-character truncation used by `reviewedAgainst`). Input: take every field of the attestation EXCEPT `signature` and `ownerConfirmation`, flatten each scalar to a path (`reviewer.kind`, `reviewedAgainst.paths[0]`, `contributions.machineEstablished[0].tool`, with array indices in order), emit one line per scalar as `<path>` TAB `<JSON.stringify(value)>` LF, sort the lines by path bytewise, and hash the UTF-8 bytes of the joined text. YAML key order, quoting and comments do not affect it. All scalars are strings, as the vendored reader returns them. Because `reviewer`, `contributions`, `reviewedAgainst` (including its own `digest`, `revision` and `portions`) and `evidence` are inside the digest, editing any of them invalidates the signature.
+
+A golden test fixes the exact bytes of the payload and the digest for one attestation, so an accidental change of canonicalization fails loudly.
+
+### Signature field shape
+
+`attestations.<rule>.signature`:
+
+```yaml
+signature:
+  algorithm: ed25519
+  keyId: <64 hex>            # SHA-256 of the raw 32-byte public key
+  confirmation: <identifier>  # 8 to 64 characters of A-Z a-z 0-9 . _ -
+  value: <base64>            # the 64-byte Ed25519 signature, 88 characters with padding
+```
+
+All four fields are required; no other key is allowed. `confirmation` is an identifier the signer chooses, unique per signing act, so that one confirmation can be revoked without revoking a key.
+
+### External trust configuration
+
+- **Supplied by:** the environment variable `MATHSTD_TRUST_CONFIG`, holding the path of a JSON file, or the flag `--trust-config <path>` on the command. The flag wins.
+- **Must be outside the repository:** the resolved real path of the file must not lie inside the repository root being evaluated. A trust configuration found inside the repository is IGNORED and reported as `trust.config-inside-repository`; every signed attestation then reports unconfirmed. Without this rule an agent could add its own key to a file in the working tree.
+- **Format** (JSON, `version` 1):
+
+```json
+{
+  "version": 1,
+  "repository": "github.com/mikeycdavis/MathematicsStandards",
+  "signers": [
+    {
+      "keyId": "<64 hex: sha256 of the raw public key>",
+      "publicKey": "<base64 of the 32 raw bytes>",
+      "name": "<display name>",
+      "notBefore": "YYYY-MM-DD",
+      "notAfter": "YYYY-MM-DD"
+    }
+  ],
+  "revokedKeys": [ { "keyId": "<64 hex>", "revokedAt": "YYYY-MM-DD", "reason": "<text>" } ],
+  "revokedConfirmations": [ { "confirmation": "<identifier>", "revokedAt": "YYYY-MM-DD", "reason": "<text>" } ]
+}
+```
+
+- **Key handling:** the verifier recomputes the SHA-256 of `publicKey` and requires it to equal `keyId`; a mismatch makes that signer entry invalid (`trust.key-fingerprint-mismatch`). It builds a `node:crypto` public key object from the 32 raw bytes (the fixed Ed25519 SPKI prefix followed by the key) and verifies with `crypto.verify(null, payload, key, signature)`. The exact call is fixed at implementation time and checked by a test.
+- The repository never holds a private key or a trust anchor. This design generates no key, and defines no signing ceremony.
+
+### Revocation and key rotation
+
+- **Revoked key:** every signature by a key listed in `revokedKeys` is invalid, whatever its date. The signed `reviewed` date is the signer's own assertion, so it cannot be used to honour signatures made before revocation.
+- **Revoked confirmation:** a signature whose `confirmation` is listed is invalid; the key stays trusted.
+- **Validity window:** a signer is trusted only while the verification date (today) is within `notBefore` to `notAfter`. An expired key makes its signatures fail until re-signed under a current key.
+- **Rotation:** the owner adds the new signer, overlaps the windows, re-signs attestations, then removes or revokes the old key. A signature by a key absent from the configuration is `untrusted-key`.
+- Revocation and rotation are changes to the external configuration and need no change to the repository.
+
+### Offline and CI behaviour
+
+Verification is entirely local: a file read, a SHA-256 and an Ed25519 verification. It never uses the network. In CI the trust configuration is supplied as a secret file mounted outside the checkout and named by `MATHSTD_TRUST_CONFIG`. When no configuration is supplied, nothing errors: every human-review attestation reports `no-trust-config` and does not discharge, and the report says so once.
+
+### Dispositions and report wording
+
+A discharge needs the conditions in section 4 and a valid signature. Signature outcomes (one per attestation, shown as `signature` in the result):
+
+| Outcome | Meaning |
+|---|---|
+| `verified` | payload verified under a trusted, current, unrevoked key |
+| `missing` | no `signature` field |
+| `malformed` | the field fails its shape, or the key id does not match the configured key |
+| `invalid` | the signature does not verify over the payload the verifier built |
+| `untrusted-key` | the key is not in the configuration |
+| `revoked-key`, `revoked-confirmation` | listed as revoked |
+| `key-expired` | outside the signer's window |
+| `no-trust-config` | no configuration supplied |
+| `trust-config-inside-repository` | configuration ignored |
+
+- `warrantBasis` is `verified-signature` only when the outcome is `verified` and the kind is `human-review`; `declared` when a `reviewer.kind` is present without a verified signature; `none` for a legacy attestation.
+- An approved `human-review` attestation without a `verified` signature has `disposition: "attested-unconfirmed"`, status `skipped`, `notEvaluatedBecause: "human-signature-unverified"`, with the signature outcome listed. It is not a pass and not full assurance. Legacy attestations keep `attested-unknown-warrant`.
+- A rejected attestation fails regardless of signature: a rejection needs no confirmation, because the framework never relaxes on a rejection.
+- Human text: "Attested (human review, signed by <name>):" lists only discharged rules. "Unconfirmed (n):" lists `attested-unconfirmed` rules with the outcome, for example "declared human-review; signature missing; not credited as full-human assurance". The word "full-human assurance" appears only for `verified-signature`.
+- An attestation of another kind may carry a signature as provenance; it does not change discharge.
+- **Owner confirmation as provenance:** an optional `ownerConfirmation` object (`by`, `at`, optional `reference`) records that the owner confirmed the attestation. It is unsigned, outside the digest, and non-discharging. It is displayed as "owner confirmation recorded, unsigned; not full-human assurance". It never changes a disposition.
 
 ## What exists today (read from the repository)
 
@@ -61,7 +166,7 @@ reviewer:
     basis: Reviewer did not write the proof.   # optional
 ```
 
-- `kind` is one of `human-review`, `agent-judgement`, `agent-mechanical-review`, `automated-tooling`. It is the DECLARED warrant: what sort of act the attestation says it records. It is not verified (see the known gap).
+- `kind` is one of `human-review`, `agent-judgement`, `agent-mechanical-review`, `automated-tooling`. It is the DECLARED warrant: what sort of act the attestation says it records. The declaration alone is not verified; for `human-review` the signature (see "Signed human confirmation") is what makes it count.
 - `reviewedBy` is kept, still required, and still says WHO or WHAT. `kind` says what sort. The two are not cross-checked.
 - `independence` is optional structured metadata and is never read to decide whether a review stands. Absent is reported as "independence: not recorded". An explicit `unknown` is reported as "independence: unknown (recorded)". The two render differently.
 
@@ -123,10 +228,13 @@ judgementWarrantsRequired(rule) -> ["human-review"]   // every manual-review rul
 The discharge check requires every warrant in the returned set to be present, and a unit test uses a stubbed two-member set to prove one warrant present does not discharge. A manual rule is discharged (pass, `disposition: "attested"`, full assurance) only when all hold:
 
 1. the attestation is `approved`;
-2. `reviewer.kind` is `human-review` AS DECLARED (not verified; see the known gap);
-3. it is fresh (not stale, not expired);
-4. it carries no `outstanding` contribution;
-5. no automated detector contradicts it (unchanged: an automated hit fails first).
+2. `reviewer.kind` is `human-review`;
+3. it carries a `signature` whose outcome is `verified` against the external trust configuration;
+4. it is fresh (not stale, not expired);
+5. it carries no `outstanding` contribution;
+6. no automated detector contradicts it (unchanged: an automated hit fails first).
+
+For a split-subject rule the applicability must also be complete (fe25).
 
 ### 5. Dispositions and reporting
 
@@ -134,7 +242,8 @@ Evaluation order: not attestable; contradicted by an automated hit; rejected; st
 
 | Situation | Status | Disposition | `notEvaluatedBecause` |
 |---|---|---|---|
-| Approved, fresh, declared `human-review`, no outstanding | pass | `attested` | none |
+| Approved, fresh, `human-review`, signature `verified`, no outstanding | pass | `attested` | none |
+| Approved, fresh, `human-review`, signature not `verified` | skipped | `attested-unconfirmed` | `human-signature-unverified` |
 | Approved, fresh, known kind other than `human-review` | skipped | `judgement-outstanding` | `human-judgement-outstanding` |
 | Approved, fresh, `human-review` with an outstanding contribution | skipped | `judgement-outstanding` | `human-judgement-outstanding` |
 | Approved, legacy (no `reviewer`) | skipped | `attested-unknown-warrant` | `unknown-warrant` |
@@ -142,14 +251,14 @@ Evaluation order: not attestable; contradicted by an automated hit; rejected; st
 | Stale or expired | skipped | unchanged | unchanged |
 
 - A `judgement-outstanding` result lists its credited components. Credit has no effect on status, score, or the three assurance counters.
-- Per-result JSON additions: `warrant` (the declared kind, or `"unknown"`), `warrantBasis` (`"declared"` whenever a `reviewer.kind` is present, `"none"` for a legacy attestation; a future verification mechanism would add a further value, so a consumer can never read `warrant` as verified), `attestation.reviewer`, and `contributions[]` with `type` one of `machine-established`, `judgement`, `outstanding`, plus `currency` for machine-established. `denominator` gains the informational counts `unknownWarrant` and `humanJudgementOutstanding`.
-- Human text: the single section is split. "Attested (human review, as declared by the attestation):" lists only discharged rules, and the wording `as declared` stays until a verification mechanism exists. "Judgement outstanding (n):" lists the second and third rows with credited components and the kind. "Unknown warrant (n):" lists legacy attestations: "attestation does not say what kind of reviewer made it; not credited as human review". `standards explain <rule>` prints the declared warrant, the independence statement, each contribution with type and currency, and what remains outstanding.
+- Per-result JSON additions: `warrant` (the declared kind, or `"unknown"`), `warrantBasis` (`"verified-signature"` for `human-review` with a verified signature, `"declared"` for a `reviewer.kind` without one, `"none"` for a legacy attestation, so a consumer can never read `warrant` as verified unless the basis says so), `signature` (the outcome from "Signed human confirmation"), `attestation.reviewer`, and `contributions[]` with `type` one of `machine-established`, `judgement`, `outstanding`, plus `currency` for machine-established. `denominator` gains the informational counts `unknownWarrant` and `humanJudgementOutstanding`.
+- Human text: the single section is split. "Attested (human review, signed by <name>):" lists only discharged rules. "Unconfirmed (n):" lists `attested-unconfirmed` rules with the signature outcome. "Judgement outstanding (n):" lists the second and third rows with credited components and the kind. "Unknown warrant (n):" lists legacy attestations: "attestation does not say what kind of reviewer made it; not credited as human review". `standards explain <rule>` prints the declared warrant, the independence statement, each contribution with type and currency, and what remains outstanding.
 - A rejection from any kind fails: a rejection is a finding, not a credit. Invariant behaviour is unchanged.
 - One attestation per rule in the first version; combining a human and an agent attestation for one rule is not supported.
 
 ### 6. Score and assurance effect
 
-None from credit. A discharged rule counts as manual-review as today. A `judgement-outstanding` or `unknown-warrant` rule is `skipped`, excluded from the score denominator unless blocked, and counted in `assurance.notEvaluated`; the three counters still sum. The informational counts make the exclusion visible. The score of a discharged rule still reflects only a declared warrant.
+None from credit. A discharged rule counts as manual-review as today. A `judgement-outstanding` or `unknown-warrant` rule is `skipped`, excluded from the score denominator unless blocked, and counted in `assurance.notEvaluated`; the three counters still sum. The informational counts make the exclusion visible. An `attested-unconfirmed` rule is skipped and counted in `assurance.notEvaluated` in the same way. A discharged rule reflects a verified signature, which proves key possession and not humanity (see the residual limit).
 
 ### 7. Envelope schema version
 
@@ -159,13 +268,14 @@ None from credit. A discharged rule counts as manual-review as today. A `judgeme
 
 - Add to each of the 14, in block style, `reviewer.kind: agent-judgement` and `reviewer.independence` with `status: not-independent` and a `basis` carrying the disclosure now in the YAML comment. `agent-judgement` is the accurate reading of "Claude Opus 5 (AI agent)" exercising judgement; the adopter may reclassify an item it can show was mechanical.
 - Effect, as expectation not measurement: the 12 approvals become `judgement-outstanding` (not-evaluated, out of the denominator); the 2 rejections stay failures with the warrant named. The verdict is expected to remain `BLOCKED_BY_INVARIANT`. The score falls by up to the 12 passes leaving the denominator; the exact figure must be re-measured against the RH repository, which is not in this repository, and is not computed here.
-- The 2 rejections staying failures, and `agent.refusal-on-invariant` being judged at all, depend on the engine judging attestations on invariant rules, which it does today. See "The nonExemptible contradiction" below.
+- The 2 rejections staying failures, and `agent.refusal-on-invariant` being judged at all, depend on the engine judging attestations on invariant rules, which it does today. See section 9 (decided).
 - Before the gate is reached the 14 are legacy and report `unknown warrant`; the migration is also how an adopter leaves that state.
-- Migration does not and cannot make any of the 14 a verified human review.
+- Migration does not and cannot make any of the 14 a verified human review, and with `agent-judgement` they need no signature.
+- Any adopter attestation that declares `human-review` without a signature becomes `attested-unconfirmed` (skipped, out of the denominator). The signature requirement for discharge is not version-gated; only the require-`reviewer.kind` check is gated at 4.0.0. To discharge, the owner signs the attestation under an externally held key; this design performs no signing and generates no key.
 
-### 9. The nonExemptible contradiction (implementer note)
+### 9. The nonExemptible contradiction (DECIDED)
 
-The policy schema's `attestations` description says an attestation never reaches a rule that is `forbidden` and `nonExemptible`, but `judgeAttestation` has no such check (its header attributes the protection to the automated failure surviving, which holds only where a detector exists). The RH migration above and the RH rejection cases depend on the engine's actual behaviour. The proposed resolution, correcting the schema description to match the engine, is stated once in `design/fe25-split-subject-applicability.md` ("The nonExemptible contradiction, resolved explicitly") and is owner-review choice 3 below. Neither this record's fixtures nor its tests depend on the choice, except that the RH-shaped rejection test names the engine behaviour it relies on.
+The policy schema's `attestations` description says an attestation never reaches a rule that is `forbidden` and `nonExemptible`, but `judgeAttestation` has no such check. Owner decision (2026-11-16): correct the schema description to match the engine. `nonExemptible` prohibits exceptions and waivers; it does not prohibit evidence-bearing attestations for manual-review rules. A rejection remains effective. An approval may discharge only when applicability is complete AND the required trusted signed human warrant is present. The exact proposed description text is in `design/fe25-split-subject-applicability.md` ("The nonExemptible contradiction, decided"). The RH migration and the RH rejection cases rely on this engine behaviour, and the fixtures and tests in both records are adjusted to it.
 
 ## Schema fragment (exact)
 
@@ -173,20 +283,22 @@ Applied to a scratch copy of `schemas/project-policy.schema.json` and exercised 
 
 ```json
 "reviewer": { "$ref": "#/$defs/reviewer" },
-"contributions": { "$ref": "#/$defs/contributions" }
+"contributions": { "$ref": "#/$defs/contributions" },
+"signature": { "$ref": "#/$defs/signature" },
+"ownerConfirmation": { "$ref": "#/$defs/ownerConfirmation" }
 ```
 
 In `$defs` add:
 
 ```json
 "reviewer": {
-  "description": "What kind of reviewer made this attestation (Standard 19 R6, FE-26). `kind` is the DECLARED warrant: it says what sort of act the attestation says it records, and the framework does not verify it. It is never inferred: an attestation with no `reviewer` is legacy and reports `unknown warrant`. `reviewedBy` still says WHO or WHAT; `kind` says what sort, and the framework does not check that the two agree.",
+  "description": "What kind of reviewer made this attestation (Standard 19 R6, FE-26). `kind` is the DECLARED warrant: it says what sort of act the attestation says it records. For `human-review` it counts only with a verified `signature`. It is never inferred: an attestation with no `reviewer` is legacy and reports `unknown warrant`. `reviewedBy` still says WHO or WHAT; `kind` says what sort, and the framework does not check that the two agree.",
   "type": "object",
   "required": ["kind"],
   "additionalProperties": false,
   "properties": {
     "kind": {
-      "description": "`human-review`: a person exercised mathematical judgement. `agent-judgement`: an AI agent exercised judgement. `agent-mechanical-review`: an AI agent carried out a check whose outcome its procedure fixes. `automated-tooling`: a program ran, with no agent in the loop. Only `human-review` can discharge a manual-review rule, as declared.",
+      "description": "`human-review`: a person exercised mathematical judgement. `agent-judgement`: an AI agent exercised judgement. `agent-mechanical-review`: an AI agent carried out a check whose outcome its procedure fixes. `automated-tooling`: a program ran, with no agent in the loop. Only `human-review` with a verified signature can discharge a manual-review rule.",
       "type": "string",
       "enum": ["human-review", "agent-judgement", "agent-mechanical-review", "automated-tooling"]
     },
@@ -238,6 +350,29 @@ In `$defs` add:
     "reference": { "type": "string", "minLength": 1 }
   }
 },
+"signature": {
+  "description": "Ed25519 signature over the payload the verifier builds from the external trust configuration, the attestation's rule id and kind, its content digest, `reviewedAt` and `confirmation`. Verified only against a trust configuration outside the repository. Absent, malformed, invalid, untrusted, revoked or unverifiable fails closed: the attestation is evidence and does not discharge.",
+  "type": "object",
+  "required": ["algorithm", "keyId", "confirmation", "value"],
+  "additionalProperties": false,
+  "properties": {
+    "algorithm": { "type": "string", "enum": ["ed25519"] },
+    "keyId": { "description": "SHA-256 of the raw 32-byte public key, lower-case hex.", "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "confirmation": { "description": "Identifier chosen by the signer for this signing act; revocable on its own.", "type": "string", "pattern": "^[A-Za-z0-9._-]{8,64}$" },
+    "value": { "description": "Base64 of the 64-byte signature, with padding.", "type": "string", "pattern": "^[A-Za-z0-9+/]{86}==$" }
+  }
+},
+"ownerConfirmation": {
+  "description": "Provenance only: records that the owner confirmed this attestation. Unsigned, outside the content digest and non-discharging. It never changes a disposition and is never called full-human assurance.",
+  "type": "object",
+  "required": ["by", "at"],
+  "additionalProperties": false,
+  "properties": {
+    "by": { "type": "string", "minLength": 1 },
+    "at": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "reference": { "type": "string", "minLength": 1 }
+  }
+},
 "outstandingComponent": {
   "description": "Judgement that is still required, and of what kind. The evaluator derives outstanding judgement itself whenever no human warrant is present; this records WHAT remains, for the person who has to supply it.",
   "type": "object",
@@ -254,7 +389,7 @@ In `$defs` add:
 
 ### Verification performed
 
-The fragment was applied to a scratch copy and run through `scripts/jsonschema.mjs` and `scripts/yaml.mjs`: an attestation with `reviewer.kind: agent-judgement`, `independence.status: unknown` and a `machineEstablished` contribution validated; `reviewer.kind: robot` was rejected with the four allowed values named; a top-level `contributions` key was rejected as an unknown property; the schema passes `assertSchemaSupported`. The semantic checks, evaluator behaviour and renderers do not exist and were not run.
+The fragment was applied to a scratch copy and run through `scripts/jsonschema.mjs` and `scripts/yaml.mjs`: an attestation with `reviewer.kind: agent-judgement`, `independence.status: unknown` and a `machineEstablished` contribution validated; `reviewer.kind: robot` was rejected with the four allowed values named; a top-level `contributions` key was rejected as an unknown property; the schema passes `assertSchemaSupported`. Re-run on 2026-11-16 with the new fragments: a well-formed `signature` and an `ownerConfirmation` validated; a 63-character `keyId`, a wrong-length base64 `value`, a 2-character `confirmation`, a non-`ed25519` algorithm and an extra `publicKey` key in the signature were each rejected at the named path, and an `ownerConfirmation` without `by` was rejected. No Ed25519 key was generated, so the `node:crypto` verification call itself was not exercised; it is fixed and tested at implementation. The semantic checks, evaluator behaviour and renderers do not exist and were not run.
 
 ## The #55 C3 mutation test
 
@@ -270,6 +405,13 @@ C3 requires that a mutation test fails if the credit-without-judgement rule is r
   - M6: non-human attestations are listed under the human-review heading.
   - M7: a stale machine contribution is credited.
   - M8: independence is made a prerequisite.
+  - M9: the signature check is skipped (a `human-review` attestation discharges unsigned).
+  - M10 to M15: the payload omits, in turn, the rule id, the repository identity, the kind, the digest, the reviewed date, the confirmation identifier.
+  - M16: a trust configuration inside the repository is accepted.
+  - M17: revocation (key or confirmation) is ignored.
+  - M18: the public key is taken from the signature or the attestation instead of the trust configuration.
+  - M19: an invalid or unverifiable signature fails open.
+  - M20: an `ownerConfirmation` is treated as a discharge.
 - **Control:** the unmutated tree passes the same gate, and the gate fails with a named message for each mutation rather than for an unrelated reason.
 - M2 and M3 are the removal of the credit-without-judgement rule; M5 is the conflation.
 
@@ -288,7 +430,7 @@ New file `test/typed-warrants.test.mjs` (planned). Each test is written to fail 
   - `judgement` under `agent-mechanical-review` or `automated-tooling` is rejected (semantic).
 - **C2** (machine components credited; no manual pass without every required judgement warrant):
   - a rule with a fresh machine contribution and no human warrant is not passed, and the contribution is listed as credited;
-  - the same rule with a declared `human-review` attestation passes;
+  - the same rule with a `human-review` attestation carrying a verified signature passes (the test generates its Ed25519 keypair in memory; no key is ever committed);
   - an `agent-judgement` attestation does not pass;
   - a stale machine contribution receives no credit; an unknown-currency one is displayed and credited as evidence and cannot discharge;
   - with a stubbed two-member `judgementWarrantsRequired`, one warrant present does not discharge, both do;
@@ -303,7 +445,7 @@ New file `test/typed-warrants.test.mjs` (planned). Each test is written to fail 
   - schema accepts each of the four kinds, rejects an unknown kind and an empty `reviewer`;
   - a policy with `standardVersion` at or above `4.0.0` and an attestation lacking `reviewer.kind` is invalid (exit 2); the same attestation below `4.0.0` is valid and legacy.
 - **C2** (independence optional, explicit `unknown`):
-  - independence absent, `independent`, `not-independent` and `unknown` all discharge identically for declared `human-review`;
+  - independence absent, `independent`, `not-independent` and `unknown` all discharge identically for a signed `human-review`;
   - absent renders "not recorded" and `unknown` renders "unknown (recorded)".
 - **C3** (legacy reports `unknown warrant`, never inferred human):
   - a legacy approved fixture reports `attested-unknown-warrant`, `warrant: "unknown"`, is absent from the human-review section, and no `human-review` warrant appears in the JSON;
@@ -318,18 +460,36 @@ New file `test/typed-warrants.test.mjs` (planned). Each test is written to fail 
 - Envelope `schemaVersion` is `"3.0"`; the new `denominator` keys are present.
 - `standards validate` runs the same semantic checks as `policy`.
 - Stale and expired take precedence over kind handling.
-- The warrant is labelled as declared in text, and every result with a `reviewer.kind` has `warrantBasis: "declared"` in JSON (legacy: `"none"`). Nothing in the test list asserts that an agent-authored `human-review` attestation is refused, because the design does not do that.
+- `warrantBasis` is `verified-signature` only for a verified `human-review`, `declared` otherwise with a kind, `none` for legacy.
+- **Signature (cross-cutting, each asserting a specific finding id or outcome, never only a nonzero exit):**
+  - a valid signature discharges; the result shows `signature: verified` and the signer name;
+  - a missing signature gives `attested-unconfirmed` with outcome `missing`;
+  - a tampered attestation field, and a signature moved to another rule, repository, kind, reviewed date or confirmation, each give outcome `invalid` and do not discharge;
+  - an untrusted key, a revoked key (including for a signature dated before revocation), a revoked confirmation (key still trusted), an expired key, and a key whose `publicKey` does not hash to its `keyId` (`trust.key-fingerprint-mismatch`) each do not discharge, with the named outcome;
+  - a trust configuration inside the repository is ignored (`trust.config-inside-repository`); with no configuration the outcome is `no-trust-config`, nothing errors and nothing discharges; the flag wins over the environment variable;
+  - a malformed signature (bad shape) is a schema error and outcome `malformed`;
+  - an unsigned `ownerConfirmation` does not discharge and the text never says full-human assurance;
+  - a rejection fails regardless of signature;
+  - an `agent-judgement` attestation with a valid signature does not discharge;
+  - a legacy unsigned attestation stays `attested-unknown-warrant`;
+  - canonicalization golden test: exact payload bytes and digest for one attestation; the digest excludes `signature` and `ownerConfirmation` and is independent of YAML key order, quoting and comments;
+  - `package.json` gains no dependency.
+- The signature mutations M9 to M20 gate on these tests. Nothing in the test list asserts that an agent is refused a signature, because the framework cannot know who holds the key.
 
 ## Owner decisions recorded in this revision
 
 Settled by the owner on 2026-11-16 and applied above: legacy valid but non-discharging; `reviewedBy` kept with a typed `reviewer` object; the requirement a BREAKING change gated at 4.0.0 (compatibility classification only); envelope `"3.0"`; contributions keyed by type; `judgement` contributions rejected under mechanical and tooling kinds; rejections effective whatever the kind; every manual-review rule requires human judgement; one attestation per rule in the first version; structured independence metadata; machine-established contributions author-asserted unless re-run; unknown-currency contributions credited as evidence and unable to discharge; stale contributions uncredited.
 
+Also settled on 2026-11-16 (second round): human confirmation by Option A (Ed25519 signature, external trust anchor) for discharge and Option B (owner confirmation) as provenance only; the nonExemptible contradiction resolved by correcting the schema description to match the engine; a rejection with incomplete split coverage still fails and shows both; envelope `"3.0"`. The `reviewedBy`/`kind` pair is not cross-checked, which the signature design makes moot.
+
 ## Choices for owner review
 
-The earlier list is reduced to what the owner has not decided. None of these is described as fail-closed unless it is.
+Decided items are removed. The owner's decision to adopt external key custody is a precondition, not a choice here: if it is not adopted, #55 and #57 stay blocked. Remaining details, each with a proposed default that fails closed:
 
-1. **BLOCKER: the human-confirmation mechanism.** Decision (d)'s "agent-authored attestations never get full-human assurance" is not enforced, because `human-review` is self-declared. The framework cannot establish that an agent did not author an attestation by reading the attestation. A string denylist is insufficient. The options, with threat model, costs and a recommendation marked for owner decision, are in `design/fe24-fe26-human-identity-packet.md`. Until the owner picks one, #55 and #57 implementation is blocked, and this design must not be described as meeting (d).
-2. **Migration default for the 14 RH attestations is `agent-judgement`.** This is fail-closed (it under-claims). The adopter may reclassify.
-3. **The nonExemptible contradiction** (section 9): correct the schema description to match the engine (proposed), or make the engine refuse attestations on invariants (changes existing verdicts). Stated in full in the split-subject record, choice 6.
-4. **The `reviewedBy` and `kind` pair is not cross-checked.** This is the lenient option and is subsumed by choice 1: no cross-check can be reliable on free text.
-5. **Ordering with #56:** the split-subject fixture S2 carries an attestation whose shape depends on which of #56 and #57 lands first.
+1. **Trust-config supply:** environment variable `MATHSTD_TRUST_CONFIG` and flag `--trust-config <path>`, flag wins.
+2. **Revocation scope:** a revoked key invalidates all its signatures regardless of date (fail closed; it means re-signing after a compromise).
+3. **Key window:** checked against the verification date, not the signed `reviewed` date.
+4. **Signature on non-human kinds** is permitted as provenance and never discharges.
+5. **Field name `ownerConfirmation`** for the unsigned provenance record.
+6. **Migration default for the 14 RH attestations is `agent-judgement`** (fail-closed: it under-claims). The adopter may reclassify.
+7. **Ordering with #56:** the split-subject fixture S2 carries an attestation whose shape depends on which of #56 and #57 lands first.

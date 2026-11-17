@@ -1,6 +1,6 @@
 # FE-25 Lean data packet: what the owner must supply
 
-**Status: DRAFT, awaiting owner input.** This packet specifies data. It contains none. Companion to `design/fe25-split-subject-applicability.md`.
+**Status: DRAFT, awaiting owner input. IMPLEMENTATION BLOCKER for #56 C2:** #56 C2 cannot be claimed until the owner supplies `F:\GitHub Evidence\MathematicsStandards\evidence-56\lean-data\lean-data.md` using the template below. The mechanism design may be frozen with the four-case fixture BLOCKED. No PvsNP or other data is invented or copied; stand-ins are mechanism-only. This packet specifies data. It contains none. Companion to `design/fe25-split-subject-applicability.md`.
 
 ## Why this exists
 

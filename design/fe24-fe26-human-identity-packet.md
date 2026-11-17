@@ -1,6 +1,15 @@
 # FE-24 / FE-26 human-confirmation packet: how a `human-review` is verified
 
-**Status: DRAFT, for owner decision.** Companion to `design/fe24-fe26-typed-evidence-and-warrants.md`. The owner has not chosen. #55 and #57 implementation remains BLOCKED until the owner picks. Nothing here is implemented.
+**Status: DECIDED by the owner on 2026-11-16; the design of the chosen mechanism is recorded in `design/fe24-fe26-typed-evidence-and-warrants.md`, section "Signed human confirmation". Option A is adopted for discharge. Option B is adopted as provenance only.** #55 and #57 implementation is not begun and stays blocked until that signature design is reviewed complete, external key custody is adopted (if it is not, #55 and #57 stay blocked), and the real Lean-data packet for #56 exists. No key is generated, nothing is released and no signing ceremony is defined here. Nothing is implemented.
+
+## Decision record (2026-11-16)
+
+- **A (signed) adopted for discharge.** A `human-review` attestation discharges only with a valid Ed25519 signature, verified with the built-in `node:crypto` (no dependency), against a trust anchor and fingerprint supplied from owner-controlled configuration outside the repository. The signature binds repository identity, rule id, reviewer kind, attestation content digest, reviewed date and confirmation identifier. A missing, invalid, revoked or untrusted signature fails closed. Legacy and unsigned declarations stay valid evidence with unknown or unconfirmed warrant.
+- **B (owner confirmation) adopted as provenance only.** An owner-confirmation event is recorded as non-discharging provenance (`ownerConfirmation`, unsigned, outside the digest) and is never called full-human assurance.
+- The Recommendation section below (B as the floor) is SUPERSEDED by this decision and is kept for the record. The residual limit stands and is stated in the design: a valid signature proves key possession, not humanity; decision (d) is enforced only to the extent the private key is held outside any agent's reach, which the framework cannot verify.
+- The canonicalization, signature field shape, trust-config location, format and supply, revocation, rotation, offline and CI behaviour, dispositions and wording, red-first tests, mutations and migration are specified in the typed-warrant record.
+
+The text below is the original comparison, unchanged except where marked superseded.
 
 ## The problem
 
@@ -73,9 +82,9 @@ Out of scope for both options: a human who knowingly rubber-stamps an attestatio
 
 Neither mechanism establishes that a human, as opposed to an agent, performed the review; each moves the question to something the agent is less able to do on its own (hold a key; write to a protected place). Both leave a residual risk the framework cannot remove, and the record should say so rather than claim (d) is met.
 
-## Recommendation, for owner decision
+## Recommendation, for owner decision (SUPERSEDED: A adopted for discharge, B provenance only)
 
-Marked as a recommendation only; the owner decides.
+Marked as a recommendation only; the owner decided differently on 2026-11-16 (see the decision record at the top).
 
 Adopt B as the floor: a confirmation record bound to the attestation digest, with the framework stating in its documentation and in the report that confirmations must live where an agent cannot write. A repository tool cannot determine who can write to a path, so the framework does not try. It uses one checkable proxy instead: the confirmation must be in a file separate from the policy file that holds the attestation (a different path), and the report prints "confirmation recorded; custody of the confirmation file is not verified by the framework". That wording is the honest limit; it does not claim independence. B fits the zero-dependency tooling, works offline, and costs a single-owner project one step per attestation. Leave A as a later, optional layer that signs the confirmation record, if an adopter needs a stronger custody guarantee.
 
@@ -83,4 +92,4 @@ This recommendation must not be read as closing (d) for the observed single-rese
 
 ## What happens next
 
-On the owner's choice, the typed-warrant record is revised to specify the chosen mechanism (schema, dispositions, tests, migration), and the implementation block on #55 and #57 lifts. Until then neither record may be described as meeting decision (d).
+The typed-warrant record now specifies the chosen mechanism. The implementation block on #55 and #57 lifts only when that design is reviewed complete, external key custody is adopted, and the Lean-data packet exists. Neither record may be described as meeting decision (d) beyond the residual limit stated above.

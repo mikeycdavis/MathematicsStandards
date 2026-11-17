@@ -1,6 +1,7 @@
 # FE-25 design record: split-subject applicability
 
-**Status: DRAFT, awaiting owner freeze. The owner has NOT frozen this record; PR #119 stays a draft.** Revised 2026-11-16 to apply the owner's binding decisions listed under "Owner decisions applied". Nothing here is implemented. No schema, rule, fixture, VERSION or CHANGELOG file is changed by the pull request that carries this record; every schema fragment and fixture below is proposed text.
+**Status: design-complete pending exact-head review; implementation not begun and blocked until the signature design (`design/fe24-fe26-typed-evidence-and-warrants.md`) is complete and the real Lean-data packet exists. PR #119 stays a draft.** Revised 2026-11-16 to apply the owner's binding decisions listed under "Owner decisions applied". Nothing here is implemented.
+**IMPLEMENTATION BLOCKER (#56 C2):** the mechanism design is frozen with the four-case fixture BLOCKED. #56 C2 cannot be claimed until the owner supplies `F:\GitHub Evidence\MathematicsStandards\evidence-56\lean-data\lean-data.md` using the template in `design/fe25-lean-data-packet.md`. No PvsNP or other data is invented or copied; stand-ins are mechanism-only. No schema, rule, fixture, VERSION or CHANGELOG file is changed by the pull request that carries this record; every schema fragment and fixture below is proposed text.
 **Authority:** the owner's finalized criteria for #56 (`finalized-criteria-2026-11-16.md`, C0 to C3), quoted in the criterion map; the semantic model and invariants in "Binding model", reproduced exactly; and the owner decisions below. This record adds no acceptance criterion.
 **Evidence base:** the gap-check report for #56 (`evidence-56/ac-gap-check/report.md`) and the live repository at main 14562f6.
 **Blocked item:** the approved C2 ("the four Lean cases are the initial fixture") is NOT satisfied by anything in this record. See "Lean fixture: BLOCKED" and `design/fe25-lean-data-packet.md`.
@@ -22,7 +23,9 @@ One issue, #56 (FE-25). The typed-evidence and warrant work (#55, #57) is a sepa
 - Semantic validation is shared across commands.
 - Serialization stays per rule.
 - An attestation binds to portions through `reviewedAgainst.portions`, which must be a subset of `appliesTo`.
-- The `nonExemptible` schema-versus-engine contradiction is resolved explicitly in this record, as an owner-review choice (choice 6), and no fixture depends on the resolution.
+- The `nonExemptible` schema-versus-engine contradiction is DECIDED (2026-11-16): the schema description is corrected to match the engine (see "The nonExemptible contradiction, decided").
+- A rejection with incomplete split coverage still fails the rule; an approval cannot discharge while any declared portion is unclassified; the result shows BOTH (2026-11-16, decided).
+- Human confirmation: an approval discharges only with a verified Ed25519 signature (`design/fe24-fe26-typed-evidence-and-warrants.md`, "Signed human confirmation").
 
 ## Binding model
 
@@ -75,7 +78,7 @@ Per rule, under the existing `applicability.<ruleId>` map. `mode: split-subject`
 
 `declaredSubject` lists the portions this rule's subject divides into, for this rule only. Coverage (invariant 4) is: every identifier in `declaredSubject` appears in exactly one of `appliesTo` or `structurallyImpossibleFor`.
 
-A limit, stated plainly: the project declares the universe, so coverage catches a portion that was listed and not classified, and cannot catch a portion the author never listed. That is inherent in a project-declared universe and is the price of the owner's per-rule decision (choice 3 names the alternative).
+A limit, stated plainly: the project declares the universe, so coverage catches a portion that was listed and not classified, and cannot catch a portion the author never listed. That is inherent in a project-declared universe and is the price of the owner's per-rule decision (choice 2 names the alternative).
 
 ### Schema fragment (exact)
 
@@ -181,7 +184,7 @@ For a rule with a split declaration:
 - every listed portion must be a member of `appliesTo`; a portion that is structurally impossible, or unknown, is invalid (`attestation.portion-not-evaluated`, exit 2);
 - `reviewedAgainst.portions` on an attestation for a rule with no split declaration is invalid (`attestation.portions-on-unsplit-rule`);
 - when the listed portions are a proper subset of `appliesTo`, an APPROVED attestation does not discharge: the rule is `skipped`, `notEvaluatedBecause: "portion-unattested"`, the remainder listed. When they equal `appliesTo`, the attestation is judged as today, and a pass covers exactly those portions;
-- a REJECTED attestation fails the rule whatever the coverage: a rejection on a rule with an unclassified portion, or with portions that are a proper subset of `appliesTo`, is `attested-rejected` (a failure), not skipped. This keeps the typed-warrant rule that a rejection is effective whatever the kind (recommended answer; owner-review choice 13). A rejection's `portions` are still validated by the binding rules above.
+- a REJECTED attestation fails the rule whatever the coverage: a rejection on a rule with an unclassified portion, or with portions that are a proper subset of `appliesTo`, is `attested-rejected` (a failure), not skipped. This keeps the typed-warrant rule that a rejection is effective whatever the kind (decided). The result shows BOTH facts: `disposition: "attested-rejected"` AND `applicability.covered: false` with `unclassified: [...]` (or `portion-unattested` remainder), so a reader sees the failure and that coverage was also incomplete. A rejection's `portions` are still validated by the binding rules above.
 
 This makes invariant 5 an enforced property of what an attestation is allowed to claim. It still cannot prove the reviewer examined what they say; `reviewedAgainst.paths` and its digest are the existing, unchanged evidence of that.
 
@@ -203,20 +206,24 @@ Per-result fields (additive):
 
 - **Scoring scope, stated explicitly.** A split rule is scored on its evaluated portion only. A pass is a pass of `appliesTo`; it claims nothing about the structurally impossible portion, and the score does not credit it. The human text says so on the rule's line, `PASS (scored on: prose-record only; structurally impossible: formal-development)`, and the JSON carries `scope: "evaluated-portion-only"`. A new informational `denominator.splitSubject` count says how many scored rules are scored on a portion only.
 - The human renderer adds a `Split subject (n):` section; `standards explain <rule>` gets a `split-subject` state printing the declaration, both bases, the coverage result and the attestation's portions.
-- **Unclassified portion:** the rule is `skipped`, `disposition: "applicability-incomplete"`, `notEvaluatedBecause: "unclassified-subject"`, with the unclassified identifiers listed. It is neither passed nor not-applicable, `denominator.unclassifiedSubject` counts it, and an APPROVED attestation cannot override it: the question is which portion is being judged, not whether it was judged. A rejected attestation still fails the rule (choice 13).
+- **Unclassified portion:** the rule is `skipped`, `disposition: "applicability-incomplete"`, `notEvaluatedBecause: "unclassified-subject"`, with the unclassified identifiers listed. It is neither passed nor not-applicable, `denominator.unclassifiedSubject` counts it, and an APPROVED attestation cannot override it: the question is which portion is being judged, not whether it was judged. An approval cannot discharge while any declared portion is unclassified. A rejected attestation still fails the rule, and the result reports both the rejection and the incomplete coverage (decided).
 - Detector hits: a split is valid only on `manual-review` rules and none of the four Lean rules has a detector, so there is no detector hit to filter; a rule with a detector is refused (`applicability.split-on-detectable-rule`), so a detected failure is never suppressed by a split.
 
 ### Envelope version
 
 `ENVELOPE_SCHEMA_VERSION` advances from `"2.0"` to `"3.0"` (owner decision). `test/envelope-schema-version.test.mjs`, which asserts `"2.0"` today, changes with it (T15). The typed-warrant record makes the same advance; one bump covers both.
 
-### The nonExemptible contradiction, resolved explicitly
+### The nonExemptible contradiction, decided
 
-Read from the repository: the policy schema's `attestations` description says an attestation "never reaches a rule that is `forbidden` and `nonExemptible`". `judgeAttestation` in `scripts/compliance.mjs` has no such check; its header says an attestation cannot bypass a `nonExemptible` rule because "the automated failure survives", which is true only where a detector exists. `applicability` has no such check either. For a manual rule with no detector, an approved fresh attestation passes an invariant today, and a rejection fails and blocks.
+Read from the repository: the policy schema's `attestations` description says an attestation "never reaches a rule that is `forbidden` and `nonExemptible`". `judgeAttestation` in `scripts/compliance.mjs` has no such check; its header says an attestation cannot bypass a `nonExemptible` rule because "the automated failure survives", which is true only where a detector exists. `applicability` has no such check either.
 
-Proposed resolution (owner-review choice 6): correct the schema description to match the engine, and record that an attestation is judged on an invariant rule. A split declaration on an invariant rule is permitted: it narrows the portion evaluated and never removes the rule. The alternative resolution, making the engine refuse attestations on invariants, would change existing verdicts and belongs to a separate decision.
+**Decision (owner, 2026-11-16):** correct the schema description to match the engine. `nonExemptible` prohibits exceptions and waivers; it does not prohibit evidence-bearing attestations for manual-review rules. A rejection remains effective. An approval may discharge only when applicability is complete AND the required trusted signed human warrant is present. Proposed replacement text for the `attestations` description (an implementation change; this record changes no schema file):
 
-No fixture depends on either resolution. The F2 attestation is on `proof.edge-cases-addressed`, which is `required` and not an invariant; the invariant rule `proof.induction-gaps` is used only in tests that need no attestation (T8).
+> An attestation is evidence, not a waiver. `nonExemptible` prohibits exceptions and waivers; it does not prohibit an evidence-bearing attestation on a manual-review rule. A rejection is always effective and fails the rule. An approval can discharge a rule only when its applicability is complete and the required trusted, signed human warrant is present; otherwise the rule is not discharged. An automated failure is never overridden by an attestation.
+
+Consequences: a split declaration on an invariant rule is permitted (it narrows the portion evaluated and never removes the rule); existing verdicts do not change. The alternative (engine refuses attestations on invariants) is not adopted.
+
+Fixtures and tests are adjusted: the F2 attestation remains on `proof.edge-cases-addressed` (required, not an invariant), and T8 plus a new T8b exercise the invariant `proof.induction-gaps` with a rejection (effective, with or without full coverage) and an approval (discharges only with complete applicability and a verified signature, otherwise `attested-unconfirmed` or `applicability-incomplete`).
 
 ## Lean fixture: BLOCKED
 
@@ -313,7 +320,7 @@ attestations:
         - prose-record
 ```
 
-Expected: the rule fails with `attested-rejected`; the result shows `evaluated: prose-record`. A second variant, S2b, carries `status: approved` with `portions: [prose-record]` and evidence that the stub is complete, and is used only for the pass path; its evidence says plainly that the stub was edited to state its edge cases, so no approval is claimed against a file built to fail. After typed warrants land (#57), an attestation also carries `reviewer.kind`; ordering is stated in the typed-warrant record.
+Expected: the rule fails with `attested-rejected`; the result shows `evaluated: prose-record`. A second variant, S2b, carries `status: approved` with `portions: [prose-record]` and evidence that the stub is complete, and is used only for the pass path; its evidence says plainly that the stub was edited to state its edge cases, so no approval is claimed against a file built to fail. After typed warrants land (#57), an attestation also carries `reviewer.kind: human-review`, and the pass path additionally needs a verified signature. The fixture holds NO key and NO signature: the test generates an Ed25519 keypair in memory, writes a temporary trust configuration outside the fixture directory, and signs S2b's attestation at test time. Without that signature S2b reports `attested-unconfirmed`, which is also asserted. Ordering is stated in the typed-warrant record.
 
 ### Negative fixtures
 
@@ -363,7 +370,7 @@ The schema fragments were applied to a scratch copy and run through `scripts/jso
 
 New file `test/split-subject.test.mjs` (planned). Every test is written to fail against current main, then made to pass, with the two exceptions marked GUARD.
 
-On current main the new keys (`mode`, `declaredSubject`, `appliesTo`, `structurallyImpossibleFor`, `reviewedAgainst.portions`) are unknown properties under `additionalProperties: false`, so a negative fixture already exits 2 for the wrong reason. Therefore every negative test must assert the SPECIFIC finding id or schema path, never only the exit code, so that it fails on main. The assertion for each is: empty arrays, `appliesTo ... must contain at least 1 item(s)` (and the `structurallyImpossibleFor` equivalent) at the path under the new key; missing subject, `appliesTo[0].subject is required but missing`; string basis, `basis expected object, found string`; missing statement, `basis.statement is required but missing`; `mode: unclear`, `mode must be one of 'split-subject'`; `profile`, assertion that the schema's key set is closed (T17) plus no `unknown property` message for any of the seven permitted keys; and, for the semantic cases, the finding ids `applicability.split-overlap`, `split-incomplete`, `unknown-subject`, `reference-malformed`, `split-missing-revisit`, `status-and-mode`, `split-on-detectable-rule`, `attestation.portions-required`, `attestation.portion-not-evaluated`, `attestation.portions-on-unsplit-rule`. A positive twin (the same file with the fault removed validates) accompanies each, which also fails on main.
+On current main the new keys (`mode`, `declaredSubject`, `appliesTo`, `structurallyImpossibleFor`, `reviewedAgainst.portions`) are unknown properties under `additionalProperties: false`, so a negative fixture already exits 2 for the wrong reason. Therefore every negative test must assert the SPECIFIC finding id or schema path, never only the exit code, so that it fails on main. The assertion for each is: empty arrays, `appliesTo ... must contain at least 1 item(s)` (and the `structurallyImpossibleFor` equivalent) at the path under the new key; missing subject, `appliesTo[0].subject is required but missing`; string basis, `basis expected object, found string`; missing statement, `basis.statement is required but missing`; `mode: unclear`, `mode must be one of 'split-subject'`; `profile`, assertion that the schema's key set is closed (T17) plus no `unknown property` message for any of the eight permitted keys; and, for the semantic cases, the finding ids `applicability.split-overlap`, `split-incomplete`, `unknown-subject`, `reference-malformed`, `split-missing-revisit`, `status-and-mode`, `split-on-detectable-rule`, `attestation.portions-required`, `attestation.portion-not-evaluated`, `attestation.portions-on-unsplit-rule`. A positive twin (the same file with the fault removed validates) accompanies each, which also fails on main.
 
 | Id | Test | Fixture | Criterion |
 |---|---|---|---|
@@ -373,10 +380,11 @@ On current main the new keys (`mode`, `declaredSubject`, `appliesTo`, `structura
 | T4 | A statement-only basis is accepted; a malformed reference is rejected; an unresolved repository path is reported as `reference-unresolved`, not an error | S1, malformed-reference | C1 |
 | T5 | A subject in both sets rejected | invalid-overlap | C1 |
 | T6 | A subject outside `declaredSubject` rejected; a missing `declaredSubject` rejected | two fixtures | C1 |
-| T7 | An unclassified portion yields `NOT_EVALUATED` with `unclassified-subject`, is not passed, is not `not-applicable`, an approved attestation cannot override it, and a rejected attestation still fails the rule | unclassified-portion | C1 |
-| T8 | A split on the invariant rule `proof.induction-gaps` with no attestation still evaluates the rule (skipped awaiting judgement) and does not remove it; no dependence on the nonExemptible resolution | S1 | C1 |
+| T7 | An unclassified portion yields `NOT_EVALUATED` with `unclassified-subject`, is not passed, is not `not-applicable`, an approved attestation (even signed) cannot override it, and a rejected attestation still fails the rule; the rejection result shows BOTH `attested-rejected` and `applicability.covered: false` with `unclassified: [external-notes]` (text and JSON) | unclassified-portion | C1 |
+| T8 | A split on the invariant rule `proof.induction-gaps` with no attestation still evaluates the rule (skipped awaiting judgement) and does not remove it | S1 | C1 |
+| T8b | nonExemptible decided: on the invariant rule, a rejection fails (with or without full coverage); an approval with complete applicability and a verified signature discharges; an approval unsigned is `attested-unconfirmed`; an approval with incomplete applicability is `applicability-incomplete`; an exception or waiver on the rule is still rejected; the corrected schema description text is asserted | S1 variants | C1 |
 | T9 | `mode: unclear` and a `profile` key rejected | two fixtures | C0, C3 |
-| T10 | Attestation binding: portions equal to `appliesTo` is judged and the pass covers exactly them; portions missing, naming an impossible portion, or on an unsplit rule are rejected (exit 2); a proper subset is `portion-unattested` and not discharged | S2, S2b, four attestation fixtures | C1 |
+| T10 | Attestation binding: portions equal to `appliesTo` is judged and the pass covers exactly them; portions missing, naming an impossible portion, or on an unsplit rule are rejected (exit 2); a proper subset is `portion-unattested` and not discharged; a REJECTED attestation on a proper subset still fails and shows both `attested-rejected` and the incomplete coverage; the S2b pass needs a test-generated signature (unsigned: `attested-unconfirmed`) | S2, S2b, four attestation fixtures | C1 |
 | T11 | Report: text and JSON name the evaluated and structurally-impossible portions and state the scoring scope; `explain` prints the split state | S1 | C1 |
 | T12 | `status` with `mode` rejected (`applicability.status-and-mode`); `revisitWhen` missing on a split rejected (`applicability.split-missing-revisit`). The `status` without `reason` part is a GUARD: it passes on main because the schema still requires `reason`, and it must keep passing after `required` is loosened | three fixtures | C1 |
 | T13 | A split on a non-manual rule rejected | invalid-detector-rule | C1 |
@@ -400,18 +408,11 @@ Criteria quoted from `finalized-criteria-2026-11-16.md`, unchanged. This record 
 
 ## Choices for owner review
 
-Choices not fixed by the owner's decisions are listed with the alternative. "Fail-closed" is stated only where it is true.
+Decided items are removed (split limited to manual-review, the nonExemptible resolution, a rejection with incomplete coverage, `portions` binding, the shared validator, evaluated-portion scoring, and the mechanism-only stand-ins). Remaining, with the alternative:
 
 1. **A reference, when given, must have a valid form** (path, URL or `commit <sha>`), checked with the FE-28 predicate; an unresolved repository path is reported, not rejected. Alternative: no form check.
-2. **Split is valid on `manual-review` rules only** (owner decision; recorded for the implementer).
-3. **`declaredSubject` is project-declared per rule.** Coverage catches a listed-and-unclassified portion and cannot catch an unlisted one. Alternative: a per-rule universe derived from the catalog or from regime names.
-4. **`required` is loosened on `applicabilityDeclaration` and restored by the semantic layer.** Alternative: add `oneOf` to the vendored evaluator. T18 guards the loosening.
-5. **A repository-path `basis.reference` that does not resolve is reported (`reference-unresolved`), not an error.** Alternative: make it invalid.
-6. **The nonExemptible contradiction is resolved by correcting the schema description to match the engine** (attestations are judged on invariant rules; a split narrows the evaluated portion and never removes the rule). Alternative: make the engine refuse attestations on invariants, which changes existing verdicts. Fixtures do not depend on either.
-7. **A proper-subset attestation is `portion-unattested`, not a partial pass.** Alternative: score the attested portion and report the rest.
-8. **`reviewedAgainst.portions` is required on a split rule's attestation and refused elsewhere.**
-9. **The shared validator is also called from `standards validate`,** closing today's gap where `validate` runs the schema only.
-10. **A split rule's score is scored on the evaluated portion only,** stated in text and JSON, with an informational `denominator.splitSubject`.
-11. **Stand-in fixture S1 and S2 are mechanism-only.** The four-case fixture is blocked on the data packet.
-12. **S2's attestation shape follows the typed-warrant record's ordering** (#57).
-13. **A rejection on a split rule that is not fully covered** (an unclassified portion, or `portions` a proper subset of `appliesTo`): does it fail or get skipped? Recommended, fail-closed answer: the rejection FAILS the rule, because a human finding a defect in a portion is not made void by incomplete classification elsewhere. Alternative: skip, which would let incomplete classification hide a recorded rejection. T7 and T10 add a rejected-attestation case asserting a failure.
+2. **`declaredSubject` is project-declared per rule.** Coverage catches a listed-and-unclassified portion and cannot catch an unlisted one. Alternative: a per-rule universe derived from the catalog or from regime names.
+3. **`required` is loosened on `applicabilityDeclaration` and restored by the semantic layer.** Alternative: add `oneOf` to the vendored evaluator. T18 guards the loosening.
+4. **A repository-path `basis.reference` that does not resolve is reported (`reference-unresolved`), not an error.** Alternative: make it invalid.
+5. **A proper-subset attestation is `portion-unattested`, not a partial pass.** Alternative: score the attested portion and report the rest.
+6. **S2's attestation shape follows the typed-warrant record's ordering** (#57).

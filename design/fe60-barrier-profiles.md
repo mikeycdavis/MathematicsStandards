@@ -1,6 +1,7 @@
 # FE-29 design record: barrier profiles
 
 **Status: DRAFT, awaiting owner freeze (2026-11-16).** Implementation is not authorized until the owner freezes this record. No code, schema, rule, fixture, `VERSION` or `CHANGELOG` file is changed by the pull request that carries it; every fragment, fixture and test below is proposed text.
+**Revision 2026-11-16 (review of head 04eb241):** applies the reviewer's ten findings. Changes: the existing required rule `problems.barriers-recorded` and Standard 17 are now in the rewording scope (choice 8); the R5 replacement is exact and keeps its MUST; text before the first profile, a multi-line `none` and indented field labels are now reported; the test list is split into red-first tests and pass-today guards, with a source-scan test for the no-verdict-path property; scratch measurements name their environment and include the pinned scores.
 **Authority:** the owner's finalized criteria for #60 (`finalized-criteria-2026-11-16.md`, C0 to C3), quoted in the criterion map, and the owner's binding decision of 2026-11-16: this is a design-only record for structured barrier profiles, and a barrier records scope, exclusions, non-exclusions and evidence and **never becomes a prohibition verdict**. This record adds no acceptance criterion.
 **Evidence base:** the gap-check report for #60 (`evidence-60/ac-gap-check/report.md`, taken at main 14562f6) and the live repository at main 3475ec4 (which adds only design records after 14562f6; the code the report read is unchanged).
 
@@ -43,8 +44,8 @@ Alternatives considered and not chosen: a separate `artifacts/barriers/<id>.md` 
 
 A `## Known Barriers` body is exactly one of:
 
-1. **One or more profiles.** Each profile is a `### <barrier name>` heading followed by field lines. Text before the first `###` is ignored.
-2. **An explicit none.** No `###` heading, and the first non-blank line begins with the word `none` (case-insensitive), optionally followed by an explanation. Existing records that say `None recorded.` stay valid.
+1. **One or more profiles.** Each profile is a `### <barrier name>` heading followed by field lines. Nothing but blank lines may precede the first `###`; any non-blank text before it is reported, because text there would sit outside every field and outside the label check.
+2. **An explicit none.** No `###` heading, and exactly one non-blank line, which is `none` or `none recorded`, case-insensitive, with an optional final period. Existing records that say `None.` or `None recorded.` stay valid. A `none` followed by anything else, on the same line or another, is not an explicit none and is reported as prose; a `none` line beside profiles is text before the first profile and is reported.
 
 Everything else is reported by the new rule: prose with no profile and no `none`. An absent or empty section is reported by the existing `problems.barriers-recorded` only; the new rule does not repeat it.
 
@@ -58,10 +59,10 @@ Everything else is reported by the new rule: prose with no profile and no `none`
 | `Does not rule out:` | what it does not rule out | yes, deliberately |
 | `Evidence:` | a stated reference; a citation may accompany it | no |
 
-- **Values.** A value is the text after the colon plus any continuation lines. A continuation line is indented, or is a list item (`-`, `*`, `+`, `1.`, `1)`). Blank lines inside a value are allowed. For `Rules out:` and `Does not rule out:`, list items are the items; with no list, the value is one item. Order of fields, and order of profiles and of items, carries no meaning and is never read.
-- **Evidence is a stated reference.** It must satisfy the FE-28 predicate `hasReference` (an `http://` or `https://` URL, a path-shaped token, or `commit <sha>` with 7 to 40 hex digits). A bare citation (`Baker, Gill and Solovay, 1975`) does not count; it may accompany a reference. The reference is **not resolved**.
-- **Reported, each as one entry of the rule's evidence list:** a missing or empty field; a repeated field; a field label outside the five; `none` as `Statement:` or `Scope:`; an `Evidence:` with no reference (including `none`); a non-blank line at column 0 that is not a field line (text outside any field); two profiles with the same name after trimming and case-folding.
-- **Rejected by name (C3).** A field line labelled `Verdict`, `Prohibition`, `Prohibited`, `Forbidden`, `Banned`, `Status` or `Decision` is reported with a message that says a profile is descriptive evidence and never a prohibition verdict. `Status` is included because Terminated Approaches uses it, and copying it across would turn a profile into a decision record. These seven labels are a closed list in one constant; they exist only to be refused.
+- **Values.** A value is the text after the colon plus any continuation lines. A continuation line is indented, or is a list item (`-`, `*`, `+`, `1.`, `1)`). Blank lines inside a value are allowed. A continuation line that itself reads `Label: ...` with a field label or one of the seven refused labels is reported ("a field label must start at column 0"), so a refused label cannot hide by being indented or bulleted. For `Rules out:` and `Does not rule out:`, list items are the items; with no list, the value is one item. Order of fields, and order of profiles and of items, carries no meaning and is never read.
+- **Evidence is a stated reference.** It must satisfy the FE-28 predicate `hasReference` (an `http://` or `https://` URL, a path-shaped token, or `commit <sha>` with 7 to 40 hex digits). A bare citation (`Baker, Gill and Solovay, 1975`) does not count; it may accompany a reference. The reference is **not resolved**. **Known false accept, measured:** any token containing a slash counts as path-shaped, so `Razborov/Rudich 1997` and the free text `see BARRIERS.md` are accepted. The predicate is shared with FE-28 and is not changed here; test T4 documents the accept so a later tightening is a visible change.
+- **Reported, each as one entry of the rule's evidence list:** a missing or empty field; a repeated field; a field label outside the five; `none` as `Statement:` or `Scope:`; an `Evidence:` with no reference (including `none`); a non-blank line at column 0 that is not a field line (text outside any field); non-blank text before the first profile; an indented or bulleted line that carries a field or refused label; two profiles with the same name after trimming and case-folding.
+- **Rejected by name (C3).** A field line labelled `Verdict`, `Prohibition`, `Prohibited`, `Forbidden`, `Banned`, `Status` or `Decision` is reported with a message that says a profile is descriptive evidence and never a prohibition verdict. `Status` is included because Terminated Approaches uses it, and copying it across would turn a profile into a decision record. These seven labels are a closed list in one constant; they exist only to be refused. **Limit, stated plainly:** the invariant "never a prohibition verdict" is enforced for field labels, headings of fields and the structure around them. The framework cannot read a prohibition written as ordinary prose inside a value (`Rules out: everything; do not pursue`), and does not try: it never reads a value as a verdict, which is the property C3 asks for. The reviewer's concern that the invariant holds only for labels is therefore accepted as a limit, and is repeated under "What the check does not establish".
 
 ## The rule
 
@@ -117,13 +118,24 @@ The finding (warning), one evidence entry per problem:
 
 JSON (`audit --json`): a new top-level key `barrierProfiles`, one entry per problem record: `path`, `barriers` with `status` (`profiles`, `none`, `prose`, `absent`, `empty`), `profiles` (each: `name`, `statement`, `scope`, `rulesOut` and `doesNotRuleOut` as arrays of items, `evidence`, `problems`) and `problems`. There is no `verdict`, `prohibited`, `status`-per-profile or score key, and a test pins the key set (T11).
 
-Standard text and template, proposed replacements (not applied by this record; choice 8):
+Standard text, rule text and template, proposed replacements (not applied by this record; choice 8). The existing text carries the prohibition reading in five places, and all five are in scope, because C3 is only partly met while any remains:
 
-- `standards/17-open-problems.md` R5, replacing its current last sentence ("An approach that a barrier already excludes is not a research direction; pursuing it after the barrier is documented is the clearest available signal that the record is not being read."):
+1. `standards/17-open-problems.md` line 50, the section summary: replace `## Known Barriers            barriers encountered, and which approaches they rule out` with `## Known Barriers            barrier profiles: scope, what each rules out and does not, evidence`.
+2. `standards/17-open-problems.md`, R5, the whole body paragraph (the six lines from "Barriers — relativisation" to "the record is not being read."), which is replaced in full by the paragraph below. The heading `### R5 — Known barriers` stays. The obligation is kept: it is still a MUST, now for the profile.
 
-> A barrier is descriptive evidence. Each `###` profile under `## Known Barriers` records the barrier's statement, its scope, what it rules out, what it does not rule out, and a stated reference. What a barrier rules out is bounded by its scope, and recording what it does not rule out is part of the record, not an afterthought. A barrier never decides whether an approach may be pursued: that decision is recorded under `## Terminated Approaches`, with the evidence required to reopen it.
+> Barriers — relativisation, natural proofs, algebrisation in complexity; the parity problem in sieve theory; obstructions specific to the problem at hand — are results about which classes of argument fail under stated conditions. `## Known Barriers` MUST record each barrier encountered as a profile: its name and statement, its scope, what it rules out within that scope, what it does not rule out, and a stated reference. A barrier is descriptive evidence. It never decides whether an approach may be pursued; that decision is recorded under `## Terminated Approaches`, with the evidence required to reopen it.
 
-- `templates/open-problem.md`, replacing the `## Known Barriers` section:
+3. `rules/problems.json`, the existing required rule `problems.barriers-recorded`: `description`, `rationale` and `remediation` reworded, and `level`, `severity`, `validationType`, `assurance`, `introducedIn` and the detector unchanged (it still establishes that the section exists and is non-empty).
+   - `description`: "The Known Barriers section records each barrier encountered: what it states, its scope, what it rules out, what it does not rule out, and a reference."
+   - `rationale`: "Barriers are results about which classes of argument fail under stated conditions. A record that omits the conditions, or what a barrier does not cover, invites reading the barrier as a prohibition."
+   - `remediation`: "Record each barrier with its statement, scope, what it rules out, what it does not rule out, and a reference."
+   - `$assuranceNote` is unchanged.
+4. `templates/open-problem.md`, the `## Known Barriers` section, replaced in full by the fragment below.
+5. `docs/assurance-report.md`, regenerated from the catalog (it carries the old description of `problems.barriers-recorded` at its line 377).
+
+Whether rewording the description of a `required` rule is a reclassification under the repository's versioning rule is the owner's to decide; the record's position is that it is not (no behaviour, level or verdict moves), and choice 8 asks.
+
+The template fragment (item 4):
 
 ```markdown
 ## Known Barriers
@@ -142,11 +154,10 @@ Does not rule out: <what it does not rule out, or none>
 Evidence: <a path, URL or commit <sha>; a citation may accompany it>
 ```
 
-- `docs/assurance-report.md` is regenerated from the catalog entry above.
 
 ## Fixtures (proposed, none committed)
 
-All are self-contained directories under `test/fixtures/`, `standardVersion: "1.0.0"` like the existing ones, with `project-policy.yml` in the block-style YAML the vendored reader accepts and `problem.md` in the Markdown the section reader accepts. The mathematical wording in these fixtures is the fixture's own recorded content; the framework checks its structure and asserts none of it (choice 9 asks the owner to confirm it or supply the adopter's own).
+All are self-contained directories under `test/fixtures/`, `standardVersion: "1.0.0"` like the existing ones, with `project-policy.yml` in the block-style YAML the vendored reader accepts and `problem.md` in the Markdown the section reader accepts. The mathematical wording in these fixtures is this record's own positioning and **needs owner confirmation or the adopter's own wording (choice 9)**. What the repository establishes is only that PvsNP's `BARRIERS.md` "carries Williams's `NEXP ⊄ ACC⁰` as the counterexample to reading a barrier as a prohibition" (`artifacts/adoption/two-adopters.md` lines 109 to 111; `design/v1.1-disposition.md` A4 row). That the result belongs under the natural-proofs profile, the Statement and Scope text, and the two citations are not in the repository. The ACC lower-bound paper is dated CCC 2011 and J. ACM 2014; the fixture's "2011" is one of those two dates and should be settled by the owner. The framework checks structure and asserts none of it.
 
 Every fixture's `project-policy.yml` is P with its own `project` name:
 
@@ -287,7 +298,7 @@ Evidence required to reopen: a non-relativizing diagonal argument.
 A published proof, or a barrier result covering every remaining route.
 ```
 
-Expected: no `problems.barrier-profiles-valid` finding; `barrierProfiles` lists two profiles; `Natural proofs` has the NEXP item among `doesNotRuleOut` and not among `rulesOut`. The only finding in the whole audit is the existing `claims.ledger-exists` (these fixtures carry no claims ledger, as `blocker-set-pvsnp` does not).
+Expected: no `problems.barrier-profiles-valid` finding; `barrierProfiles` lists two profiles. If choice 9 is confirmed as written, `Natural proofs` has the NEXP item among `doesNotRuleOut` and not among `rulesOut`; that placement assertion is conditional (T7b). The only finding in the whole audit is the existing `claims.ledger-exists` (these fixtures carry no claims ledger, as `blocker-set-pvsnp` does not).
 
 ### B2: `barrier-profile-none`
 
@@ -414,61 +425,86 @@ Evidence: notes/b.md
 | `continuation-indented` | `Scope: C,` then an indented `continued here.` line | valid |
 | `fields-reordered` | the five lines in reverse order | valid |
 | `duplicate-name`, `duplicate-name-case` | G twice; G and G with `### b` | two problems (one per profile) |
-| `none-explained` | body `None - nothing known.` | status `none`, valid |
+| `none-recorded` | body `None recorded.` | status `none`, valid |
+| `none-explained` | body `None - nothing known.` | status `prose`, one problem |
+| `none-then-prose` | body `None recorded. Relativization forbids diagonalization.` | status `prose`, one problem |
+| `none-two-lines` | `None.` then the line `Relativization forbids diagonalization.` | status `prose`, one problem |
+| `none-then-profile` | `None.`, a blank line, then G | one problem, text before the first profile |
+| `verdict-before-profile` | `Verdict: prohibited`, a blank line, then G | one problem, text before the first profile |
+| `prose-before-profile` | `Some intro.`, a blank line, then G | one problem, text before the first profile |
+| `indented-verdict`, `bulleted-verdict` | G with the line `  Verdict: prohibited` (indented) or `- Verdict: prohibited` after `Scope:` | one problem, a field label must start at column 0 |
+| `indented-known-label` | G with an indented `  Evidence: x` after `Scope:` | one problem, same message |
+| `evidence-slash-false-accept` | `Evidence: Razborov/Rudich 1997`; `Evidence: see BARRIERS.md` | valid today (documents the shared predicate's false accept; flips to a problem if the predicate is tightened) |
 | `empty-section`, `prose-section` | body empty; body `Some prose.` | status `empty` / `prose`, one problem each |
 
 ## Verification performed
 
-Everything below was run in a scratch copy of `git archive 3475ec4`, outside the repository, and none of it is committed. The prototype is `scripts/barriers.mjs` (about 150 lines: `parseBarriers`, reusing `hasReference`) plus a detector, a text and JSON report block, a catalog entry, and entries in `evaluated.mjs` and `surfaces.mjs`.
+Everything below was run in a scratch copy of `git archive 3475ec4` in the session's temporary directory, outside the repository and without a `.git`, and none of it is committed. Where a figure comes from a different environment it says so. The prototype is `scripts/barriers.mjs` (about 150 lines: `parseBarriers`, reusing `hasReference`) plus a detector, a text and JSON report block, a catalog entry, and entries in `evaluated.mjs` and `surfaces.mjs`.
 
-- **Baseline.** `node --test test/*.test.mjs` on main: 416 tests, 416 pass.
-- **Prototype.** 413 of 416 pass. The three failures: "the assurance report is current" and "the classification table and the detector file agree, site for site" are the two wiring items listed under "The rule" and are expected; "the helper refuses a mutating command aimed at the repository" also fails on a pristine `git archive` export of main (cause not investigated; it concerns the repository-root guard of the test helper) and is unrelated to this work.
+- **Baseline.** Two environments. In the pull request's own worktree (a git checkout at 3475ec4): 416 tests, 416 pass. In a pristine `git archive` export of 3475ec4 (no `.git`): 416 tests, 415 pass; the one failure is "the helper refuses a mutating command aimed at the repository", whose guard has no repository to detect in an export (consistent with the reviewer's reading; not separately proven).
+- **Prototype** (scratch export, no `.git`; compare with the 415 of 416 export baseline above). 413 of 416 pass. "The assurance report is current" and "the classification table and the detector file agree, site for site" are the two wiring items listed under "The rule" and are expected; the third failure is the export-only one above. These figures were re-measured after the revision.
 - **Schema.** `schemas/project-policy.schema.json` is unchanged. Every fixture `project-policy.yml` was read by `scripts/yaml.mjs`, and `validate` and `audit` ran on all nine fixture directories without a policy error. `problem.md` is not schema-validated, so there is no schema fragment to add; the template fragment above is the only structural artifact.
 - **Fixtures.** B1 to B9 behaved as stated under each. The unit-level cases behaved as tabled: 25 profile cases and 6 section cases in the verification script, plus each of the seven verdict labels run separately (every one gave exactly one problem carrying the "never a prohibition verdict" message).
 - **Not red-checked against main for the new keys.** On main, B5 to B8 produce no barrier finding at all, because `problems.barriers-recorded` is satisfied by any non-empty section. That is why the negative tests assert the new rule id and the `barrierProfiles` key and not an exit code, so they fail on main for the right reason.
-- **Blast radius.** Of the existing fixtures, three gain one new warning because their `## Known Barriers` is prose: `blocker-absent`, `escape-hatch-declared`, `escape-hatch-undeclared`. No existing test failed because of it. The repository's own self-audit gains no finding. With no problem record, the new rule reports `not-evaluated` (checked on `math-compliant`).
+- **Blast radius.** Of the existing fixtures, three gain one new warning because their `## Known Barriers` is prose: `blocker-absent`, `escape-hatch-declared`, `escape-hatch-undeclared`. No existing test failed because of it. **Pinned scores, measured:** the new warning does not move any status or score. `escape-hatch-undeclared` is `NON_COMPLIANT` 97 with and without the prototype (the figure `test/not-evaluated-score.test.mjs` and `test/score-aggregation.test.mjs` pin); `escape-hatch-declared` is `NON_COMPLIANT` 97 and `blocker-absent` is `NON_COMPLIANT` 92, each identical with and without it. The rule is not scored (`scored: false`, so the `scored` count in the denominator is unchanged at 35 and 13) while the `total` and `applicable` counts rise by one (86 to 87). The repository's own self-audit gains no finding. With no problem record, the new rule reports `not-evaluated` (checked on `math-compliant`).
 - **C2 without special-casing.** The prototype reads no mathematics: the NEXP item is just an item. Test T8 pins that the source names neither NEXP nor ACC as a word.
 
-## Red-first test list
+## Test lists
 
-New file `test/fe60-barrier-profiles.test.mjs` (planned), written before `scripts/barriers.mjs` and the rule exist. Every test fails against current main except the two marked GUARD. Unit tests import `parseBarriers` (absent on main, so the whole file fails to load first); CLI tests assert the new rule id or the `barrierProfiles` key, never only an exit code.
+Two files, so that the claim "fails on main" is true of every test in the first and "passes on main" is true of every test in the second.
+
+### Red-first file: `test/fe60-barrier-profiles.test.mjs` (planned)
+
+Written before `scripts/barriers.mjs` and the rule exist. Every test in this file fails against current main. Unit tests import `parseBarriers` by a static import, which does not exist on main, so the whole file fails to load there; CLI tests assert the new rule id, the new text line or the `barrierProfiles` key, never only an exit code, so each would also fail on main if it were run alone.
 
 | Id | Test | Fixture or input | Criterion |
 |---|---|---|---|
 | T1 | G parses with all five fields; fields in any order; inline form, list form and indented continuation all give the same fields | G, `fields-reordered`, `continuation-indented`, B1 | C1 |
 | T2 | Each of the five fields missing, and an empty field, is one problem naming the field | five `missing-*` cases, `empty-scope` | C1 |
 | T3 | `none` is a valid `Rules out:` and `Does not rule out:` and is rejected for `Statement:` and `Scope:` | four cases | C1 |
-| T4 | `Evidence:` needs a stated reference (URL, path, `commit <sha>`); a bare citation or `none` is rejected; nothing is resolved (a path that does not exist is valid) | five cases | C1 |
-| T5 | Section forms: profiles, explicit none (with and without an explanation) valid; prose reported; empty and absent reported by the parser. In the CLI, B9 gives exactly one finding, `problems.barriers-recorded`, and not the new rule; B5 gives the new rule only | B2, B5, B9, three section cases | C1 |
+| T4 | `Evidence:` needs a stated reference (URL, path, `commit <sha>`); a bare citation or `none` is rejected; nothing is resolved (a path that does not exist is valid). **Documents the false accept:** `Razborov/Rudich 1997` and `see BARRIERS.md` are valid today, asserted as such with a comment that they are a known weakness of the shared predicate | six cases | C1 |
+| T5 | Section forms: profiles valid; `none` and `none recorded` valid; `none` followed by anything, prose, empty and absent reported by the parser; B5 through the CLI gives the new rule (B9 is a guard, below) | B2, B5, section cases | C1 |
+| T5b | Text before the first profile is reported (`none-then-profile`, `verdict-before-profile`, `prose-before-profile`); an indented or bulleted refused or field label is reported (`indented-verdict`, `bulleted-verdict`, `indented-known-label`); `none-then-prose` and `none-two-lines` are prose | eight cases | C1, C3 |
 | T6 | Duplicate names (case-folded), a repeated field, an unknown field and stray text are each reported, the unknown field by name | five cases | C1 |
-| T7 | B1 has no new finding; `barrierProfiles` lists `Natural proofs` and `Relativization`; the NEXP item is in `Natural proofs`' `doesNotRuleOut` and not in `rulesOut`; text output lists both profiles | B1 | C2 |
-| T8 | C2 is not special-cased: the B1 record with `NEXP not in ACC0` replaced by an arbitrary token produces the same result, and `scripts/barriers.mjs` contains neither `NEXP` nor `ACC` as a whole word | B1 variant, source scan | C2 |
+| T7a | B1 has no new finding and `barrierProfiles` lists two named profiles, each with the five fields non-empty; text output lists both | B1 | C1, C2 |
+| T7b | **Conditional on choice 9 being confirmed as written:** the NEXP item is in `Natural proofs`' `doesNotRuleOut` and not in `rulesOut`. If the owner confirms another placement or supplies the adopter's own record, the fixture and this assertion change; T7a stands | B1 | C2 |
+| T8 | C2 is not special-cased: B1 with `NEXP not in ACC0` replaced by an arbitrary token produces the same result, and `scripts/barriers.mjs` contains neither `NEXP` nor `ACC` as a whole word | B1 variant, source scan | C2 |
 | T9 | Each of the seven labels is reported with the "never a prohibition verdict" message; B6 through the CLI gives one `problems.barrier-profiles-valid` warning | seven cases, B6 | C3 |
-| T10 | A barrier cannot change any other result: B3 and B4 `validate --json` are deep-equal except `project` and `auditedAt`; the `Rules out:` item matching an active blocker or a terminated approach yields no finding | B3, B4 | C3 |
+| T10 | **No path from a profile to a verdict, by source scan:** `scripts/barriers.mjs` is imported only by `scripts/standards.mjs`; within it `parseBarriers` is called once, in `barrierReport`, and `barrierReport` is called from exactly three places, `detectBarrierProfiles`, the text renderer and the JSON assembly; `detectBarrierProfiles` makes exactly one `report()` call, for the new rule id. This is deliberately brittle: a new consumer of profile data, which is how a barrier would acquire a verdict, must change the test, which makes it a visible decision. It cannot detect a path that re-parses `problem.md` independently, so T11 and T12 cover the output side | source files | C3 |
 | T11 | The module exports exactly `BARRIERS_HEADING`, `FIELD_KEYS`, `parseBarriers`; a parsed profile has exactly the keys `name, statement, scope, rulesOut, doesNotRuleOut, evidence, problems`; the `barrierProfiles` JSON entries carry no `verdict`, `prohibit*`, `forbid*` or score key | B1 | C3 |
-| T12 | Catalog: the new rule is `recommended`; no rule at level `forbidden` or `required` other than the existing `problems.barriers-recorded` mentions a barrier; the new rule's description contains "never a prohibition verdict" | `rules/*.json` | C3 |
-| T13 | Wording: `standards/17-open-problems.md` R5 and `templates/open-problem.md` contain the descriptive wording and no longer contain "is not a research direction"; the template's profile example parses with zero problems | the two files | C0, C3 |
+| T12 | Catalog and text, no allow-list: the new rule is `recommended`, and its description contains "never a prohibition verdict"; the `description`, `rationale`, `remediation` and `$assuranceNote` of both barrier rules (`problems.barriers-recorded` and `problems.barrier-profiles-valid`) contain none of "approaches it rules out", "approaches it excludes", "already excludes", "not a research direction" | `rules/*.json` | C3 |
+| T13 | Wording, all five places: `standards/17-open-problems.md` line 50 summary and R5, `templates/open-problem.md` and the regenerated `docs/assurance-report.md` contain none of the four phrases above and R5 still contains `MUST record each barrier`; the template's profile example parses with zero problems | the four files | C0, C3 |
 | T14 | Report: text output has the line "Barrier profiles (descriptive evidence; never a prohibition verdict):"; `audit --json` has the `barrierProfiles` key | B1 | C1, C3 |
 | T15 | With no problem record the rule reports `not-evaluated` | `math-compliant` | C1 |
-| T16 | GUARD, passes on main: `open-problem-gaps` still reports `problems.barriers-recorded` for a missing section and the existing blocker and attempt-gate tests are unchanged | existing fixtures | C1 |
-| T17 | GUARD, passes on main: `blocker-absent`, `escape-hatch-declared` and `escape-hatch-undeclared` keep every finding they have today (the new warning is the only addition once the rule lands, asserted by id) | three existing fixtures | C1 |
 
-T16 and T17's second half and the three wiring tests (assurance report, classification table, and the `evaluated` and `surfaces` lists) are existing tests that the implementation must keep green; they are listed so none is a surprise.
+### Guard file: `test/fe60-barrier-guards.test.mjs` (planned)
+
+Every test here passes on main today and must keep passing. The file does not import `scripts/barriers.mjs` (it uses the CLI and the file system only, or a dynamic import inside a skipped-if-absent check), so it can run on main. These parts were first written into the red-first list and are corrected here: they pass today and are guards, not red tests.
+
+| Id | Guard | Fixture | Criterion |
+|---|---|---|---|
+| G1 | B9 (no `## Known Barriers`): exactly one barrier finding, `problems.barriers-recorded`, and the new rule, once it exists, does not repeat it | B9 | C1 |
+| G2 | **Independence, vacuous on main:** B3 and B4 `validate --json` are deep-equal except `project` and `auditedAt`. It passes today because main reads neither; it is a guard against a future profile changing another result, and its real strength comes only with T10 | B3, B4 | C3 |
+| G3 | No `forbidden`-level or other `required`-level rule outside `problems.barriers-recorded` mentions a barrier in its description or rationale | `rules/*.json` | C3 |
+| G4 | `open-problem-gaps` still reports `problems.barriers-recorded` for a missing section; the existing blocker and attempt-gate tests are unchanged | existing fixtures | C1 |
+| G5 | `blocker-absent`, `escape-hatch-declared` and `escape-hatch-undeclared` keep every finding they have today, and `escape-hatch-undeclared` stays `NON_COMPLIANT` 97; once the rule lands the only addition is the new warning, asserted by id | three existing fixtures | C1 |
+
+Existing tests the implementation must keep green, listed so none is a surprise: the assurance report is current, the classification table agrees with the detector file, and the `evaluated` and `surfaces` lists.
 
 ## Criterion map (#60)
 
 Criteria quoted from `finalized-criteria-2026-11-16.md`, unchanged. This record adds none.
 
 - **C0: Adopt a structured barrier profile.** Met by this record once the owner freezes it (verified by review, the gap-check's "document criterion") and by the implementation's adoption: the catalog entry, the template and Standard 17 R5 (T12, T13). **Not met by this record while it is a draft.**
-- **C1: It records barrier identity or statement, scope, what it rules out, what it does not rule out, and evidence/reference.** Met by the five fields (Syntax), the fail-closed reading and the rule; tests T1 to T7, T14, T15.
-- **C2: The NEXP-not-in-ACC0 counterexample is representable.** Met by B1: it is an item under `Does not rule out:` of the natural-proofs profile, with the reference on the `Evidence:` line; tests T7, T8. The wording is the fixture's, and choice 9 asks the owner to confirm it.
-- **C3: A barrier profile is descriptive evidence and never a prohibition verdict.** Met by invariants 1 and 5, the rejected labels, the closed key set and the catalog test; tests T9 to T13. It is partial today (the gap-check: no path from a barrier to a verdict exists, and nothing pins that); these tests pin it.
+- **C1: It records barrier identity or statement, scope, what it rules out, what it does not rule out, and evidence/reference.** Met by the five fields (Syntax), the fail-closed reading and the rule; tests T1 to T7a, T14, T15. Requirements this record adds beyond C1's wording, each an owner choice: the `Statement:` field in addition to the heading (4), the `none` rules (5), the stated-reference form of `Evidence:` (6), and the refused and unknown labels (7). Note that C1 asks the profile to record what it does not rule out; `Does not rule out: none` lets a profile satisfy that with nothing, and choice 5 asks the owner to decide that with C1's wording in view.
+- **C2: The NEXP-not-in-ACC0 counterexample is representable.** Met by B1: it is an item under `Does not rule out:` of the natural-proofs profile, with the reference on the `Evidence:` line; tests T7a, T8, and T7b once confirmed. The placement and wording are this record's own and choice 9 asks the owner to confirm them.
+- **C3: A barrier profile is descriptive evidence and never a prohibition verdict.** Met by invariants 1 and 5, the rejected labels, the closed key set and the catalog test; tests T9 to T13 and guards G2, G3. It is partial today (the gap-check: no path from a barrier to a verdict exists, and nothing pins that); these tests pin it. **C3 is only partly met until choice 8 is approved and implemented**: the existing required rule `problems.barriers-recorded`, Standard 17 and the template currently word barriers as excluding approaches, and the profile model contradicts them until they are reworded. T12 and T13 fail on that wording until it changes.
 
-Design questions raised by the gap-check, answered: (1) shape: `###` profile with line fields under `## Known Barriers`; (2) all five mandatory, `none` allowed for the two exclusion fields only; (3) prose-only is reported by a new rule and `problems.barriers-recorded` is unchanged; (4) C3 by labels, closed keys and tests, plus rewording R5 and the template; (5) NEXP phrased as the fixture's own recorded content; (6) assurance ceiling `partial`: structure only.
+Design questions raised by the gap-check, answered: (1) shape: `###` profile with line fields under `## Known Barriers`; (2) all five mandatory, `none` allowed for the two exclusion fields only, and a single-line explicit none for the section; (3) prose-only is reported by a new rule and `problems.barriers-recorded` is unchanged; (4) C3 by labels, closed keys, a source-scan test and tests, plus rewording the five places of choice 8; (5) NEXP phrased as this record's own positioning, pending owner confirmation; (6) assurance ceiling `partial`: structure only.
 
 ## What the check does not establish
 
-That a barrier is real, that its scope is right, that what is listed as ruled out or not ruled out is correct, that a cited reference exists, or that a profile is complete: the framework cannot know which barriers apply to a problem. It also does not stop a project from writing a prohibition in prose inside a field value; it refuses the labels and never reads a value as a verdict, which is the property C3 asks for.
+That a barrier is real, that its scope is right, that what is listed as ruled out or not ruled out is correct, that a cited reference exists, or that a profile is complete: the framework cannot know which barriers apply to a problem. It also does not stop a project from writing a prohibition in prose inside a field value or a heading; it refuses the labels, reports text outside fields, and never reads a value as a verdict, which is the property C3 asks for. The invariant is therefore enforced for structure and not for the meaning of free text.
 
 ## Versioning note
 
@@ -485,7 +521,8 @@ Each states the default chosen (fail closed) and the alternative.
 5. **`none` is a deliberate answer for `Rules out:` and `Does not rule out:` only.** Alternative: require both to carry content, or allow `none` everywhere.
 6. **`Evidence:` must contain a stated reference** by the FE-28 predicate; a bare citation is not enough. Alternative: accept free text.
 7. **Seven verdict-like labels are refused by name, and any other unknown label is refused.** Alternative: ignore unknown labels, or refuse only the seven.
-8. **Reword Standard 17 R5 and the template sentence "An approach a barrier already excludes is not a research direction."** The current wording is the prohibition reading C3 forbids. Alternative: leave the wording and rely on tests alone, which leaves the standard contradicting the profile model.
-9. **The fixture's mathematics.** B1 places NEXP not in ACC0 under the natural-proofs profile's `Does not rule out:` and cites Razborov and Rudich (1997) and Williams (2011) as bare citations beside note files. I did not read the PvsNP repository, so whether its own record attaches the result to natural proofs or elsewhere is unchecked. Please confirm the wording or supply the adopter's own text; C2 needs only that the case is representable.
+8. **Reword the five places that carry the prohibition reading:** Standard 17 line 50, Standard 17 R5 (replaced in full, MUST kept), the `description`, `rationale` and `remediation` of the existing required rule `problems.barriers-recorded`, the template, and the regenerated assurance report. The current wording, including "An approach a barrier already excludes is not a research direction", is the reading C3 forbids. Sub-question: is rewording a required rule's description a reclassification (the record says no)? Alternative: leave the wording and rely on tests alone, in which case C3 stays partly met and T12 and T13 are dropped.
+9. **The fixture's mathematics is this record's own positioning, not repository fact.** The repository says only that PvsNP carries Williams's NEXP not in ACC0 as the counterexample to reading a barrier as a prohibition. B1 places it under the natural-proofs profile's `Does not rule out:` and cites Razborov and Rudich (1997) and Williams (2011; the ACC paper is dated CCC 2011 and J. ACM 2014) as bare citations beside note files. I did not read the PvsNP repository. Please confirm the placement, statement, scope and dates, or supply the adopter's own text; C2 needs only that the case is representable, and T7b waits on this.
 10. **Classification and number.** `recommended` makes this minor-version-class and `"3.2.0"` is prepared, not assigned.
 11. **Out of scope, not designed:** linking an attempt, gate, claim or terminated approach to a barrier by name; identifiers for individual `Rules out:` items; resolving references. Each would be a separate decision, and the first is the one most likely to be read as a prohibition mechanism.
+12. **The explicit `none` of the section is stricter than FE-27's.** Only `none` or `none recorded` on one line; `None - nothing known.` is prose and is reported, which closes a hole where text after `none` was never read. Alternative: allow an explanation after `none` and accept that it is unread, as FE-27 does.

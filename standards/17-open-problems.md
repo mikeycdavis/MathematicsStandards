@@ -47,7 +47,7 @@ sections, in this order, none omitted and none empty:
 ## Known Results             what the literature already establishes
 ## Equivalences              relationships to the target, with direction and proof status
 ## Where the Difficulty Lives  the honest answer to "what is the hard part now?"
-## Known Barriers            barriers encountered, and which approaches they rule out
+## Known Barriers            barrier profiles: scope, what each rules out and does not, evidence
 ## Terminated Approaches     one H3 per approach, each with Status: and
                              Evidence required to reopen:
 ## Stopping Criteria         what would make this effort stop
@@ -100,11 +100,12 @@ is to name it, require it to be written about in this section, and record who re
 ### R5 — Known barriers
 
 Barriers — relativisation, natural proofs, algebrisation in complexity; the parity problem in sieve
-theory; obstructions specific to the problem at hand — are results about which *approaches* cannot
-work. Where an approach falls to a known barrier, `## Known Barriers` MUST record the barrier, the
-citation, and which approaches it rules out. An approach that a barrier already excludes is not a
-research direction; pursuing it after the barrier is documented is the clearest available signal that
-the record is not being read.
+theory; obstructions specific to the problem at hand — are results about which classes of argument
+fail under stated conditions. `## Known Barriers` MUST record each barrier encountered as a profile:
+its name and statement, its scope, what it rules out within that scope, what it does not rule out, and
+a stated reference. A barrier is descriptive evidence. It never decides whether an approach may be
+pursued; that decision is recorded under `## Terminated Approaches`, with the evidence required to
+reopen it.
 
 ### R6 — Terminated approaches and reopening evidence
 
@@ -135,7 +136,7 @@ at the start, this is a research plan. Written at the end, it is a rationalisati
   finding.
 - R2's requirement that the proved section be honest about containing nothing about the target, which
   is the most common true state of a serious effort.
-- R3's higher literature bar, R5's treatment of barriers as statements about approaches, and R6's
+- R3's higher literature bar, R5's treatment of barriers as profiles: scope, what each rules out and does not, and evidence, and R6's
   H3 format with an explicit reopening line.
 - R4's split of the difficulty-displacement question into a mechanical structural half and a
   judgement half that is named rather than pretended away.

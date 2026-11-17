@@ -46,8 +46,18 @@ of the value of this file.
 
 ## Known Barriers
 
-Barriers encountered, each with its citation and the approaches it rules out. An approach a barrier
-already excludes is not a research direction.
+One `###` heading per barrier, named for the barrier. A barrier is descriptive evidence: it records
+what a result shows, under which conditions, and what it does and does not rule out. It is never a
+verdict on whether an approach may be pursued; that decision belongs under Terminated Approaches,
+with the evidence required to reopen it. Write `none` deliberately if no barrier applies. Prose with
+no profile is reported by `problems.barrier-profiles-valid`.
+
+### <Barrier name>
+Statement: <what the barrier says, with its conditions>
+Scope: <the class of arguments and the setting it speaks about>
+Rules out: <what it rules out within that scope, or none>
+Does not rule out: <what it does not rule out, or none>
+Evidence: <a path, URL or commit <sha>; a citation may accompany it>
 
 ## Current Blocker
 

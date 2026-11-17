@@ -12,8 +12,8 @@ rule catalog, so it cannot claim coverage the rules do not declare.
 
 | Figure | Value |
 | --- | --- |
-| Rules in the catalog | 86 |
-| Rules with a detector | 57 |
+| Rules in the catalog | 87 |
+| Rules with a detector | 58 |
 | Rules with no detector (report not-evaluated, never passed) | 29 |
 | Prohibitions (`forbidden` + `nonExemptible`) | 37 |
 | Standards carrying at least one rule | 22 of 22 |
@@ -370,11 +370,19 @@ A claim asserts novelty and carries no citation-type evidence recording a prior-
 
 **What the check does not establish.** Matches novelty assertions in the claim's own text and checks for a recorded search. Novelty claimed in a paper draft rather than in the ledger is not seen, and the quality of the recorded search is not assessed.
 
+### `problems.barrier-profiles-valid`
+
+[Standard 17](../standards/17-open-problems.md) · recommended · warning · structural
+
+The Known Barriers section is either one or more barrier profiles or an explicit none. A profile names the barrier and records its statement, its scope, what it rules out, what it does not rule out, and a stated reference. A profile is descriptive evidence and never a prohibition verdict: a line labelled Verdict, Prohibition, Prohibited, Forbidden, Banned, Status or Decision is reported. Prose with no profile is reported.
+
+**What the check does not establish.** Establishes the shape of each profile and that its evidence is a stated reference. It does not establish that the barrier is real, that the scope is right, that what is listed as ruled out or not ruled out is correct, or that a reference exists. A profile never feeds a verdict about an approach.
+
 ### `problems.barriers-recorded`
 
 [Standard 17](../standards/17-open-problems.md) · required · warning · document
 
-The Known Barriers section records each barrier encountered, its citation, and which approaches it rules out.
+The Known Barriers section records each barrier encountered: what it states, its scope, what it rules out, what it does not rule out, and a reference.
 
 **What the check does not establish.** Establishes that the section exists and says something. It cannot know which barriers apply to this problem.
 

@@ -11,6 +11,24 @@ is one of the arms protecting Standard 21 (see `standards/21-standards-integrity
 
 ## Unreleased
 
+**New recommended rule `problems.barrier-profiles-valid`: structured barrier profiles (FE-29, #60).**
+The `## Known Barriers` section of an open-problem record is now either one or more `###` profiles
+(Statement, Scope, Rules out, Does not rule out, Evidence) or an explicit `none`. A profile is
+descriptive evidence and never a prohibition verdict: a line labelled Verdict, Prohibition, Prohibited,
+Forbidden, Banned, Status or Decision is reported, and nothing derives a verdict from a profile.
+`recommended` / `warning` / `structural` / assurance `partial`, `introducedIn` `3.2.0` (prepared, not
+assigned). Design: `design/fe60-barrier-profiles.md` (frozen). `audit --json` gains `barrierProfiles`.
+
+- Catalog effect: 86 to 87 rules catalogued, 57 to 58 evaluated; 7 of 22 standards fully machine-represented, unchanged.
+- Prose-only sections, including three existing fixtures, gain one warning; no score or status moves.
+- Clarification, not reclassification: the six places that worded a barrier as excluding approaches
+  (Standard 17 summary, R5 and the beyond-the-source list, the template, the description, rationale and
+  remediation of the required `problems.barriers-recorded`, and the assurance report) now describe a
+  profile. Its level, severity, detector and behaviour are unchanged. Stopping-criteria texts are untouched.
+- Evidence must satisfy the FE-28 reference predicate; its known false accepts (slash tokens) are documented, not changed.
+
+**No `VERSION` change, tag or release is made by this entry.**
+
 **`computation.scope-declared` accepts an explicit structured `scope: point` (FE-33, #64).** A
 `computational` or `numerical` evidence entry whose description begins with the exact lower-case key
 `scope: point;` (or `scope: point,`) is accepted as declaring a single-point scope, so it no longer

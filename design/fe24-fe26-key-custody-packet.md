@@ -214,7 +214,7 @@ Revoked key: all its signatures invalid regardless of date. Revoked confirmation
 Approved: one key per repository. The shared-key recommendation below is not selected. Each key's generation still needs its own dated authorization.
 
 
-One key per repository localises compromise and revocation but multiplies custody; one shared key is simpler, and the payload still binds repository identity. Recommended: one key for the owner across repositories ONLY if section 1.2's per-repository configs are strictly maintained, otherwise one per repository. Owner decides.
+One key per repository localises compromise and revocation but multiplies custody; one shared key is simpler, and the payload still binds repository identity. Superseded original text (decision 7: one key per repository decided) follows. Recommended: one key for the owner across repositories ONLY if section 1.2's per-repository configs are strictly maintained, otherwise one per repository. Owner decides.
 
 ### 5.6 Failure modes
 
@@ -254,7 +254,7 @@ The workflow is described for a future state after approval. It does not define 
 Approved: T1, a reviewed standalone `node:crypto` tool on the custody system, outside every repository. A golden-vector format test is required before adoption. No throwaway key is authorized yet, so the test is not yet permitted (see 8.2 item 6). T2 and T3 are not selected. The original recommendation text follows.
 
 
-T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred only if the owner is prepared to maintain and review it, with a golden check against the framework's fixed payload and digest example so any divergence fails visibly. Do not adopt T3.
+Superseded original text (decision 6: T1 decided; T2 and T3 not selected): T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred only if the owner is prepared to maintain and review it, with a golden check against the framework's fixed payload and digest example so any divergence fails visibly. Do not adopt T3.
 
 ### 6.4 Failure modes
 

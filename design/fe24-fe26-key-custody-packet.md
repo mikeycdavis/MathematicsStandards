@@ -1,6 +1,26 @@
 # FE-24 / FE-26 key-custody packet: how the owner would hold the Ed25519 signing key
 
-**Status: PROPOSAL FOR OWNER DECISION. DRAFT. Nothing in this packet is adopted.** The owner has approved external key custody as the required direction for `human-review` discharge (see "Signed human confirmation" in `design/fe24-fe26-typed-evidence-and-warrants.md` and `design/fe24-fe26-human-identity-packet.md`) but has NOT operationally adopted it. Implementation of #55 and #57 stays blocked. **No key may be generated, no signing ceremony run and no trust configuration created until this packet is approved AND the separate dated owner statement in section 8.2 item 11 has been made** (section 8 lists the exact approvals). Packet approval alone authorises nothing. This packet generates no key, invents no key, fingerprint or key identifier, contains no code, and changes no schema, rule, fixture, VERSION or CHANGELOG. Every identifier below written in angle brackets is a placeholder.
+**Status: DESIGN DECISIONS RECORDED (owner decisions dated 2026-11-17); OPERATIONAL ADOPTION NOT AUTHORIZED. DRAFT PR.** The owner (Mike) recorded the choices in the section "Owner decisions recorded 2026-11-17" below. Those choices are the approved design direction for `human-review` discharge custody (see "Signed human confirmation" in `design/fe24-fe26-typed-evidence-and-warrants.md` and `design/fe24-fe26-human-identity-packet.md`). They are NOT operational adoption. The exact custody device or environment has NOT been selected, so operational adoption and any key generation stay blocked until the owner names it. Generation authority is explicitly withheld (decision 11): merging this packet authorizes no real key, no cold spare, no rotation key and no throwaway test key, and creates no trust configuration. Implementation of #55 and #57 stays blocked. This packet generates no key, invents no key, fingerprint or key identifier, contains no code, and changes no schema, rule, fixture, VERSION or CHANGELOG. Every identifier below written in angle brackets is a placeholder.
+
+## Owner decisions recorded 2026-11-17
+
+Recorded from the owner's statement of 2026-11-17. These are approved design choices only; none authorizes an action. Where the sections below still say "recommendation" or "OWNER DECISION", the choice below governs.
+
+| # | Topic | Approved choice (2026-11-17) |
+|---|---|---|
+| 1 | Trust-config location (1.3) | L2 locally: a separate Windows custody account, with write denied to the daily and agent account. L4 in CI: a secret-mounted copy outside the checkout |
+| 2 | Repository binding (1.2) | B1 plus B2. B1: one per-repository config. B2: an evaluator identity check as an accident guard only. This packet documents that B2 does NOT stop an adversarial agent that can rewrite the identity source. B2 still requires its own revision of the typed-warrant record before it is implemented; this packet does not make that revision |
+| 3 | Key storage (2.3) | K3: an offline machine or bootable offline environment that never runs agent or screen-reading tools. K1 (hardware token) is only a later upgrade, and only after raw Ed25519 support is proven on the actual token |
+| 4 | Custody device (8.2 item 4) | NOT selected. The design may merge, but operational adoption and key generation are blocked until the owner names the exact machine or environment |
+| 5 | Backup (4.3) | R3: a cold-spare key, physically separate, inactive until needed. Its generation needs its own explicit dated owner authorization (not given) |
+| 6 | Signing tool (6.3) | T1: a reviewed standalone `node:crypto` tool on the custody system, outside every repository. A golden-vector format test is required before adoption. No throwaway key is authorized yet |
+| 7 | Key scope (5.5) | One key per repository |
+| 8 | Validity window (5.4) | W1: 12 months. Michael Davis owns the reminders, at 60, 30 and 7 days before expiry |
+| 9 | Loss and compromise (7.3) | Section 7 approved as written. Affected adopters are notified whenever a published release relied on a compromised key |
+| 10 | Residual limit (3.4) | Accepted. A valid signature proves possession of a trusted key over the exact content, not humanity or careful review. Custody is owner-asserted. Agent-run local verification is non-authoritative |
+| 11 | Authority to generate (8.2) | Explicitly WITHHELD. Merging this packet authorizes no real key, cold spare, rotation key or throwaway test key |
+
+Not decided and not authorized by these decisions: the custody device or environment (decision 4); generation of any key, including the cold spare, any rotation or replacement key, and any throwaway test key; creation of any trust configuration; the B2 framework change; lifting the #55 and #57 implementation block.
 
 ## Purpose and scope
 
@@ -36,9 +56,12 @@ The signed payload's `repository:` line is taken from the trust config's `reposi
 
 Options: B1 alone; B1 plus B2 as an accident guard; B2 alone is not recommended (it makes the config's `repository` redundant and still rests on an editable source).
 
-**Recommendation (OWNER DECISION):** B1 plus B2 as an accident guard, with the packet and the eventual documentation stating that B2 catches mis-pointing, not a hostile agent. Owner-side practice under B1: one config file per repository, the file name containing the repository slug, the path set per repository (not one global `MATHSTD_TRUST_CONFIG` for the whole machine). Adding B2 requires an extension to the typed-warrant record's verification rules and is therefore a framework design change that must be approved separately (listed in section 8); if the owner declines B2, B1 stands and the residual risk above is documented as accepted.
+**Decision recorded 2026-11-17 (approved): B1 plus B2 as an accident guard.** Original recommendation text follows. B1 plus B2 as an accident guard, with the packet and the eventual documentation stating that B2 catches mis-pointing, not a hostile agent. Owner-side practice under B1: one config file per repository, the file name containing the repository slug, the path set per repository (not one global `MATHSTD_TRUST_CONFIG` for the whole machine). Adding B2 requires an extension to the typed-warrant record's verification rules and is therefore a framework design change that must be approved separately (listed in section 8); B2 is chosen as a direction, but its implementation is not authorized by this packet. Documented limit: B2 does not stop an adversarial agent that can rewrite the identity source; it only catches mis-pointing. If B2 is not later implemented, B1 stands and the residual risk above is accepted.
 
-### 1.3 Recommendation for location (OWNER DECISION)
+### 1.3 Location (DECIDED 2026-11-17: L2 locally, L4 in CI)
+
+Approved: L2 locally (separate Windows custody account, write denied to the daily and agent account) and L4 in CI (secret-mounted copy outside the checkout). The L1 fallback below is not selected. The original recommendation text follows.
+
 
 L2 for local verification if the owner is willing to run a second Windows account; otherwise L1 with an explicit ACL that denies the agent's execution context write access, and an honest note that on a single shared account the barrier is only as good as the sandbox the agent runs in. L4 for CI. Whichever is chosen, record in the adoption checklist (section 8) the actual path class (not a secret) so reviewers know which barrier applies.
 
@@ -71,7 +94,10 @@ L2 for local verification if the owner is willing to run a second Windows accoun
 - Windows reality: general-purpose OS key stores and TPM are weak candidates for Ed25519; hardware tokens are device-specific; an offline machine is the most portable. Because of the compatibility question in K1, the realistic pair is K3 (primary) with K1 as an upgrade only if a verified raw-Ed25519 device exists.
 - The signing tool must produce a raw Ed25519 signature (64 bytes, base64) over the exact payload bytes. Any chosen tool must be checked against this requirement with a throwaway test key in an isolated scratch location, never a real key. Generating even a throwaway key is a key generation: it is NOT permitted until the owner makes its own separate, explicit, dated statement (section 8.2 item 6) naming the scratch location and the deletion; neither packet approval nor item 11 covers it. The test must compare raw signature bytes (64 bytes after decoding), not just print success.
 
-### 2.3 Recommendation (OWNER DECISION)
+### 2.3 Key storage (DECIDED 2026-11-17: K3)
+
+Approved: K3, an offline machine or bootable offline environment that never runs agent or screen-reading tools. K1 is only a later upgrade, after raw Ed25519 support is proven on the actual token. K4 is not selected. The exact device or environment is NOT selected (decision 4), so no generation can occur. The original recommendation text follows.
+
 
 K3, an offline signing machine or a bootable offline environment, with the private key encrypted at rest and the passphrase held only by the owner. Evaluate K1 later only if a device is shown to give raw Ed25519 signatures. Reject K5 outright; treat K4 as acceptable only if the owner records that they accept the weaker barrier. This choice is the owner's: it trades convenience for protection, and no framework check can confirm what was chosen.
 
@@ -109,7 +135,10 @@ The owner signs on the custody machine (K3) after reviewing the attestation them
 
 A valid signature proves that the holder of a trusted private key approved this exact content. It does not prove the signer is human, nor that they read the attestation. If the key is ever usable by an agent, an agent can produce a valid signature, and decision (d) is then not enforced. The framework cannot verify custody. Three further residuals: (1) a human who signs without reviewing is out of scope; (2) an agent that convinces the owner to sign a misleading attestation is not stopped by any signature; (3) the repository's own history shows nothing about where the key lives. The report wording specified in the typed-warrant record ("signed by <name>", and "full-human assurance" only for `verified-signature`) must therefore be read as "a trusted key signed", with custody an owner-asserted fact recorded in the adoption checklist.
 
-### 3.5 Recommendation (OWNER DECISION)
+### 3.5 Boundaries (DECIDED 2026-11-17, with decisions 1, 3 and 10)
+
+Approved by decisions 1, 3 and 10: machine separation (K3), a separate-account trust config (L2), owner-run or CI-run verification authoritative, agent-run local verification non-authoritative. Agent deny rules are defence in depth only. The original recommendation text follows.
+
 
 Machine separation (K3) plus a separate-account trust config (L2) where practical, agent permission deny rules as defence in depth only, and an owner-run or CI-run verification treated as authoritative. Record in the checklist which barrier actually applies, and accept in writing that the framework cannot verify it.
 
@@ -139,7 +168,10 @@ The trust config must also be backed up: it is small and public, so a plain back
 - A recovery does not rewrite history: signatures made before loss remain valid while the key remains trusted.
 - Passphrase loss is key loss.
 
-### 4.3 Recommendation (OWNER DECISION)
+### 4.3 Backup (DECIDED 2026-11-17: R3)
+
+Approved: R3, a cold-spare key, physically separate and inactive until needed. The spare's generation needs its own explicit dated owner authorization, which has not been given; it is not covered by this packet or by decision 11. R4 is declined. The original recommendation text follows.
+
 
 R3 (cold spare) with R2 for the spare only if the owner is comfortable with an encrypted offline copy. Decline R4 unless the owner explicitly wants a second signer (a separate decision about who may discharge reviews, which this packet does not make). If the owner prefers minimal custody, R1 is acceptable, accepting that loss forces re-signing every discharged attestation under a new key.
 
@@ -173,11 +205,14 @@ Revoked key: all its signatures invalid regardless of date. Revoked confirmation
 
 ### 5.4 Options for validity windows (OWNER DECISION)
 
-- W1: short windows (for example 12 months), forcing periodic rotation and re-signing; limits blast radius, costs a recurring owner task.
+- W1: short windows (for example 12 months), forcing periodic rotation and re-signing; limits blast radius, costs a recurring owner task. **DECIDED 2026-11-17: W1, 12 months; Michael Davis owns reminders at 60, 30 and 7 days before expiry.**
 - W2: long windows (multiple years); less work, longer exposure after an unnoticed compromise.
 - Recommended: W1, 12 months, with the reminder in 1.4. This is a recommendation only; the owner chooses.
 
-### 5.5 One key or one key per repository (OWNER DECISION)
+### 5.5 One key or one key per repository (DECIDED 2026-11-17: one key per repository)
+
+Approved: one key per repository. The shared-key recommendation below is not selected. Each key's generation still needs its own dated authorization.
+
 
 One key per repository localises compromise and revocation but multiplies custody; one shared key is simpler, and the payload still binds repository identity. Recommended: one key for the owner across repositories ONLY if section 1.2's per-repository configs are strictly maintained, otherwise one per repository. Owner decides.
 
@@ -214,7 +249,10 @@ The workflow is described for a future state after approval. It does not define 
 8. Verification runs where the owner controls the config (CI or the owner's own run). The attestation discharges only if the outcome is `verified`.
 9. The owner records the confirmation identifier and date in their custody log (outside the repository) so the confirmation can be revoked if needed.
 
-### 6.3 Recommendation (OWNER DECISION)
+### 6.3 Signing tool (DECIDED 2026-11-17: T1)
+
+Approved: T1, a reviewed standalone `node:crypto` tool on the custody system, outside every repository. A golden-vector format test is required before adoption. No throwaway key is authorized yet, so the test is not yet permitted (see 8.2 item 6). T2 and T3 are not selected. The original recommendation text follows.
+
 
 T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred only if the owner is prepared to maintain and review it, with a golden check against the framework's fixed payload and digest example so any divergence fails visibly. Do not adopt T3.
 
@@ -247,7 +285,10 @@ T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred onl
 5. Find the cause (agent access, shared account, backup exposure) and change the boundary that failed (section 3).
 6. Record the event, dates and outcome in the checklist and, where it affects released claims, note it in the repository's design records (a documentation change, separately authorised).
 
-### 7.3 Recommendation (OWNER DECISION)
+### 7.3 Loss and compromise (DECIDED 2026-11-17: approved as written)
+
+Approved as written, including notification: affected adopters are notified whenever a published release relied on a compromised key. The original recommendation text follows.
+
 
 Adopt the table and steps as written; decide in advance who is told (the owner alone, or adopters, if a published release relied on a compromised key). The framework cannot notify anyone.
 
@@ -262,10 +303,10 @@ Adopt the table and steps as written; decide in advance who is told (the owner a
 
 ### 8.1 Adoption checklist (nothing below is done; all steps happen after approval)
 
-- [ ] Owner decisions in 8.2 recorded (each with the chosen option).
-- [ ] Custody machine and account chosen and described, no agent or screen-reading tools on it.
-- [ ] Signing tool chosen and kept outside the repository; its format agreement with the framework's golden vector checked with a throwaway key.
-- [ ] Key generated on the custody machine (first use of any real key; requires approval items 1 to 11, with item 11 as the authority).
+- [x] Owner decisions in 8.2 recorded (each with the chosen option) for items 1 to 3 and 5 to 10, dated 2026-11-17. Item 4 (custody device) is NOT decided and item 11 (authority to generate) is withheld; both stay open.
+- [ ] Custody machine or environment named by the owner (decision 4, NOT yet selected) and described, no agent or screen-reading tools on it. Operational adoption is blocked until this is done.
+- [ ] Signing tool chosen and kept outside the repository; its format agreement with the framework's golden vector checked with a throwaway key (T1 chosen; the throwaway key is not yet authorized).
+- [ ] Key generated on the custody machine (first use of any real key; requires approval items 1 to 11 with item 11 as the authority; item 11 is WITHHELD, so this stays unauthorized).
 - [ ] Public key and key identifier computed by the owner (never by an agent), entered into a per-repository trust config outside the repository.
 - [ ] Trust config hash recorded outside agent reach; copy supplied to CI as a secret file mounted outside the checkout; CI workflow protected from agent-authored edits.
 - [ ] Backup / spare per section 4 established and a recovery drill done using a throwaway key (only under the separate dated statement of 8.2 item 6).
@@ -277,25 +318,27 @@ Adopt the table and steps as written; decide in advance who is told (the owner a
 
 ### 8.2 Exact owner approval items required BEFORE any key generation
 
-Each requires an explicit, recorded owner answer. A missing answer means no key is generated.
+Each requires an explicit, recorded owner answer. A missing answer means no key is generated. Status as of the 2026-11-17 owner decisions is shown in bold after each item. Items 1 to 3 and 5 to 10 are DECIDED; item 4 is NOT DECIDED; item 11 is WITHHELD and is not satisfied by merging this packet.
 
-1. **Trust-config location and barrier** (section 1.3): choose L1, L2, L3 or L4 and state the barrier.
-2. **Repository identity binding** (section 1.2): B1 alone, or B1 plus B2 (which is a framework design change needing its own approval and its own revision of the typed-warrant record), or B2 alone (not recommended).
-3. **Key storage option** (section 2): K3 recommended; K1 only after device capability for raw Ed25519 is shown; K4 only with a written weaker-barrier acceptance; K5 forbidden.
-4. **Custody machine and generation environment**: where and on what machine the key will be generated, confirmed to run no agent or screen-capture tooling.
-5. **Backup and recovery** (section 4): R1, R2, R3 or R4.
-6. **Signing tool and format test** (section 6.3): T1 or T2, and whether to run a FORMAT TEST with a throwaway test key. A throwaway key is still a key generation, so the test is NOT covered by packet approval or by item 11: it needs its own separate, explicit, dated owner statement naming the scratch location and the deletion (no real key material, deleted afterwards). Absent that statement, no format test is run and the format question stays open until after item 11. The same statement gate covers the golden-vector check and any recovery drill.
-7. **Key scope** (section 5.5): one key for all repositories or one per repository.
-8. **Validity window policy** (section 5.4): W1 or W2, and the reminder owner.
-9. **Loss and compromise plan** (section 7): approved as written or amended; notification policy.
-10. **Acceptance of the residual limit** (section 3.4): the owner acknowledges in writing that a valid signature proves key possession, not humanity; that the framework cannot verify custody; and that agent-run local verification is non-authoritative.
-11. **Authority to generate**: a separate, final, dated owner statement that the packet is approved and a key may now be generated, naming the environment from item 4 and the set of keys covered (the primary key, and explicitly any cold spare, rotation keys or loss replacements; any key not named needs its own dated statement of this form). Approval of the packet alone is not this statement.
+1. **Trust-config location and barrier** (section 1.3): choose L1, L2, L3 or L4 and state the barrier. **DECIDED 2026-11-17: L2 locally (separate Windows custody account, write denied to the daily and agent account) and L4 in CI.**
+2. **Repository identity binding** (section 1.2): B1 alone, or B1 plus B2 (which is a framework design change needing its own approval and its own revision of the typed-warrant record), or B2 alone (not recommended). **DECIDED 2026-11-17: B1 plus B2 as an accident guard; B2 does not stop an adversarial agent; B2 implementation still needs its own approval.**
+3. **Key storage option** (section 2): K3 recommended; K1 only after device capability for raw Ed25519 is shown; K4 only with a written weaker-barrier acceptance; K5 forbidden. **DECIDED 2026-11-17: K3; K1 only later after raw Ed25519 is proven on the actual token.**
+4. **Custody machine and generation environment**: where and on what machine the key will be generated, confirmed to run no agent or screen-capture tooling. **NOT DECIDED. The exact machine or environment has not been named. Design may merge; operational adoption and key generation are blocked until the owner names it.**
+5. **Backup and recovery** (section 4): R1, R2, R3 or R4. **DECIDED 2026-11-17: R3 cold spare; its generation needs its own dated authorization (not given).**
+6. **Signing tool and format test** (section 6.3): T1 or T2, and whether to run a FORMAT TEST with a throwaway test key. A throwaway key is still a key generation, so the test is NOT covered by packet approval or by item 11: it needs its own separate, explicit, dated owner statement naming the scratch location and the deletion (no real key material, deleted afterwards). Absent that statement, no format test is run and the format question stays open until after item 11. The same statement gate covers the golden-vector check and any recovery drill. **DECIDED 2026-11-17: T1 outside every repository, golden-vector format test required before adoption. NO throwaway key authorized yet; the separate dated statement has not been made.**
+7. **Key scope** (section 5.5): one key for all repositories or one per repository. **DECIDED 2026-11-17: one key per repository.**
+8. **Validity window policy** (section 5.4): W1 or W2, and the reminder owner. **DECIDED 2026-11-17: W1, 12 months; Michael Davis owns reminders at 60, 30 and 7 days.**
+9. **Loss and compromise plan** (section 7): approved as written or amended; notification policy. **DECIDED 2026-11-17: approved as written; notify affected adopters when a published release relied on a compromised key.**
+10. **Acceptance of the residual limit** (section 3.4): the owner acknowledges in writing that a valid signature proves key possession, not humanity; that the framework cannot verify custody; and that agent-run local verification is non-authoritative. **DECIDED 2026-11-17: accepted as stated; custody owner-asserted; agent-run local verification non-authoritative.**
+11. **Authority to generate**: a separate, final, dated owner statement that the packet is approved and a key may now be generated, naming the environment from item 4 and the set of keys covered (the primary key, and explicitly any cold spare, rotation keys or loss replacements; any key not named needs its own dated statement of this form). Approval of the packet alone is not this statement. **WITHHELD 2026-11-17. Not satisfied. Merging this packet authorizes no real key, cold spare, rotation key or throwaway test key; each needs its own dated statement of this form.**
 
 ### 8.3 What stays blocked after approval of this packet
 
-Approval of this packet authorises nothing by itself: key generation and trust-config creation require the separate dated statement of item 11 (and, for a throwaway test key, item 6's own statement). Neither lifts the #55 / #57 implementation block: that also requires the signature design review to be complete, external key custody to be marked operationally adopted by the owner after the checklist is done, and the real Lean-data packet for #56 to exist.
+Merging this packet records design decisions and authorizes nothing by itself (item 11 is withheld, item 4 is undecided): key generation and trust-config creation require the separate dated statement of item 11 (and, for a throwaway test key, item 6's own statement). Neither lifts the #55 / #57 implementation block: that also requires the signature design review to be complete, external key custody to be marked operationally adopted by the owner after the checklist is done, and the real Lean-data packet for #56 to exist.
 
-## Summary of recommendations for owner decision
+## Summary of recommendations and recorded decisions
+
+The table shows the original recommendations. The owner's recorded decisions of 2026-11-17 are in the section "Owner decisions recorded 2026-11-17" and govern where they differ (one key per repository instead of one shared key; T1 specifically; custody device undecided; generation withheld).
 
 | Topic | Recommendation |
 |---|---|
@@ -307,4 +350,4 @@ Approval of this packet authorises nothing by itself: key generation and trust-c
 | Validity and scope | 12-month windows (W1); one key across repositories only with strict per-repository configs |
 | Signing tool | T1 or T2 outside the repository; no framework signer |
 | Loss/compromise | section 7 as written |
-| Approvals | the eleven items in 8.2, with no key before item 11 |
+| Approvals | the eleven items in 8.2: items 1 to 3 and 5 to 10 decided 2026-11-17, item 4 undecided, item 11 withheld; no key before item 11 |

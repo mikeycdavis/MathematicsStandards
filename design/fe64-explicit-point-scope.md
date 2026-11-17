@@ -1,6 +1,6 @@
 # FE-33 design record: explicit point scope
 
-**Status: DRAFT, owner-decided, awaiting freeze after fresh review.** The twelve choices below were decided by the owner on 2026-11-17 and this revision records them. They are decisions, not defaults awaiting a yes. One further owner choice (13, breadth of the contradiction vocabulary) was raised by review and **decided as 13b** on 2026-11-17 (expanded vocabulary, no carve-outs); it does not change any of the twelve. The record is not frozen: a fresh review of this revision is required first, and implementation is not authorized until the owner then freezes it.
+**Status: FROZEN 2026-11-17 by owner (cmsg_01S962nAgzeF44i1MHDz4h1uWy613X5C7p7vwHwk8L2fJs). Implementation order #64, then #60, then #61, one PR at a time; no VERSION, tag or release action.** Each implementation PR still needs the normal zero-findings exact-head review gate. The twelve choices below were decided by the owner on 2026-11-17, and choice 13 was decided as 13b (expanded vocabulary, no carve-outs).
 **Authority:** the owner-finalized criteria of 2026-11-16 (cmsg_01S962nAgzeF44i1MHDz4h1uY1YFLzdLBAfNL6C61NiNhq), recorded verbatim in `F:\GitHub Evidence\MathematicsStandards\evidence-64\decisions\finalized-criteria-2026-11-16.md`, the owner decision that this item is a design-only record, and the owner's twelve choice decisions of 2026-11-17 (section "Owner decisions"), which are authoritative over any earlier default in this record's history for an explicit structured `scope: point`. Issue: #64 (FE-33).
 **Baseline:** `origin/main` at 11e6a14, VERSION 3.1.0. Main moved from 3475ec4 to 11e6a14 by one commit that only added `design/fe24-fe26-key-custody-packet.md`; `scripts/`, `rules/`, `standards/`, `templates/` and `test/` are byte-identical, so every code reference and baseline result below (taken at 3475ec4, re-run at 11e6a14 where marked) still holds. The gap check (`evidence-64/ac-gap-check/report.md`) was taken at 14562f6; every code location it cites was re-read at 3475ec4 and still holds (detector at `scripts/standards.mjs:1030-1038` and `1073-1077`, evidence parser at `scripts/claims.mjs:468-474`).
 
@@ -725,7 +725,7 @@ The pattern and key-regex probes ran the regular expressions in a throwaway scri
 
 ## Owner decisions (2026-11-17)
 
-All twelve choices were decided by the owner on 2026-11-17. They are recorded here as decisions, not defaults awaiting a yes. They add no acceptance criterion. The record remains a draft: it awaits a fresh review of this revision and then the owner's freeze.
+All twelve choices were decided by the owner on 2026-11-17. They are recorded here as decisions, not defaults awaiting a yes. They add no acceptance criterion. The record is now frozen (see the Status line).
 
 | # | Decision | Where specified |
 | --- | --- | --- |
@@ -749,6 +749,6 @@ Residual points the reviewer may want to confirm, none of which changes a decisi
 - The contradiction check scans only the evidence item's own detail. A point declaration next to a universally quantified claim (as in CLM-0003) is accepted by this rule, by design and by C2.
 - Choice 6 records the owner's MAJOR (4.0.0) classification as stated; this record does not argue it and takes no release action.
 
-## Delivery rules once frozen
+## Delivery rules (record frozen)
 
-Freeze requires a fresh review of this revision first. Choice 13 is decided (13b) and its seven patterns are part of the specified detector. Then: red-first tests (above, those labelled RED-FIRST failing on the baseline, PASS-TODAY pins committed alongside), then fixtures, then the detector and parser change, then the mutation-check entry, then the standards, template, catalog and assurance-report updates, then a CHANGELOG entry under Unreleased that records the MAJOR (4.0.0) classification. No `VERSION` change, tag or release. #55 to #57, #60 and #61 stay deferred; nothing here implements them.
+The record is frozen. Choice 13 is decided (13b) and its seven patterns are part of the specified detector. Then: red-first tests (above, those labelled RED-FIRST failing on the baseline, PASS-TODAY pins committed alongside), then fixtures, then the detector and parser change, then the mutation-check entry, then the standards, template, catalog and assurance-report updates, then a CHANGELOG entry under Unreleased that records the MAJOR (4.0.0) classification. No `VERSION` change, tag or release. #60 and #61 are frozen and sequenced after #64 (order #64, #60, #61, one PR at a time); #55 to #57 stay deferred; nothing here implements any of them. Implementation step 0: exercise the Part 2 contradiction detector with a scratch differential against real strings (Part 2 was not run in a scratch copy of the detector), before the red-first tests.

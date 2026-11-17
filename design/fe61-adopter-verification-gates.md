@@ -1,6 +1,6 @@
 # FE-61 design record: adopter verification gates
 
-**Owner decisions recorded 2026-11-17: defaults of Choices 1 to 15 approved; Choice 7 is Option A; Choice 16 confirmed ("reported result" is audit-level only; adopter assertions must never increase score, Cover or assurance).** **Status: DRAFT, awaiting owner freeze. Implementation of #61 is not authorized until the owner freezes this record.** Nothing here is implemented. The pull request that carries this record changes no code, schema, rule, fixture, VERSION or CHANGELOG file; every schema fragment, fixture, template block, test and report line below is proposed text.
+**Owner decisions recorded 2026-11-17: defaults of Choices 1 to 15 approved; Choice 7 is Option A; Choice 16 confirmed ("reported result" is audit-level only; adopter assertions must never increase score, Cover or assurance).** **Status: FROZEN 2026-11-17 by owner (cmsg_01S962nAgzeF44i1MHDz4h1uWy613X5C7p7vwHwk8L2fJs). Implementation order #64, then #60, then #61, one PR at a time; no VERSION, tag or release action.** Each implementation PR still needs the normal zero-findings exact-head review gate. The owner accepted the change in `fullyMachineRepresentedStandards` from 7 to 6 as the truthful assurance result of Option A, not a defect. Nothing here is implemented. The pull request that carries this record changes no code, schema, rule, fixture, VERSION or CHANGELOG file; every schema fragment, fixture, template block, test and report line below is proposed text.
 **Authority:** the owner-finalized criteria for #61, `finalized-criteria-2026-11-16.md` (C0 to C4 and the unnumbered rider), and the owner's binding decision below. This record adds no acceptance criterion.
 **Evidence base:** the gap-check report for #61 (`ac-gap-check/report.md`, main 14562f6) and the live repository at 3475ec4, re-checked against main 11e6a14 (a design-only change: no `scripts/` or `rules/` difference). The pattern is the merged FE-28 attempt gates (`scripts/attempts.mjs`, `design/fe27-fe28-blocker-and-attempt-gates.md`). The problem is `design/v1.1-disposition.md` row A5: an adopter's own verification tooling is invisible to the framework, and the risk of making it visible is "the framework claiming credit for assurance it did not establish".
 
@@ -91,7 +91,7 @@ Satisfied by the merge of this record after freeze. Verified by review, not by a
 
 | # | Test | Fixture | Fails today because |
 | --- | --- | --- | --- |
-| C1.1 | A gate with `id`, `version`, provenance and result validates: `validate` does not exit 2, and `scripts/policy.mjs` reads it without a schema error (there is no `policy` subcommand) | `adopter-gates-passed` | the key is unknown (`additionalProperties: false`), exit 2 |
+| C1.1 | A gate with `id`, `version`, provenance and result validates: `validate` does not exit 2, and `scripts/policy.mjs` (run as `npm run policy`) reads it without a schema error (there is no `standards.mjs` `policy` subcommand) | `adopter-gates-passed` | the key is unknown (`additionalProperties: false`), exit 2 |
 | C1.2 | A reference with no `version` is rejected, exit 2, naming `adopterGates[0].version` | `adopter-gates-no-version` | key unknown, different message |
 | C1.3 | A reference with no `id` is rejected, exit 2, naming `adopterGates[0].id` | `adopter-gates-no-id` | same |
 | C1.4 | Two references whose ids are equal after trim and case-fold are both reported `invalid`, one finding each | `adopter-gates-duplicate-id` | no rule |
@@ -430,7 +430,7 @@ adopterGates:
       evidence: "artifacts/gate-runs/2026-11-10-selftest.log"
 ```
 
-Exit codes below are those of `validate` on the fixture's directory (exit 2 is a schema or configuration error, the existing path; there is no `policy` subcommand), and equally of `scripts/policy.mjs` reading the file against the patched schema.
+Exit codes below are those of `validate` on the fixture's directory (exit 2 is a schema or configuration error, the existing path; there is no `standards.mjs` `policy` subcommand, and `npm run policy` runs `scripts/policy.mjs`), and equally of `scripts/policy.mjs` reading the file against the patched schema.
 
 | Fixture | Schema result | Reported by the proposed rule |
 | --- | --- | --- |

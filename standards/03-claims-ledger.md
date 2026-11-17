@@ -76,6 +76,13 @@ and above ([Standard 7](07-proof-obligations.md)); `Formal` at rank 9 and above
 omitted — an absent field and an empty field are different, and only one of them shows that the
 author considered the question.
 
+A computation at a single parameter value declares `scope: point` as the first words of its
+`computational` or `numerical` evidence entry (`scope: point;` or `scope: point,`, lower case, exact
+spelling). It still names its arithmetic, and it does not also state a range, an exhaustive check or a
+universal claim (such a contradiction is reported). The declaration is read from that exact form;
+descriptions elsewhere, including `Quantifiers`, are not read as declarations
+([Standard 10](10-computational-and-numerical-evidence.md) R1).
+
 ### R3 — The inline reference convention
 
 Research prose refers to claims by id. When a status word sits adjacent to the id, the prose is

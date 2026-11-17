@@ -12,14 +12,14 @@
       "assurance": "partial",
       "nonExemptible": false,
       "introducedIn": "1.0.0",
-      "description": "Evidence of type computational or numerical records the predicate checked, the range or sample, the arithmetic used, the program, the environment, any seed, and the outcome.",
+      "description": "Evidence of type computational or numerical records the predicate checked, the range or sample, the arithmetic used, the program, the environment, any seed, and the outcome. A computation at a single parameter value may instead declare `scope: point` as the first words of the evidence entry.",
       "rationale": "Almost every dispute about a computational result turns out to be a dispute about one of these lines, and none of them requires mathematical judgement to record.",
-      "remediation": "Expand the evidence entry to cover Standard 10 R1's seven items, and commit the script rather than describing it.",
+      "remediation": "Expand the evidence entry to cover Standard 10 R1's seven items, and commit the script rather than describing it. For a single-point computation, begin the evidence entry with `scope: point;` (exact spelling, then `;` or `,`), still state the arithmetic, and do not also state a range or an exhaustive or universal check.",
       "aliases": [],
       "deprecatedIn": null,
       "supersededBy": null,
       "removedIn": null,
-      "$assuranceNote": "Looks for a bound and an arithmetic declaration in the evidence text. It cannot confirm that the program checked what the entry says it checked."
+      "$assuranceNote": "Looks for a bound and an arithmetic declaration in the evidence text. It cannot confirm that the program checked what the entry says it checked. A `scope: point` declaration is accepted as stated; the detector does not check that the program ran at one point."
     },
     {
       "id": "computation.reproducible-runs",

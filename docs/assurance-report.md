@@ -206,9 +206,9 @@ A path-shaped artifact named by computational or numerical evidence resolves to 
 
 [Standard 10](../standards/10-computational-and-numerical-evidence.md) · required · error · document
 
-Evidence of type computational or numerical records the predicate checked, the range or sample, the arithmetic used, the program, the environment, any seed, and the outcome.
+Evidence of type computational or numerical records the predicate checked, the range or sample, the arithmetic used, the program, the environment, any seed, and the outcome. A computation at a single parameter value may instead declare `scope: point` as the first words of the evidence entry.
 
-**What the check does not establish.** Looks for a bound and an arithmetic declaration in the evidence text. It cannot confirm that the program checked what the entry says it checked.
+**What the check does not establish.** Looks for a bound and an arithmetic declaration in the evidence text. It cannot confirm that the program checked what the entry says it checked. A `scope: point` declaration is accepted as stated; the detector does not check that the program ran at one point.
 
 ### `evidence.applicability-declared`
 

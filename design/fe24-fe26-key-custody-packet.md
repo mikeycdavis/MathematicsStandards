@@ -1,6 +1,6 @@
 # FE-24 / FE-26 key-custody packet: how the owner would hold the Ed25519 signing key
 
-**Status: PROPOSAL FOR OWNER DECISION. DRAFT. Nothing in this packet is adopted.** The owner has approved external key custody as the required direction for `human-review` discharge (see "Signed human confirmation" in `design/fe24-fe26-typed-evidence-and-warrants.md` and `design/fe24-fe26-human-identity-packet.md`) but has NOT operationally adopted it. Implementation of #55 and #57 stays blocked. **No key may be generated, no signing ceremony run and no trust configuration created until this packet is approved** (section 8 lists the exact approvals). This packet generates no key, invents no key, fingerprint or key identifier, contains no code, and changes no schema, rule, fixture, VERSION or CHANGELOG. Every identifier below written in angle brackets is a placeholder.
+**Status: PROPOSAL FOR OWNER DECISION. DRAFT. Nothing in this packet is adopted.** The owner has approved external key custody as the required direction for `human-review` discharge (see "Signed human confirmation" in `design/fe24-fe26-typed-evidence-and-warrants.md` and `design/fe24-fe26-human-identity-packet.md`) but has NOT operationally adopted it. Implementation of #55 and #57 stays blocked. **No key may be generated, no signing ceremony run and no trust configuration created until this packet is approved AND the separate dated owner statement in section 8.2 item 11 has been made** (section 8 lists the exact approvals). Packet approval alone authorises nothing. This packet generates no key, invents no key, fingerprint or key identifier, contains no code, and changes no schema, rule, fixture, VERSION or CHANGELOG. Every identifier below written in angle brackets is a placeholder.
 
 ## Purpose and scope
 
@@ -59,7 +59,7 @@ L2 for local verification if the owner is willing to run a second Windows accoun
 
 | Option | Generation / storage | Agent reach | Windows fit | Notes |
 |---|---|---|---|---|
-| K1 Hardware token with on-device key (smart card or security key that can generate and hold Ed25519 and require touch) | Key generated on the device and never exported | Lowest: signing needs physical presence (touch or PIN) | Variable. Ed25519 support differs by device and firmware, and by the interface used (OpenPGP card, PIV, FIDO2). Windows tooling for these is vendor-specific. **The owner must verify, on the actual device, that it can produce a raw Ed25519 signature over arbitrary bytes before this option is chosen**; do not assume it | FIDO2 and SSH-style security-key signatures wrap the message in a different signed structure than a raw Ed25519 signature over the payload text, so they would NOT verify under the specified `crypto.verify(null, payload, key, signature)` unless the verification format is changed. Treat as incompatible with the current design unless the owner approves a design change |
+| K1 Hardware token with on-device key (smart card or security key that can generate and hold Ed25519 and require touch) | Key generated on the device and never exported | Lowest: signing needs physical presence (touch or PIN) | Variable. Ed25519 support differs by device and firmware, and by the interface used (OpenPGP card, PIV, FIDO2). Windows tooling for these is vendor-specific. **The owner must verify, on the actual device, that it can produce a raw Ed25519 signature over arbitrary bytes before this option is chosen**; do not assume it | FIDO2 and SSH-style security-key signatures wrap the message in a different signed structure than a raw Ed25519 signature over the payload text, so they would NOT verify under the specified `crypto.verify(null, payload, key, signature)` unless the verification format is changed. Treat as incompatible with the current design unless the owner approves a design change. More generally, any hash-then-sign or enveloped format fails (OpenPGP card signing, `ssh-keygen -Y sign` SSHSIG): the verifier checks a raw Ed25519 signature over the payload bytes and nothing else |
 | K2 OS keystore (Windows CNG / DPAPI / TPM-backed key) | Key held by the OS, optionally TPM-bound | Medium: any process running as the same user can usually ask the OS to sign; non-exportable only stops copying | Windows' native key stores historically do not offer Ed25519 broadly; confirm before relying. DPAPI protects a file at rest for the user account, not against a process running as that user | A TPM-bound key prevents theft of the key file but not use by a same-user process |
 | K3 Offline machine (air-gapped or never-networked computer; key file on it, ideally encrypted) | Key generated and used on a machine that does not run agent sessions; payload moved in and signature moved out (QR, USB, typed text) | Low while the machine stays isolated and unlocked only when used | Works with `node:crypto` or OpenSSL on any OS; needs a second machine or a bootable environment | Highest owner effort; best fit if no token supports raw Ed25519 |
 | K4 Passphrase-encrypted key file on the daily machine, in a location agents cannot read | Generated locally with `node:crypto` or OpenSSL, stored encrypted | Medium to high: the passphrase is typed into a session an agent may observe or the file may be readable by the same account | Easy | Weakest acceptable floor; only meaningful if the passphrase is never in any agent-readable place and signing happens in a shell the agent cannot drive |
@@ -69,7 +69,7 @@ L2 for local verification if the owner is willing to run a second Windows accoun
 
 - The only property that defeats an agent is that using the key requires something the agent session cannot do: a physical touch, a second machine, a passphrase the agent cannot obtain. Storage that merely hides the file (K4, K2) is a speed bump against a same-account agent.
 - Windows reality: general-purpose OS key stores and TPM are weak candidates for Ed25519; hardware tokens are device-specific; an offline machine is the most portable. Because of the compatibility question in K1, the realistic pair is K3 (primary) with K1 as an upgrade only if a verified raw-Ed25519 device exists.
-- The signing tool must produce a raw Ed25519 signature (64 bytes, base64) over the exact payload bytes. Any chosen tool must be checked against this requirement with a throwaway test key in an isolated scratch location, never a real key, only after the owner approves running such a test (section 8 item 6).
+- The signing tool must produce a raw Ed25519 signature (64 bytes, base64) over the exact payload bytes. Any chosen tool must be checked against this requirement with a throwaway test key in an isolated scratch location, never a real key. Generating even a throwaway key is a key generation: it is NOT permitted until the owner makes its own separate, explicit, dated statement (section 8.2 item 6) naming the scratch location and the deletion; neither packet approval nor item 11 covers it. The test must compare raw signature bytes (64 bytes after decoding), not just print success.
 
 ### 2.3 Recommendation (OWNER DECISION)
 
@@ -128,7 +128,7 @@ Machine separation (K3) plus a separate-account trust config (L2) where practica
 |---|---|---|---|
 | R1 No backup | Key exists once | Smallest attack surface | Loss means re-adoption of every signed attestation (section 7) |
 | R2 Second encrypted copy offline | Encrypted key file on separate offline media in a separate physical place | Survives loss of the primary device | A second place an attacker (or agent with physical access) could reach; passphrase must be recoverable by the owner |
-| R3 Second independent key (cold spare) | A second key, generated and kept offline, whose public key is pre-listed in the trust config as a signer with a later `notBefore` or held in reserve | No secret needs restoring; loss of one key is recoverable by revocation and use of the other | Two keys to custody; the spare's public key must be in the config before it is needed, widening the anchor set |
+| R3 Second independent key (cold spare) | A second key (its generation needs its own dated item-11-form statement, see 8.2), generated and kept offline, whose public key is pre-listed in the trust config as a signer with a later `notBefore` or held in reserve | No secret needs restoring; loss of one key is recoverable by revocation and use of the other | Two keys to custody; the spare's public key must be in the config before it is needed, widening the anchor set |
 | R4 Escrow with a named second person | A trusted person holds a sealed copy | Survives owner incapacity | Adds a human who can sign; conflicts with "one owner signs" |
 
 The trust config must also be backed up: it is small and public, so a plain backup plus the recorded hash (section 1.4) suffices. It must be backed up OUTSIDE agent write reach, since a restored backup is a trust anchor.
@@ -157,12 +157,12 @@ Revoked key: all its signatures invalid regardless of date. Revoked confirmation
 
 ### 5.2 Planned rotation, step by step (owner actions; nothing here is run before approval)
 
-1. On the custody machine, generate the new key (only after section 8 approval) and compute its public key and key identifier there; never on an agent machine.
+1. On the custody machine, generate the new key (only after its own dated owner statement in the form of 8.2 item 11, naming this key; the original item 11 does not cover it unless it explicitly names rotation keys) and compute its public key and key identifier there; never on an agent machine.
 2. Add the new signer entry to the trust config copy on the custody side, with `notBefore` set to the activation date and a `notAfter` the owner chooses (recommended in 5.4).
 3. Overlap: both signers trusted. Re-sign each discharged attestation with the new key (workflow in section 6).
 4. Move the updated config to the authoritative locations (local custody path, CI secret), and compare the recorded hash.
 5. Run an owner-controlled verification and confirm discharges still hold.
-6. Revoke the old key (add to `revokedKeys` with date and reason) or let its window lapse; revoking is preferred because the signed `reviewed` date is the signer's own assertion and cannot be used to honour old signatures.
+6. Revoke the old key (add to `revokedKeys` with date and reason) or let its window lapse; the real difference is timing: revocation takes effect immediately and independently of `notAfter`, while a lapse takes effect only when the window ends. Both invalidate the old key's signatures (a lapsed key reports `key-expired`), so re-signing under the new key must be complete BEFORE either happens or discharges are lost.
 7. Destroy the old private key according to the custody option and record the destruction in the checklist.
 
 ### 5.3 Revocation (emergency or routine)
@@ -197,8 +197,8 @@ The workflow is described for a future state after approval. It does not define 
 - **Preparer (agent or owner):** writes the attestation in the policy file with `reviewer.kind: human-review`, contributions and `reviewedAgainst`, leaving `signature` empty. The preparer may not sign.
 - **Owner:** reviews the underlying subject (the rule's evidence, the reviewed paths) themselves, then signs.
 - **Signing tool, options:**
-  - **T1 a small standalone script using only `node:crypto`**, kept OUTSIDE the framework repository (in the owner's custody area) so no dependency or code is added to the framework. It rebuilds the payload text from the attestation, shows it, and signs with the key. Pros: matches the verifier's own primitives, so format agreement is likely; cons: it is new code that the owner must review and keep, and it duplicates the digest and payload canonicalization, creating drift risk against the framework.
-  - **T2 OpenSSL command line** (raw Ed25519 signing of a file, supported by recent OpenSSL releases; confirm the installed version supports it). Pros: widely documented, no bespoke code; cons: the payload and digest must be built separately (by the framework's own helper or by hand), and an owner-built payload risks typos.
+  - **T1 a small standalone script using only `node:crypto`**, kept OUTSIDE the framework repository (in the owner's custody area) so no dependency or code is added to the framework. It rebuilds the payload text from the attestation, shows it, and signs with the key. Pros: matches the verifier's own primitives, so format agreement is likely; cons: it is new code that the owner must review and keep, and it duplicates the digest and payload canonicalization, creating drift risk against the framework. Rebuilding the digest means flattening the attestation, which needs a YAML parse on the custody machine: an extra code path and supply-chain exposure there (T2 has the same need, by hand or by helper). A framework-provided digest helper or a framework-displayed payload preview is a candidate follow-up, but it adds code and needs separate approval; it is not proposed here.
+  - **T2 OpenSSL command line** (raw Ed25519 signing of a file, supported by recent OpenSSL releases; confirm the installed version supports it). The raw-signing form is `openssl pkeyutl -sign -rawin` with the key and the payload file; it writes binary output that must be converted to base64 for `signature.value`. Windows does not ship OpenSSL, so a build must be sourced from somewhere the owner trusts (a supply-chain decision for the custody machine), and the installed version must be confirmed to support Ed25519 raw signing. Pros: widely documented, no bespoke code; cons: the payload and digest must be built separately (by the framework's own helper or by hand), and an owner-built payload risks typos.
   - **T3 a framework-provided signing helper:** not available and not proposed. The typed-warrant record says the framework holds no private key and defines no ceremony; adding a signer to the framework would add a key-handling code path to the repository and widen scope. Listed only to record it was considered and is NOT recommended without separate approval.
 - **Dependency rule:** the framework gains no dependency under any option; the tool lives outside the repository.
 
@@ -206,10 +206,10 @@ The workflow is described for a future state after approval. It does not define 
 
 1. Preparer produces the attestation and a reviewable preview of the signed payload, built by the framework's verifier logic (a future read-only display; this packet specifies no code for it).
 2. Owner reads the real evidence behind the attestation, not the agent's summary.
-3. Owner moves the attestation content (not the key) to the custody machine, by a one-way route (removable media or typed text).
-4. On the custody machine, the tool REBUILDS the payload from the attestation, with `repository` taken from the owner's own record for that repository (matching the trust config's `repository`), and displays all payload lines: repository, rule, kind, digest, reviewed date, confirmation.
+3. Owner moves the attestation content (not the key) to the custody machine, as reviewed, non-executable data only (typed text or a QR code preferred; removable media is a known air-gap attack vector and, if used, carries only plain text files that are inspected, never executed or auto-run).
+4. On the custody machine, the tool REBUILDS the payload from the attestation, with `repository` taken from the owner's own record for that repository (matching the trust config's `repository`), and displays all payload lines, including the first domain-separation line `mathstd-attestation-signature/1`, then repository, rule, kind, digest, reviewed date and confirmation.
 5. Owner checks each line against what they reviewed, chooses a unique `confirmation` identifier (8 to 64 characters of A-Z a-z 0-9 . _ -), unlocks the key, and signs.
-6. Tool outputs only: `algorithm`, `keyId`, `confirmation`, base64 `value`. The signed result is carried back by a one-way route.
+6. Tool outputs only: `algorithm`, `keyId`, `confirmation`, base64 `value`. The signed result is carried back the same way (non-executable data only).
 7. The `signature` block is written into the attestation (by the owner or the preparer; the block is public data and contains no secret).
 8. Verification runs where the owner controls the config (CI or the owner's own run). The attestation discharges only if the outcome is `verified`.
 9. The owner records the confirmation identifier and date in their custody log (outside the repository) so the confirmation can be revoked if needed.
@@ -220,7 +220,7 @@ T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred onl
 
 ### 6.4 Failure modes
 
-- Tool digest or payload differs from the verifier's: valid-looking signature that verifies `invalid`. Mitigation: the framework's golden test vector (specified in the typed-warrant record) is run through the tool with a throwaway test key only after approval.
+- Tool digest or payload differs from the verifier's: valid-looking signature that verifies `invalid`. Mitigation: the framework's golden test vector (specified in the typed-warrant record) is run through the tool with a throwaway test key only under the separate dated statement of 8.2 item 6.
 - Preparer edits the attestation after signing: digest changes, signature `invalid` (the intended behaviour).
 - Owner signs from an agent-driven session: custody boundary void.
 - Date: `reviewed` is the attestation's own date; mismatch with the signing date is not an error, but the confirmation log should hold the actual date.
@@ -232,7 +232,7 @@ T1 or T2 (owner's choice) with the tool outside the repository; T1 preferred onl
 
 | Event | Class | Response |
 |---|---|---|
-| Key lost, no sign of exposure | Loss | Use the spare if R3, else generate a replacement after a fresh approval pass; add new signer; re-review and re-sign discharged attestations; revoke the lost key as a precaution |
+| Key lost, no sign of exposure | Loss | Use the spare if R3, else generate a replacement only under its own dated item-11-form owner statement; add new signer; re-review and re-sign discharged attestations; revoke the lost key as a precaution |
 | Passphrase forgotten | Loss | Same as key loss |
 | Key (or backup) possibly exposed, no misuse seen | Suspected compromise | Treat as compromise |
 | Key used by something other than the owner, or trust config altered | Confirmed compromise | See below |
@@ -265,10 +265,10 @@ Adopt the table and steps as written; decide in advance who is told (the owner a
 - [ ] Owner decisions in 8.2 recorded (each with the chosen option).
 - [ ] Custody machine and account chosen and described, no agent or screen-reading tools on it.
 - [ ] Signing tool chosen and kept outside the repository; its format agreement with the framework's golden vector checked with a throwaway key.
-- [ ] Key generated on the custody machine (first use of any real key; requires approval items 1 to 6).
+- [ ] Key generated on the custody machine (first use of any real key; requires approval items 1 to 11, with item 11 as the authority).
 - [ ] Public key and key identifier computed by the owner (never by an agent), entered into a per-repository trust config outside the repository.
 - [ ] Trust config hash recorded outside agent reach; copy supplied to CI as a secret file mounted outside the checkout; CI workflow protected from agent-authored edits.
-- [ ] Backup / spare per section 4 established and a recovery drill done using a throwaway key.
+- [ ] Backup / spare per section 4 established and a recovery drill done using a throwaway key (only under the separate dated statement of 8.2 item 6).
 - [ ] Rotation and revocation dates scheduled; reminders set.
 - [ ] Custody log created (confirmation identifiers, dates, reasons).
 - [ ] Loss and compromise plan (section 7) reviewed.
@@ -284,16 +284,16 @@ Each requires an explicit, recorded owner answer. A missing answer means no key 
 3. **Key storage option** (section 2): K3 recommended; K1 only after device capability for raw Ed25519 is shown; K4 only with a written weaker-barrier acceptance; K5 forbidden.
 4. **Custody machine and generation environment**: where and on what machine the key will be generated, confirmed to run no agent or screen-capture tooling.
 5. **Backup and recovery** (section 4): R1, R2, R3 or R4.
-6. **Signing tool and format test** (section 6.3): T1 or T2, and permission to run a one-time FORMAT TEST with a throwaway test key (clearly marked non-production, deleted afterwards) before any real key exists. This is the only pre-adoption key-like action permitted, and only on explicit approval of this item.
+6. **Signing tool and format test** (section 6.3): T1 or T2, and whether to run a FORMAT TEST with a throwaway test key. A throwaway key is still a key generation, so the test is NOT covered by packet approval or by item 11: it needs its own separate, explicit, dated owner statement naming the scratch location and the deletion (no real key material, deleted afterwards). Absent that statement, no format test is run and the format question stays open until after item 11. The same statement gate covers the golden-vector check and any recovery drill.
 7. **Key scope** (section 5.5): one key for all repositories or one per repository.
 8. **Validity window policy** (section 5.4): W1 or W2, and the reminder owner.
 9. **Loss and compromise plan** (section 7): approved as written or amended; notification policy.
 10. **Acceptance of the residual limit** (section 3.4): the owner acknowledges in writing that a valid signature proves key possession, not humanity; that the framework cannot verify custody; and that agent-run local verification is non-authoritative.
-11. **Authority to generate**: a separate, final, dated owner statement that the packet is approved and a key may now be generated, naming the environment from item 4. Approval of the packet alone is not this statement.
+11. **Authority to generate**: a separate, final, dated owner statement that the packet is approved and a key may now be generated, naming the environment from item 4 and the set of keys covered (the primary key, and explicitly any cold spare, rotation keys or loss replacements; any key not named needs its own dated statement of this form). Approval of the packet alone is not this statement.
 
 ### 8.3 What stays blocked after approval of this packet
 
-Approval of this packet authorises key generation and trust-config creation by the owner. It does not lift the #55 / #57 implementation block: that also requires the signature design review to be complete, external key custody to be marked operationally adopted by the owner after the checklist is done, and the real Lean-data packet for #56 to exist.
+Approval of this packet authorises nothing by itself: key generation and trust-config creation require the separate dated statement of item 11 (and, for a throwaway test key, item 6's own statement). Neither lifts the #55 / #57 implementation block: that also requires the signature design review to be complete, external key custody to be marked operationally adopted by the owner after the checklist is done, and the real Lean-data packet for #56 to exist.
 
 ## Summary of recommendations for owner decision
 

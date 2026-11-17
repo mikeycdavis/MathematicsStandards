@@ -60,6 +60,7 @@ export const EVALUATED_RULES = [
   "problems.difficulty-location",
   "problems.barriers-recorded",
   "problems.blocker-named",
+  "problems.barrier-profiles-valid",
   "lifecycle.failed-routes-preserved",
   "lifecycle.terminated-approaches",
   "lifecycle.reopening-evidence",

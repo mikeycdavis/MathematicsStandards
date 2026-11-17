@@ -1,0 +1,8 @@
+# FE-29 (#60) fixture: barrier-profile-missing-scope
+standardVersion: "1.0.0"
+project: "barrier-profile-missing-scope"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

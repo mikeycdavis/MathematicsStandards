@@ -53,7 +53,8 @@ import {
 } from "./claims.mjs";
 import { undischargedAssertions } from "./markers.mjs";
 import { parseBlocker } from "./blocker.mjs";
-import { parseAttempt, rollup } from "./attempts.mjs";
+import { hasReference, parseAttempt, rollup } from "./attempts.mjs";
+import { parseBarriers } from "./barriers.mjs";
 
 /**
  * This file names the very tokens it searches for — `sorry`, `Admitted`, `native_decide`. Scanning
@@ -1577,6 +1578,40 @@ function detectAttemptGates() {
   });
 }
 
+/**
+ * FE-29 (#60). The Known Barriers section of each open-problem record, read as barrier profiles. A
+ * profile is descriptive evidence and never a prohibition verdict. This is the one place a record is
+ * parsed for them, and the three consumers (the detector, the text report and the JSON report) all
+ * read what it returns. See design/fe60-barrier-profiles.md.
+ */
+function barrierReport() {
+  const dir = path.join(root, OPEN_PROBLEMS_DIR);
+  return files
+    .filter((f) => f.startsWith(dir + path.sep) && path.basename(f) === "problem.md" && contents.has(f))
+    .map((f) => ({ path: rel(f), barriers: parseBarriers(contents.get(f)) }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * FE-29 (#60). Each Known Barriers section is a set of structured profiles or an explicit none. An
+ * absent or empty section is left to problems.barriers-recorded and is not repeated here.
+ */
+function detectBarrierProfiles() {
+  const evidence = [];
+  for (const { path: file, barriers } of barrierReport()) {
+    if (barriers.status === "absent" || barriers.status === "empty") continue;
+    for (const problem of barriers.problems) evidence.push(`${file} — ${problem}`);
+  }
+  if (evidence.length === 0) return;
+  report("problems.barrier-profiles-valid", {
+    message:
+      `${evidence.length} problem(s) with the barrier profiles of the open-problem record. A barrier profile is descriptive ` +
+      `evidence: it records scope, what is ruled out, what is not, and evidence, and is never a prohibition verdict.`,
+    evidence,
+    label: "OBSERVED",
+  });
+}
+
 const ABANDONED = /(^|\/)(abandoned|failed|dead-ends?|attempts?)(\/|$)/i;
 
 /**
@@ -1924,6 +1959,7 @@ detectOpenProblems();
 detectFailedRoutes();
 detectBlockers();
 detectAttemptGates();
+detectBarrierProfiles();
 detectEvidenceShape();
 detectLocatorFragments();
 detectApplicability();
@@ -1962,6 +1998,20 @@ function renderHuman(fileCount) {
     const roll = attempt.rollup === "no-gates" ? "no gates" : attempt.rollup === "all-passed" ? "all passed" : "not all passed";
     lines.push(`    ${attempt.id}: ${roll}${shown.length > 0 ? ` (${shown.join(", ")})` : ""}`);
     for (const gate of attempt.gates) lines.push(`      ${gate.name}: ${gate.reported}`);
+  }
+  // FE-29 (#60). Item counts only: never summed, compared or scored, and never a verdict.
+  const barrierRecords = barrierReport();
+  if (barrierRecords.length > 0) {
+    lines.push("  Barrier profiles (descriptive evidence; never a prohibition verdict):");
+    for (const { path: file, barriers } of barrierRecords) {
+      lines.push(`    ${file}: ${barriers.status === "profiles" ? `${barriers.profiles.length} profile(s)` : barriers.status}`);
+      for (const p of barriers.profiles) {
+        lines.push(
+          `      ${p.name}: rules out ${p.rulesOut.length}, does not rule out ${p.doesNotRuleOut.length}, ` +
+            `${hasReference(p.evidence) ? "evidence stated" : "no evidence reference"}`,
+        );
+      }
+    }
   }
 
   const attention = [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
@@ -2414,6 +2464,9 @@ if (!VALIDATING) {
           // lacking the evidence its state requires is `invalid`, an unrun gate is `unrun`, and an
           // attempt with no gates is `no-gates`. Nothing here is ever a pass by omission.
           researchAttempts: attemptReport(),
+          // FE-29 (#60). Each open-problem record's barrier profiles. There is no verdict, prohibition
+          // or score key, and a test pins the key set.
+          barrierProfiles: barrierReport(),
           findings,
         },
         null,

@@ -188,6 +188,9 @@ export const RULE_SURFACES = new Map([
   // FE-27. The Current Blocker section of each record. A record with no such section is the finding,
   // so the surface is the record, not the section.
   ["problems.blocker-named", { subject: P, surfaces: ["open-problems"] }],
+  // FE-29 (#60). The Known Barriers section of each record, read as barrier profiles. A record with no
+  // such section is left to problems.barriers-recorded, so the surface is the record.
+  ["problems.barrier-profiles-valid", { subject: P, surfaces: ["open-problems"] }],
 
   // Lifecycle. `failed-routes-preserved` reads PATH NAMES rather than content — which is §0m stated
   // as a surface: a rule looking for a record of abandoned work is matching the shape of a path.

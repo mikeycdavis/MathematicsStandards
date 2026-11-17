@@ -1,0 +1,8 @@
+# FE-29 (#60) fixture: barrier-profile-nexp-acc0
+standardVersion: "1.0.0"
+project: "barrier-profile-nexp-acc0"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

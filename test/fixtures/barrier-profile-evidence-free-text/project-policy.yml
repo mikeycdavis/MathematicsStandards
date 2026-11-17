@@ -1,0 +1,8 @@
+# FE-29 (#60) fixture: barrier-profile-evidence-free-text
+standardVersion: "1.0.0"
+project: "barrier-profile-evidence-free-text"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

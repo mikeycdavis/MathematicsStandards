@@ -1,0 +1,8 @@
+# FE-29 (#60) fixture: barrier-profile-pursued-control
+standardVersion: "1.0.0"
+project: "barrier-profile-pursued-control"
+
+mathematics:
+  regimes:
+    - open-problem
+  openProblemMode: true

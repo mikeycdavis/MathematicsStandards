@@ -559,7 +559,7 @@ test("T13 · the template carries the profile form, and its example parses once 
 });
 
 test("T13 · R7 and the other stopping-criteria texts stay outside this change (choice 13)", () => {
-  assert.match(read("standards/17-open-problems.md"), /a barrier that would rule the strategy out/);
+  assert.match(read("standards/17-open-problems.md").replace(/\s+/g, " "), /a barrier that would rule the strategy out/);
 });
 
 // ---------------------------------------------------------------------------

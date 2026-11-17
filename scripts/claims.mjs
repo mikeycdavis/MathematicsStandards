@@ -470,7 +470,26 @@ function parseEvidence(textLine) {
   const type = (split ? split[1] : textLine.split(/\s/)[0]).toLowerCase();
   const detail = split ? split[2].trim() : "";
   const artifacts = [...detail.matchAll(/`([^`]+)`/g)].map((m) => m[1].trim()).filter(isPathShaped);
-  return { type, detail, artifacts, text: textLine };
+  // Not type-gated: only computation.scope-declared reads `scope`, and only for computational items.
+  return { type, detail, artifacts, scope: classifyScope(detail), text: textLine };
+}
+
+/** The structured scope key: the lower-case literal `scope:` at character 0 of an evidence detail. */
+const SCOPE_KEY = /^scope:[ \t]*([^;,\s]*)[ \t]*(?:[;,]|$)/;
+
+/**
+ * FE-33 (#64). Classify an evidence detail's structured scope declaration. Exactly one class:
+ * `none` (no literal `scope:` at char 0), `malformed` (starts with `scope:` but fails the key
+ * grammar), `unrecognised` (grammar ok, value is not exactly `point`), `point`. `rest` is the
+ * detail after the key and its terminator. Nothing else (Quantifiers, Statement, Domain) is read.
+ */
+export function classifyScope(detail) {
+  if (!detail.startsWith("scope:")) return { kind: "none", value: null, rest: detail };
+  const match = SCOPE_KEY.exec(detail);
+  if (!match) return { kind: "malformed", value: null, rest: detail };
+  const rest = detail.slice(match[0].length).trim();
+  if (match[1] !== "point") return { kind: "unrecognised", value: match[1], rest };
+  return { kind: "point", value: "point", rest };
 }
 
 /**
@@ -662,5 +681,47 @@ export function looksUniversal(entry) {
 
 /** True when evidence text describes a bounded, finite check. */
 export function looksBounded(detail) {
-  return /\b(n\s*(?:<=|≤|<)\s*\d|up to\s+\d|first\s+\d+\s+\w+|10\^\d|10\*\*\d|exhaustive(?:ly)?\s+(?:up to|to)\b|range\s+\d)/i.test(detail);
+  return BOUNDED_RANGE.test(detail);
+}
+
+/** The expression inside `looksBounded`, unchanged, shared with the scope-contradiction check. */
+const BOUNDED_RANGE = /\b(n\s*(?:<=|≤|<)\s*\d|up to\s+\d|first\s+\d+\s+\w+|10\^\d|10\*\*\d|exhaustive(?:ly)?\s+(?:up to|to)\b|range\s+\d)/i;
+
+const DOMAIN_WORDS = "n|m|k|s|x|t|integers?|naturals?|reals?|values?|parameters?|inputs?|cases?|primes?|numbers?|points?";
+
+/**
+ * FE-33 (#64), owner Choice 13b: the seven contradiction patterns, tried in this order; the first
+ * pattern that matches anywhere wins. A consistency check of a `scope: point` declaration against
+ * the same evidence item's own words. It never supplies or infers point scope.
+ */
+const SCOPE_CONTRADICTION_PATTERNS = [
+  /\bexhaustive(?:ly)?\b/i,
+  /\b(?:for all|for every|for each|for any|for arbitrar(?:y|ily)|universal(?:ly)?|all sufficiently large|infinitely many)\b|∀/i,
+  new RegExp(`\\ball\\s+(?:\\w+\\s+){0,2}?(?:${DOMAIN_WORDS}|intervals?|subintervals?)\\b`, "i"),
+  BOUNDED_RANGE,
+  new RegExp(`\\bevery\\s+(?:\\w+\\s+){0,2}?(?:${DOMAIN_WORDS})\\b`, "i"),
+  /\b(?:entire|whole|full)\s+(?:range|interval|domain)\b|\bacross\s+(?:the\s+)?(?:\w+\s+)?(?:range|interval|domain)\b/i,
+  /\brandom\s+sampl\w*|\bsampl(?:ed|ing)\s+(?:on|over|across|from)\b/i,
+];
+
+/**
+ * Scan the part of a point-declared evidence detail that follows the key. Backtick code spans are
+ * replaced by a space first (a program path is not language). Returns `{ pattern, text }` (the
+ * 1-based pattern number, and the text to quote: the match, extended over the rest of its token and
+ * cut to 40 characters) or null.
+ */
+export function findScopeContradiction(rest) {
+  const scanned = rest.replace(/`[^`]*`/g, " ");
+  for (let i = 0; i < SCOPE_CONTRADICTION_PATTERNS.length; i++) {
+    const match = SCOPE_CONTRADICTION_PATTERNS[i].exec(scanned);
+    if (!match) continue;
+    let end = match.index + match[0].length;
+    while (end < scanned.length) {
+      const ch = scanned[end];
+      if (/[\p{L}\p{N}_^*]/u.test(ch) || (ch === "." && /\d/.test(scanned[end + 1] ?? ""))) end++;
+      else break;
+    }
+    return { pattern: i + 1, text: scanned.slice(match.index, end).slice(0, 40) };
+  }
+  return null;
 }

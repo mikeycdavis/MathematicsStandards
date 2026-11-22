@@ -54,7 +54,7 @@
     },
 
     "attestations": {
-      "description": "Recorded human judgement for rules the catalog says a human evaluates (Standard 19 R6). An attestation is EVIDENCE, not a waiver: it says the rule applies and is satisfied on human review. It never overrides an automated failure, never applies to a rule the catalog marks non-attestable, never reaches a rule that is `forbidden` and `nonExemptible`, and returns the rule to not-evaluated once stale or expired. Most of what these standards require is mathematical judgement, so this is the mechanism that carries the majority of the framework's real assurance.",
+      "description": "Recorded human judgement for rules the catalog says a human evaluates (Standard 19 R6). An attestation is EVIDENCE, not a waiver: it says the rule applies and is satisfied on human review. It never overrides an automated failure, never applies to a rule the catalog marks non-attestable, and returns the rule to not-evaluated once stale or expired. `nonExemptible` prohibits exceptions and waivers; it does not prohibit an evidence-bearing attestation on a manual-review rule. A rejection is always effective and fails the rule. Most of what these standards require is mathematical judgement, so this is the mechanism that carries the majority of the framework's real assurance.",
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/ruleId" },
       "additionalProperties": { "$ref": "#/$defs/attestation" }
@@ -196,11 +196,61 @@
       }
     },
 
-    "applicabilityDeclaration": {
+    "subjectId": {
+      "description": "A stable identifier for a portion of a rule's subject: lower-case kebab-case. Stable means a rename is an edit to the declaration, never a silent change of meaning.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+
+    "splitBasis": {
+      "description": "Why a portion is classified as it is. `statement` is required free text and is valid on its own. `reference` is optional and, when present, is checked separately by the semantic layer: it must state a path, a URL or `commit <sha>`.",
       "type": "object",
-      "required": ["status", "reason"],
+      "required": ["statement"],
       "additionalProperties": false,
       "properties": {
+        "statement": { "description": "Why this classification holds.", "type": "string", "minLength": 1 },
+        "reference": { "description": "Optional path, URL or commit supporting the statement. The framework checks its form and, for a repository path, whether it resolves; it does not judge whether it supports the statement.", "type": "string", "minLength": 1 }
+      }
+    },
+
+    "splitSubjectEntry": {
+      "type": "object",
+      "required": ["subject", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "subject": { "$ref": "#/$defs/subjectId" },
+        "basis": { "$ref": "#/$defs/splitBasis" }
+      }
+    },
+
+    "applicabilityDeclaration": {
+      "description": "A status declaration (`status` and `reason`) or a split-subject declaration (`mode`, `declaredSubject`, `appliesTo`, `structurallyImpossibleFor`, `revisitWhen`). The schema cannot express which keys are required for which branch; the semantic layer (scripts/applicability.mjs) enforces it, so `standards validate`, `standards policy` and `standards audit` agree.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "Present instead of `status`. The only value is `split-subject`: the rule's subject is divided into a portion where it is evaluated and a portion where its failure mode is structurally impossible. There is no generic partial value and no named bundle; a second value would be a separate decision.",
+          "type": "string",
+          "enum": ["split-subject"]
+        },
+        "declaredSubject": {
+          "description": "The portions this rule's subject divides into, declared by the project for this rule. A split declaration must classify every one of them. A portion listed here and classified in neither set leaves the rule not evaluated. It cannot catch a portion the author never listed.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/subjectId" }
+        },
+        "appliesTo": {
+          "description": "Portions on which the rule is evaluated. Non-empty when `mode` is present.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/splitSubjectEntry" }
+        },
+        "structurallyImpossibleFor": {
+          "description": "Portions on which the rule's failure mode cannot occur, by construction. Non-empty when `mode` is present. Not `not-applicable`: the rule still applies to the project.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/splitSubjectEntry" }
+        },
         "status": {
           "type": "string",
           "enum": ["applicable", "not-applicable"]
@@ -267,6 +317,12 @@
           "description": "Informational revision identifier. Recorded, never computed — provider-neutral by design.",
           "type": "string",
           "minLength": 1
+        },
+        "portions": {
+          "description": "For an attestation on a rule with a split-subject declaration: the portions the reviewer examined. Each must be a member of the rule's `appliesTo`; the semantic layer enforces this. Required on such an attestation and refused on any other.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/subjectId" }
         }
       }
     },

@@ -21,6 +21,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { parseYaml, YamlError } from "./yaml.mjs";
 import { validate, assertSchemaSupported, SchemaError } from "./jsonschema.mjs";
+import { validateApplicability } from "./applicability.mjs";
 
 const EXIT_OK = 0;
 const EXIT_FINDINGS = 1;
@@ -190,6 +191,19 @@ export async function checkPolicy(policyPath, schemaPath, today) {
       return null; // A missing catalog disables the rule-aware checks; it never fakes a pass.
     }
   })();
+
+  // FE-25. The conditional applicability rules the schema cannot express, shared with
+  // `standards validate` and the engine so all three agree. Invalid is exit 2, never a finding.
+  const semantic = validateApplicability(document, catalog);
+  if (semantic.length > 0) {
+    return {
+      status: "invalid",
+      errors: semantic.map((e) => ({ path: e.path, message: `${e.id}: ${e.message}` })),
+      findings: [],
+      aliases,
+      document,
+    };
+  }
   const findings = complianceFindings(document, today, catalog);
   return { status: findings.length > 0 ? "findings" : "ok", errors: [], findings, aliases, document };
 }

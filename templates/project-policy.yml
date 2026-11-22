@@ -51,6 +51,25 @@ mathematics:
 #     reason: "This project contains no proof-assistant sources."
 #     reviewedAt: "2026-01-01"
 #     revisitWhen: "A .lean, .v, or .thy file is added to this repository."
+#
+# Example — a manual-review rule whose subject splits (never use not-applicable for this). Every
+# portion in declaredSubject must be in exactly one of appliesTo / structurallyImpossibleFor, and an
+# attestation on this rule must list reviewedAgainst.portions (a subset of appliesTo).
+#
+# applicability:
+#   proof.induction-gaps:
+#     mode: split-subject
+#     declaredSubject: [formal-development, prose-record]   # write as a block list if your reader needs it
+#     appliesTo:
+#       - subject: prose-record
+#         basis:
+#           statement: "Induction sketched in prose can omit a case."
+#     structurallyImpossibleFor:
+#       - subject: formal-development
+#         basis:
+#           statement: "A Lean induction that omits a case does not elaborate."
+#           reference: "docs/Audit.lean@<40-hex-sha>:36-49"
+#     revisitWhen: "The prose record is folded into the formal development."
 
 # --- Exceptions ----------------------------------------------------------------------------------
 #

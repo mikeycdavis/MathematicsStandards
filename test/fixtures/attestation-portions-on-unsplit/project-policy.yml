@@ -1,0 +1,24 @@
+# MECHANISM EVIDENCE ONLY, NOT CREDITED TO C2 (#56).
+# Negative fixture: portions on an attestation for a rule with no split declaration.
+# Names, portions, statements and files here are stand-ins chosen to exercise the split-subject
+# mechanism. None is adopter data, and none was copied from any adopter repository.
+standardVersion: "1.0.0"
+mathematics:
+  regimes:
+    - informal
+    - theorem-proving
+applicability:
+  proof.edge-cases-addressed:
+    status: applicable
+    reason: Applies to the whole project.
+attestations:
+  proof.edge-cases-addressed:
+    status: approved
+    reviewedBy: Example Reviewer
+    reviewedAt: "2026-11-16"
+    evidence: Read BARRIERS.md against the stand-in claim.
+    reviewedAgainst:
+      paths:
+        - BARRIERS.md
+      portions:
+        - prose-record

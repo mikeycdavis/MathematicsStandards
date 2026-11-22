@@ -29,6 +29,7 @@ import { plan as planInit, apply as applyInit, render as renderInit } from "./in
 import { parseYaml } from "./yaml.mjs";
 import { classifyArg } from "./invocation.mjs";
 import { validate as validateSchema } from "./jsonschema.mjs";
+import { validateApplicability, classifySplit } from "./applicability.mjs";
 import {
   STATUS_RANK,
   PROVED_RANK,
@@ -516,6 +517,17 @@ async function loadProjectPolicy(repoRoot) {
         error:
           `project-policy.yml does not match the schema (${errors.length} error(s)): ` +
           errors.slice(0, 3).map((e) => `${e.path || "(document)"} ${e.message}`).join("; "),
+      };
+    }
+    // FE-25. The conditional applicability rules the schema cannot express; the same module
+    // `standards policy` and the engine call, so the three commands agree on every file.
+    const semantic = validateApplicability(document, await loadCatalog(path.join(HOME, "rules")));
+    if (semantic.length > 0) {
+      return {
+        document: null,
+        error:
+          `project-policy.yml has invalid applicability (${semantic.length} error(s)): ` +
+          semantic.slice(0, 3).map((e) => `${e.id} at ${e.path}: ${e.message}`).join("; "),
       };
     }
     return { document, error: null };
@@ -2307,6 +2319,7 @@ function renderVerdict(report, policyState) {
     out.push(`  Not applicable (${na.length}): ${na.map((r) => r.ruleId).join(", ")}`);
     out.push("");
   }
+  out.push(...renderSplitSubject(report.splitSubject));
 
   const c = report.frameworkCoverage;
   if (c) {
@@ -2322,6 +2335,39 @@ function renderVerdict(report, policyState) {
   out.push("  much was verified. A skipped rule is neither a pass nor a failure. Framework coverage");
   out.push("  is maturity of the tooling, never compliance of this project — they do not combine.");
   return out.join("\n");
+}
+
+/**
+ * FE-25. The `Split subject (n):` section. A split rule is evaluated on its `appliesTo` portions
+ * only, and every line says so: a pass is a pass of those portions and claims nothing about the
+ * structurally impossible ones. Rendered from the engine's side channel, not from the envelope.
+ */
+function renderSplitSubject(splits) {
+  if (!Array.isArray(splits) || splits.length === 0) return [];
+  const out = [`  Split subject (${splits.length}):`];
+  for (const s of splits) {
+    const on = s.evaluated.map((e) => e.subject).join(", ");
+    const off = s.structurallyImpossible.map((e) => e.subject).join(", ");
+    const state = s.covered
+      ? s.status === "passed"
+        ? "PASS"
+        : s.status === "failed"
+          ? "FAIL"
+          : "NOT EVALUATED, awaiting judgement"
+      : `NOT EVALUATED, unclassified: ${s.unclassified.join(", ")}`;
+    out.push(`    ${s.ruleId} ${state} (scored on: ${on} only; structurally impossible: ${off})`);
+    if (s.disposition === "attested-rejected" && !s.covered) {
+      out.push(`      rejected, and coverage is also incomplete: unclassified ${s.unclassified.join(", ")}`);
+    }
+    if (s.unattestedPortions.length > 0 && s.attestedPortions) {
+      out.push(`      attested portions: ${s.attestedPortions.join(", ")}; unattested: ${s.unattestedPortions.join(", ")}`);
+    }
+    for (const e of [...s.evaluated, ...s.structurallyImpossible]) {
+      if (e.referenceState === "reference-unresolved") out.push(`      ${e.subject}: reference-unresolved (${e.reference})`);
+    }
+  }
+  out.push("");
+  return out;
 }
 
 /**
@@ -2407,6 +2453,14 @@ function explain(catalog, subject, policyDocument) {
     assuranceNote: rule["$assuranceNote"] ?? null,
     disposition: applies?.status === "not-applicable"
       ? { state: "not-applicable", reason: applies.reason, revisitWhen: applies.revisitWhen }
+      : applies?.mode === "split-subject"
+        ? {
+            // FE-25. `explain` is not the result envelope, so it can carry the split state.
+            state: "split-subject",
+            ...classifySplit(applies, null),
+            revisitWhen: applies.revisitWhen,
+            attestedPortions: attestation?.reviewedAgainst?.portions ?? null,
+          }
       : exception
         ? { state: "excepted", reason: exception.reason, expires: exception.expires ?? null }
         : attestation
@@ -2438,6 +2492,15 @@ function renderExplain(info) {
   if (info.disposition.reason) lines.push(`    reason: ${info.disposition.reason}`);
   if (info.disposition.revisitWhen) lines.push(`    revisit when: ${info.disposition.revisitWhen}`);
   if (info.disposition.reviewedBy) lines.push(`    reviewed by ${info.disposition.reviewedBy} on ${info.disposition.reviewedAt}`);
+  if (info.disposition.state === "split-subject") {
+    const d = info.disposition;
+    lines.push(`    evaluated on (scope: ${d.scope}), and a pass claims nothing about the other portions:`);
+    for (const e of d.evaluated) lines.push(`      ${e.subject} — ${e.statement}${e.reference ? ` [${e.reference}]` : ""}`);
+    lines.push("    structurally impossible for:");
+    for (const e of d.structurallyImpossible) lines.push(`      ${e.subject} — ${e.statement}${e.reference ? ` [${e.reference}]` : ""}`);
+    lines.push(`    coverage: ${d.covered ? "complete" : `INCOMPLETE, unclassified: ${d.unclassified.join(", ")}`}`);
+    lines.push(`    attested portions: ${d.attestedPortions ? d.attestedPortions.join(", ") : "none"}`);
+  }
   return lines.join("\n");
 }
 
@@ -2710,6 +2773,7 @@ const evaluateArgs = {
   inspections,
   today,
   digests,
+  files: relativeFileSet,
 };
 
 /**
@@ -2754,14 +2818,18 @@ const report_ = envelope({
     : null,
 });
 
+// FE-25. The split-subject facts are rendered for people but are NOT part of the 2.0 envelope: the
+// JSON branch below writes `report_`, which does not carry them. Held behind the 3.0 change.
+const shown = { ...report_, splitSubject: verdict.splitSubject ?? [] };
+
 if (JSON_OUT) {
   // A consumer joins on results[].ruleId. `findings` is additive detail beyond that contract.
   process.stdout.write(JSON.stringify({ ...report_, findings }, null, 2) + "\n");
 } else if (STATUS_ONLY) {
-  process.stdout.write(renderStatus(report_, policy) + "\n");
+  process.stdout.write(renderStatus(shown, policy) + "\n");
   if (PROVENANCE) process.stdout.write("\n" + renderProvenance(report_) + "\n");
 } else {
-  process.stdout.write(renderVerdict(report_, policy) + "\n");
+  process.stdout.write(renderVerdict(shown, policy) + "\n");
   // Both in the ordinary render, both unconditional. A reader who does not pass --provenance is
   // exactly the reader these two protect: one is told which rows are not about their repository,
   // the other which passes examined nothing of the kind they check.

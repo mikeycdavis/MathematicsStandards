@@ -181,9 +181,13 @@ const PINNED = /@[0-9a-f]{40}(?::\d+(?:-\d+)?)?$/;
 export function referenceState(reference, files) {
   if (reference === undefined) return { state: "none" };
   const text = String(reference).trim();
-  if (/\bhttps?:\/\/\S+/i.test(text) || /\bcommit:?\s+[0-9a-f]{7,40}\b/i.test(text)) return { state: "not-a-path" };
+  // URLs, emails and prose are not citation candidates (see citationTokens), so they never make the
+  // state unresolved and a URL beside a pin never masks the pinned check.
   const tokens = citationTokens(text);
-  if (tokens.length === 0) return unresolvedOrUnchecked(text, files);
+  if (tokens.length === 0) {
+    if (/\b[a-z][a-z0-9+.-]*:\/\/\S+/i.test(text) || /\bcommit:?\s+[0-9a-f]{7,40}\b/i.test(text)) return { state: "not-a-path" };
+    return unresolvedOrUnchecked(text, files);
+  }
   // Every citation is classified, not only the first. All pinned: reference-unresolved (pinned).
   if (tokens.every((t) => PINNED.test(t))) return { state: "reference-unresolved", pinned: true };
   if (tokens.some((t) => PINNED.test(t))) return { state: "reference-unresolved", pinned: false };
@@ -196,12 +200,36 @@ function unresolvedOrUnchecked(tokensOrText, files) {
   return list.every((t) => files.has(t.split("#")[0])) ? { state: "resolved" } : { state: "reference-unresolved", pinned: false };
 }
 
-/** The path-like tokens of a reference, in order (a token has a slash or a file extension). */
+const NOT_PATHS = new Set(["and/or", "either/or", "w/o", "n/a", "his/her", "he/she"]);
+
+/** Is `left` (the part of a token before any `@`) a repository-path-like string? */
+function isPathLike(left) {
+  if (!left || NOT_PATHS.has(left.toLowerCase()) || !/[A-Za-z]/.test(left)) return false;
+  if (left.includes("/")) return true;
+  // A file name: letters in the base, and an extension that starts with a letter (so 3.2 and v1.2 are
+  // not paths). Abbreviations whose every dot-part is one letter (e.g, i.e, a.k.a) are not paths.
+  if (left.split(".").every((part) => part.length <= 1)) return false;
+  return /^[\w-][\w.-]*\.[A-Za-z][A-Za-z0-9]{0,5}$/.test(left) && /[A-Za-z]/.test(left.split(".").slice(0, -1).join("."));
+}
+
+/**
+ * The citation candidates of a reference, in order. A candidate is a token that is path-like on the
+ * left of any `@`. URL tokens (scheme://) and email-like tokens are skipped entirely, as are prose
+ * tokens such as `e.g`, `3.2` and `v1.2`.
+ *
+ * A pinned citation is `path@<40-hex sha>` with an optional `:line[-line]`. A GitHub-style `#L5`
+ * anchor (`path@sha#L5`) is intentionally NOT a valid pin: the one form keeps the line range
+ * machine-readable.
+ */
 export function citationTokens(text) {
   return String(text)
     .split(/[\s,;]+/)
     .map((t) => t.replace(/^[("'`]+|[)"'`.,;:]+$/g, ""))
-    .filter((t) => t.includes("/") || /\.[A-Za-z0-9]{1,6}(#|$|@)/.test(t));
+    .filter((t) => {
+      if (t === "" || /^[a-z][a-z0-9+.-]*:\/\//i.test(t)) return false;
+      if (!t.includes("/") && /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(t)) return false; // email
+      return isPathLike(t.split("@")[0]);
+    });
 }
 
 /**

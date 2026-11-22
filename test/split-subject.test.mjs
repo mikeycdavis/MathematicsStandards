@@ -24,7 +24,7 @@ import path from "node:path";
 
 import { loadCatalog } from "../scripts/catalog.mjs";
 import { evaluate, ENVELOPE_SCHEMA_VERSION } from "../scripts/compliance.mjs";
-import { validateApplicability, ApplicabilityError } from "../scripts/applicability.mjs";
+import { validateApplicability, ApplicabilityError, referenceState } from "../scripts/applicability.mjs";
 import { hasReference } from "../scripts/attempts.mjs";
 import { parseYaml } from "../scripts/yaml.mjs";
 import { HOME, run } from "./helpers/cli.mjs";
@@ -141,7 +141,7 @@ const NEGATIVES = [
   ["split-subject-invalid-missing-declared", /applicability\.split-incomplete/],
   ["split-subject-invalid-malformed-reference", /applicability\.reference-malformed/],
   ["split-subject-invalid-unpinned-later-citation", /applicability\.reference-malformed.*'docs\/B\.md' is unpinned among pinned citations/],
-  ["split-subject-invalid-overlap",/applicability\.split-overlap/],
+  ["split-subject-invalid-overlap", /applicability\.split-overlap/],
   ["split-subject-invalid-unknown-subject", /applicability\.unknown-subject/],
   ["split-subject-invalid-status-and-mode", /applicability\.status-and-mode/],
   ["split-subject-invalid-no-revisit", /applicability\.split-missing-revisit/],
@@ -193,8 +193,31 @@ test("every citation in a multi-citation reference is checked, and duplicates ar
     return validateApplicability(p, catalog);
   };
   assert.deepEqual(withRef(`docs/A.md@${sha}:1-2 docs/B.md@${sha}:3`), []);
-  assert.match(withRef(`docs/A.md@${sha}:1-2 docs/B.md@abc:3`)[0].message, /docs\/B\.md@abc:3' is not a valid pinned citation/);
-  assert.match(withRef(`docs/A.md@${sha}:1-2 docs/B.md`)[0].message, /unpinned among pinned/);
+  const messages = (ref) => withRef(ref).map((e) => `${e.id}: ${e.message}`);
+  assert.ok(messages(`docs/A.md@${sha}:1-2 docs/B.md@abc:3`).some((m) => /docs\/B\.md@abc:3' is not a valid pinned citation/.test(m)));
+  assert.ok(messages(`docs/A.md@${sha}:1-2 docs/B.md`).some((m) => /unpinned among pinned/.test(m)));
+  // path@sha#L5 is intentionally not a valid pin.
+  assert.ok(messages(`docs/A.md@${sha}#L5`).some((m) => /not a valid pinned citation/.test(m)));
+  // Realistic surrounding prose, URLs and emails beside a pin are accepted, not malformed.
+  const pin = `docs/A.md@${sha}:1-2`;
+  for (const ref of [
+    `${pin} (contact bob@example.com)`,
+    `${pin} see https://example.org/spec.md`,
+    `https://github.com/o/r/blob/${sha}/x.md and ${pin}`,
+    `${pin}, section 3.2`,
+    `${pin} e.g. the lemma`,
+    `${pin} i.e. the base case, v1.2 of the notes`,
+    `${pin} / ${pin}`,
+  ]) {
+    assert.deepEqual(withRef(ref), [], ref);
+    const files = new Set();
+    const state = referenceState(ref, files);
+    assert.equal(state.state, "reference-unresolved", ref);
+    assert.equal(state.pinned, true, ref);
+  }
+  // A URL beside a pin does not mask it, and a URL alone is not a path.
+  assert.equal(referenceState(`see https://example.org/spec.md ${pin}`, new Set()).pinned, true);
+  assert.equal(referenceState("https://example.org/spec.md", new Set()).state, "not-a-path");
   const dup = clone(base);
   dup.applicability[EDGE].declaredSubject.push("prose-record");
   assert.equal(validateApplicability(dup, catalog)[0].id, "applicability.split-duplicate");

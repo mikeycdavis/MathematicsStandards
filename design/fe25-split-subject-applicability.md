@@ -14,7 +14,7 @@
 4. **Citations use full 40-character SHAs.** The pinned PvsNP commit is `a2789dfe75f0c342c3a1001f4ec334aec34bb3dd`.
 5. **"Evidenced" for a fixture** means all of: a real adopter citation at the pinned SHA; a per-rule basis for each portion; the checked statements it relies on named; and owner review.
 6. **Approved revisit triggers.** Case 1: changes to theorem hypotheses or edge-case coverage. Case 2: changes to proof-admission controls or use of prose to justify a formal claim. Case 3: changes to induction proof-admission controls or prose proof scope. Case 4: clarification of the rule's scope, or identification of a real applicable symbolic step.
-7. **Test T19 must be reworded** to match the amended C2 to match the amended C2; its exact new wording is a separate owner-reviewed change. Tests are not implemented by this amendment.
+7. **Test T19 must be reworded** to match the amended C2; its exact new wording is a separate owner-reviewed change. Tests are not implemented by this amendment.
 
 This amendment does not lift the implementation-blocked statement above. Where the text below says "four" cases or "four-case fixture", the amendment above governs.
 

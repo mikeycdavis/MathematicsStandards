@@ -107,7 +107,10 @@ export function validateApplicability(document, catalog, { splitOnly = false } =
           }
         }
         const reference = entry.basis?.reference;
-        if (reference !== undefined && !hasReference(reference)) {
+        // `hasReference` (attempts.mjs) is shared with other callers and requires a slash in a path, so a
+        // slash-less pinned citation such as `README.md@<sha>:33` would fail it. A pinned citation is
+        // recognised here, for split declarations only, and `hasReference` is left unchanged.
+        if (reference !== undefined && !hasReference(reference) && !hasPinnedCitation(reference)) {
           add(
             "applicability.reference-malformed",
             `${where}.basis.reference`,
@@ -167,6 +170,16 @@ export function validateApplicability(document, catalog, { splitOnly = false } =
 
 /** A pinned adopter citation: `path@<40-hex sha>` with optional `:line` or `:line-line`. */
 const PINNED = /@[0-9a-f]{40}(?::\d+(?:-\d+)?)?$/;
+
+/**
+ * Does the reference contain at least one well-formed pinned citation, whose path is any
+ * repository-relative path (a directory is NOT required; `README.md@<sha>:33` is valid)? A pinned
+ * citation requires the exact path that supports the claim and a 40-hex SHA. Local to split
+ * declarations; the later per-citation loop still rejects every malformed or unpinned-later token.
+ */
+function hasPinnedCitation(reference) {
+  return typeof reference === "string" && citationTokens(reference).some((t) => PINNED.test(t));
+}
 
 /**
  * Where does a basis reference stand? Reported, never an error (design choice 4).

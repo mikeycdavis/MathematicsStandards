@@ -71,9 +71,62 @@ test("hasReference accepts a pinned path@sha:lines token when the path has a sla
   assert.equal(hasReference(`PvsNP/TM/Rewind.lean@${SHA}:116-217`), true);
   assert.equal(hasReference(`docs/NEXT_STEPS.md@${SHA}:71-72`), true);
   assert.equal(hasReference("see the notes"), false);
-  // Recorded limitation, not endorsed: a slash-less pinned token is NOT a reference to hasReference,
-  // so a pinned citation must name a repository path with a directory.
+  // hasReference is deliberately unchanged (other callers rely on it): a slash-less pinned token is
+  // still not a reference to IT. Split declarations accept it through a local pinned-citation
+  // recognizer in applicability.mjs (next tests), so the exact repository-relative path is enough.
   assert.equal(hasReference(`README.md@${SHA}:33`), false);
+});
+
+test("a slash-less pinned citation (README.md@<sha>:33) is accepted in a split declaration, in either role; every negative still fails", () => {
+  const base = policyOf("split-subject-standin");
+  const withRef = (key, ref) => {
+    const p = clone(base);
+    p.applicability[EDGE][key][0].basis.reference = ref;
+    return validateApplicability(p, catalog);
+  };
+  // No directory is required by the citation form, for appliesTo or structurallyImpossibleFor.
+  for (const key of ["appliesTo", "structurallyImpossibleFor"]) {
+    assert.deepEqual(withRef(key, `README.md@${SHA}:33`), [], key);
+    assert.deepEqual(withRef(key, `README.md@${SHA}`), [], key);
+    assert.deepEqual(withRef(key, `README.md@${SHA}:33-40 docs/B.md@${SHA}:3`), [], key);
+    const state = referenceState(`README.md@${SHA}:33`, new Set());
+    assert.deepEqual(state, { state: "reference-unresolved", pinned: true });
+    // Negatives, slash-less and slashed alike.
+    for (const bad of [
+      `README.md@${SHA.slice(0, 7)}:33`, // short sha
+      `README.md@${SHA.toUpperCase()}:33`, // uppercase sha
+      `README.md@${SHA}#L5`, // #L5 form
+      `README.md@${SHA}:3-`,
+      "see the notes",
+    ]) {
+      assert.ok(withRef(key, bad).some((e) => e.id === "applicability.reference-malformed"), `${key}: ${bad}`);
+    }
+    // An unpinned later citation beside a pinned slash-less one is still refused.
+    assert.ok(withRef(key, `README.md@${SHA}:33 docs/B.md`).some((e) => /unpinned among pinned/.test(e.message)));
+    assert.ok(withRef(key, `README.md@${SHA}:33 NOTES.md`).some((e) => /unpinned among pinned/.test(e.message)));
+  }
+});
+
+test("the citation form does not itself require a directory: the portion boundary is the subject id, not a path (no directory-boundary field exists in the 2.0 declaration)", () => {
+  const schema = JSON.parse(readFileSync(path.join(HOME, "schemas/project-policy.schema.json"), "utf8"));
+  const props = Object.keys(schema.$defs.applicabilityDeclaration.properties);
+  assert.equal(props.some((k) => /path|dir|scope/i.test(k)), false, "no path or directory field defines a portion boundary");
+});
+
+test("KNOWN LIMITATION, pinned as is: scheme-less domains and numbered prose with a slash are path-like, so beside a pin they are refused as unpinned; a scheme URL or the statement field is the workaround", () => {
+  const base = policyOf("split-subject-standin");
+  const pin = `docs/A.md@${SHA}:1`;
+  const withRef = (ref) => {
+    const p = clone(base);
+    p.applicability[EDGE].appliesTo[0].basis.reference = ref;
+    return validateApplicability(p, catalog);
+  };
+  // Not fixed: excluding a first segment that looks like a domain would let a genuine unpinned
+  // repository path in a directory of that name (for example docs.com/x.md) pass the unpinned check.
+  for (const ref of ["www.example.com/x", "example.com/x", "github.com/o/r/blob/main/x.md", "Lemma 2.1/Thm 3"]) {
+    assert.ok(withRef(`${pin} ${ref}`).some((e) => /unpinned among pinned/.test(e.message)), ref);
+  }
+  assert.deepEqual(withRef(`${pin} https://www.example.com/x`), []);
 });
 
 // ---------------------------------------------------------------------------
@@ -115,6 +168,21 @@ test("T11: the human report and `explain` state the evaluated and structurally i
   assert.match(explain, /prose-record — An induction sketched in prose/);
   assert.match(explain, /formal-development — A Lean induction cannot omit its base case/);
   assert.match(explain, /coverage: complete/);
+});
+
+test("an unclassified split states that it remains unclassified and why the generic no-detector token is shown (human report and explain)", () => {
+  const dir = fixture("split-subject-unclassified-portion");
+  const { out } = run(["validate", `--dir=${dir}`]);
+  assert.match(out, /the split remains unclassified: external-notes is declared in declaredSubject but in neither appliesTo nor structurallyImpossibleFor/);
+  assert.match(out, /the JSON shows the generic 'no-detector' token \(envelope 2\.0 has no precise token\); it does not mean a detector is missing/);
+  const explain = run(["explain", EDGE, `--dir=${dir}`]).out;
+  assert.match(explain, /coverage: INCOMPLETE, unclassified: external-notes/);
+  assert.match(explain, /the split remains unclassified: external-notes has no classification/);
+  assert.match(explain, /skipped \/ not-evaluated \/ 'no-detector', the generic 2\.0 token .* does not mean a detector is missing/);
+  // A fully classified split does not carry the sentence.
+  const ok = run(["explain", INDUCTION, `--dir=${fixture("split-subject-standin")}`]).out;
+  assert.doesNotMatch(ok, /remains unclassified/);
+  assert.doesNotMatch(run(["validate", `--dir=${fixture("split-subject-standin")}`]).out, /remains unclassified/);
 });
 
 test("S2: a rejection bound to prose-record fails the rule and the report says what it was scored on", () => {

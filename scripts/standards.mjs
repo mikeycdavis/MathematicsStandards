@@ -2356,6 +2356,10 @@ function renderSplitSubject(splits) {
           : "NOT EVALUATED, awaiting judgement"
       : `NOT EVALUATED, unclassified: ${s.unclassified.join(", ")}`;
     out.push(`    ${s.ruleId} ${state} (scored on: ${on} only; structurally impossible: ${off})`);
+    if (!s.covered) {
+      out.push(`      the split remains unclassified: ${s.unclassified.join(", ")} ${s.unclassified.length === 1 ? "is" : "are"} declared in declaredSubject but in neither appliesTo nor structurallyImpossibleFor`);
+      out.push(`      the JSON shows the generic 'no-detector' token (envelope 2.0 has no precise token); it does not mean a detector is missing`);
+    }
     if (s.disposition === "attested-rejected" && !s.covered) {
       out.push(`      rejected, and coverage is also incomplete: unclassified ${s.unclassified.join(", ")}`);
     }
@@ -2499,6 +2503,10 @@ function renderExplain(info) {
     lines.push("    structurally impossible for:");
     for (const e of d.structurallyImpossible) lines.push(`      ${e.subject} — ${e.statement}${e.reference ? ` [${e.reference}]` : ""}`);
     lines.push(`    coverage: ${d.covered ? "complete" : `INCOMPLETE, unclassified: ${d.unclassified.join(", ")}`}`);
+    if (!d.covered) {
+      lines.push(`    the split remains unclassified: ${d.unclassified.join(", ")} ${d.unclassified.length === 1 ? "has" : "have"} no classification (declared, but in neither appliesTo nor structurallyImpossibleFor)`);
+      lines.push("    the JSON shows skipped / not-evaluated / 'no-detector', the generic 2.0 token (the precise token is held for 3.0); it does not mean a detector is missing");
+    }
     lines.push(`    attested portions: ${d.attestedPortions ? d.attestedPortions.join(", ") : "none"}`);
   }
   return lines.join("\n");

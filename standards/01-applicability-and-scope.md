@@ -67,6 +67,14 @@ An attestation on a split rule MUST list `reviewedAgainst.portions`, a subset of
 approval covering only some of `appliesTo` does not discharge the rule; a rejection always fails.
 `portions` on an unsplit rule is refused. A `reference` of the form `path@<40-hex>:lines` is a pinned
 citation into another repository; it is reported `reference-unresolved` and never resolved locally.
+`path` is the exact repository-relative path that supports the claim, with or without a directory
+(`README.md@<sha>:33` is valid); the SHA must be 40 lowercase hex characters, and an unpinned,
+short-SHA or `#L5`-form citation is refused.
+
+A split with an unclassified portion remains unclassified and is not evaluated. In the 2.0 JSON it is
+shown with the generic `skipped` / `not-evaluated` / `no-detector` token, because 2.0 has no precise
+one; the human report and `standards explain` name the portion(s) lacking a classification and say
+that the token does not mean a detector is missing.
 
 Whether an approval may discharge a split rule awaits the signature design (#55/#57); until then an
 approval is judged as it is today, and the portion binding above is the only added condition.

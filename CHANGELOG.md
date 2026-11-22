@@ -22,6 +22,12 @@ declaration carries `mode` instead; the requirement is enforced semantically (`a
 `applicability.missing-reason`, which also rejects a whitespace-only reason). Every citation in a
 multi-citation `basis.reference` is checked, and repeated `declaredSubject` or `portions` entries are
 refused (`applicability.split-duplicate`).
+A pinned citation is `path@<40-hex sha>[:lines]` where `path` is the exact repository-relative path that
+supports the claim; a directory is not required by the form (`README.md@<sha>:33` is valid), and
+`hasReference` in `scripts/attempts.mjs` is unchanged for its other callers. An unclassified split
+stays `skipped` / `not-evaluated` / `no-detector` in the 2.0 JSON (no new key or token); the human
+report and `standards explain` now say that the split remains unclassified, which portion(s) lack a
+classification, and that the generic token does not mean a detector is missing.
 **Held behind the 3.0 envelope change (not in this release):** `denominator.splitSubject` and
 `unclassifiedSubject`, the per-result `applicability` object, the tokens `applicability-incomplete`,
 `unclassified-subject` and `portion-unattested` in JSON, and signature-dependent attestation parts

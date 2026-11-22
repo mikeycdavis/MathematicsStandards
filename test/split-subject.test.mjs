@@ -6,7 +6,8 @@
  * citations (`split-subject-lean-pinned`). A declaration counts toward C2 only with a real adopter
  * citation at the pinned SHA, a per-rule basis for each portion, named checked statements AND owner
  * review. None of that has happened, so nothing in this file satisfies C2, and C2 stays open.
- * The reworded T19 is a separate owner-reviewed change and is not implemented here.
+ * A PROPOSED reworded T19 (cases 2 and 3 evidenced, case 1 pending, case 4 not-evaluated) closes the
+ * lean group below. It is a DRAFT for owner review: its wording is not owner-approved and it claims no C2 credit.
  *
  * NOT IMPLEMENTED, blocked by #55/#57 (signature design): T8b, the signature part of T10, and the
  * signature part of T16. The engine has no signed-confirmation path, and these tests do not
@@ -247,7 +248,7 @@ test("T14: `scripts/policy.mjs` exits 2 with the same message for every negative
 });
 
 test("positive twins: the valid fixtures pass the semantic layer", () => {
-  for (const name of ["split-subject-standin", "split-subject-standin-attested", "split-subject-lean-pinned", "split-subject-unclassified-portion", "attestation-partial-portions"]) {
+  for (const name of ["split-subject-standin", "split-subject-standin-attested", "split-subject-lean-pinned", "split-subject-lean-cited", "split-subject-unclassified-portion", "attestation-partial-portions"]) {
     assert.deepEqual(validateApplicability(policyOf(name), catalog), [], name);
   }
 });
@@ -431,6 +432,74 @@ test("lean-pinned: case 4 rigor.symbolic-validity-conditions is recorded not-eva
   assert.equal(r.status, "skipped");
   assert.equal(r.disposition, "not-evaluated");
   assert.equal(splitOf(verdict, rule), undefined);
+});
+
+// ---------------------------------------------------------------------------
+// PROPOSED T19 (DRAFT, wording pending owner review; no C2 credit claimed; C2 stays open).
+// Cases 2 and 3 split with the owner-approved adopter citations; case 1 stays pending and uncredited;
+// case 4 stays not-evaluated. Verification of the citations was static: the Lean build and audit were not run.
+// ---------------------------------------------------------------------------
+test("T19 (proposed): cases 2 and 3 report an evaluated and a structurally impossible portion with pinned adopter citations; case 1 is pending; case 4 is not-evaluated", () => {
+  const dir = fixture("split-subject-lean-cited");
+  const policy = policyOf("split-subject-lean-cited");
+  const text = readFileSync(path.join(dir, "project-policy.yml"), "utf8");
+  const verdict = verdictFor(policy, new Set());
+  const cited = [
+    ["proof.unjustified-triviality", "manifest-listed-formal"],
+    ["proof.induction-gaps", "manifest-listed-formal"],
+  ];
+  for (const [id, formal] of cited) {
+    assert.notEqual(resultOf(verdict, id).disposition, "not-applicable", id);
+    const s = splitOf(verdict, id);
+    assert.equal(s.covered, true, id);
+    assert.deepEqual(s.evaluated.map((e) => e.subject), ["prose-record"], id);
+    assert.deepEqual(s.structurallyImpossible.map((e) => e.subject), [formal], id);
+    assert.match(s.revisitWhen, /\S/);
+    for (const e of [...s.evaluated, ...s.structurallyImpossible]) {
+      assert.equal(e.referenceState, "reference-unresolved", `${id} ${e.subject}`);
+      assert.equal(e.pinned, true, `${id} ${e.subject}`);
+      assert.match(e.statement, /verification was static; the Lean build and audit were not run/i, `${id} ${e.subject}`);
+      for (const token of e.reference.split(/\s+/)) {
+        assert.match(token, new RegExp(`^[\\w./-]+@${SHA}:\\d+(?:-\\d+)?$`), `${id}: ${token}`);
+      }
+    }
+  }
+  // Case 2: exactly the approved pairing.
+  const c2 = splitOf(verdict, "proof.unjustified-triviality");
+  assert.match(c2.evaluated[0].reference, /^docs\/ADR\/ADR-020-bottleneck-fibre-bounds\.md@\w+:62-66$/);
+  assert.match(c2.structurallyImpossible[0].reference, /PvsNP\/Proof\/CountingGap\.lean@\w+:184-187/);
+  assert.match(c2.structurallyImpossible[0].statement, /Cnf\.large_measure_does_not_bound_the_charge_set/);
+  assert.match(c2.structurallyImpossible[0].statement, /manifest-listed declarations only/);
+  // Case 3: pairings 3.1, 3.4, 3.5 and 3.6 only, each by its actual proof structure.
+  const c3 = splitOf(verdict, "proof.induction-gaps");
+  const prose = c3.evaluated[0].reference;
+  for (const frag of ["NEXT_STEPS.md@", ":71-72", "ADR-019-oracle-machine-model.md@", ":34-35", "ADR-022-tseitin-target.md@", ":120-121", ":136-138"]) assert.ok(prose.includes(frag), frag);
+  const formal = c3.structurallyImpossible[0];
+  for (const name of ["loopTM_steps", "steps_congr", "pow_add_mul_le", "exists_narrow_refutation"]) assert.ok(formal.statement.includes(name), name);
+  assert.match(formal.statement, /loopTM_steps.*?structural recursion on k by an equation-compiler match/);
+  assert.match(formal.statement, /exists_narrow_refutation.*?tactic induction n with.*?not strong induction/);
+  // 3.2 and 3.3 are never credited: absent from every citation and statement (a header note is the only mention).
+  for (const e of [...c3.evaluated, ...c3.structurallyImpossible]) {
+    for (const banned of ["ADR-001", "ADR-014", "seq_steps", "matchTM_run", "match_scan", "Compose.lean", "MatchTM.lean"]) {
+      assert.equal(`${e.reference} ${e.statement}`.includes(banned), false, `${banned} must not be credited`);
+    }
+  }
+  // Case 1 stays pending and uncredited: no entry in the cited fixture, and the empty-CNF candidate is not used as case 1 evidence.
+  assert.equal(policy.applicability["proof.edge-cases-addressed"], undefined);
+  assert.equal(splitOf(verdict, "proof.edge-cases-addressed"), undefined);
+  assert.equal(resultOf(verdict, "proof.edge-cases-addressed").disposition, "not-evaluated");
+  assert.equal(/Encoding\.lean|ADR-015/.test(text.replace(/^#.*$/gm, "")), false);
+  const pinned = splitOf(verdictFor(policyOf("split-subject-lean-pinned"), new Set()), "proof.edge-cases-addressed");
+  assert.ok(pinned.structurallyImpossible[0].statement.startsWith("PENDING owner review"));
+  // Case 4 stays not-evaluated, never not-applicable, in both fixtures.
+  for (const p of [policy, policyOf("split-subject-lean-pinned")]) {
+    const r = resultOf(verdictFor(p, new Set()), "rigor.symbolic-validity-conditions");
+    assert.equal(p.applicability["rigor.symbolic-validity-conditions"], undefined);
+    assert.equal(r.disposition, "not-evaluated");
+    assert.notEqual(r.disposition, "not-applicable");
+  }
+  // No C2 credit is claimed anywhere in the fixture.
+  assert.match(text, /C2 IS NOT CLAIMED/);
 });
 
 // ---------------------------------------------------------------------------

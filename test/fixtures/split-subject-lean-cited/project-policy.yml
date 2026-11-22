@@ -1,0 +1,62 @@
+# ADOPTER-CITATION FIXTURE, CASES 2 AND 3, FOR OWNER REVIEW (#56, DRAFT PR). C2 IS NOT CLAIMED.
+# C2 stays open: case 1 is evidence-pending and owner acceptance of lean-data.md is outstanding.
+#
+# Declarations-only fixture. It holds NO adopter file: every `reference` is a `path@<40-hex>:lines`
+# citation into PvsNP at the pinned commit
+#   a2789dfe75f0c342c3a1001f4ec334aec34bb3dd
+# and the framework reports each as `reference-unresolved` (a pinned citation names a file of another
+# repository, never of this one). That report is expected and accepted.
+#
+# Source: evidence draft lean-data.DRAFT-r7 (not a real lean-data.md). Carries ONLY owner-approved material.
+#   Case 2 (owner ruling 2026-11-22T21:34:43Z): ADR-020 lines 62-66 paired with
+#     Cnf.large_measure_does_not_bound_the_charge_set, described as a supported triviality assertion.
+#   Case 3 (owner ruling 2026-11-22T21:38:33Z): pairings 3.1, 3.4, 3.5 and 3.6, approved as statically verified.
+# VERIFICATION WAS STATIC for every pairing: both sides were read at the pinned commit; the Lean build and
+# audit were not run, and scripts/check.ps1 was not run.
+#
+# Uncredited note only (NOT declared below): pairings 3.2 (ADR-001 line 25, seq_steps_inl and seq_steps_inr,
+# not in the audit manifest) and 3.3 (ADR-014 lines 33-35, names matchTM_run but the induction is match_scan)
+# stay evidence notes with no credit and appear in no citation, statement or portion of this fixture.
+#
+# Case 1, proof.edge-cases-addressed: PENDING and uncredited. It has deliberately NO applicability entry here.
+#   The empty-CNF candidate (ADR-015, PvsNP/Sat/Encoding.lean) is NOT case 1 evidence and is not used.
+# Case 4, rigor.symbolic-validity-conditions: NOT-EVALUATED. No applicability entry here either.
+standardVersion: "1.0.0"
+project: split-subject-lean-cited
+mathematics:
+  regimes:
+    - informal
+    - theorem-proving
+applicability:
+  proof.unjustified-triviality:
+    mode: split-subject
+    declaredSubject:
+      - manifest-listed-formal
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: A supported triviality assertion. ADR-020 lines 62-66 call the bound trivial as the measure approaches n + 1 and name the theorem Cnf.large_measure_does_not_bound_the_charge_set as its checked counterpart. Prose could call a step trivial without discharging it; here the claim is paired with a named theorem. The sentence at lines 65-66 about a unit clause has no checked counterpart and is not covered. Verification was static; the Lean build and audit were not run.
+          reference: docs/ADR/ADR-020-bottleneck-fibre-bounds.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:62-66
+    structurallyImpossibleFor:
+      - subject: manifest-listed-formal
+        basis:
+          statement: Scoped to manifest-listed declarations only. The checked statement is Cnf.large_measure_does_not_bound_the_charge_set (CountingGap.lean lines 184-187, manifest line 1591). A declaration listed in the axiom manifest is kernel-checked and axiom-audited, so an informal appeal to triviality cannot discharge it. The audit shows the theorem proves, not that it is the intended claim. Declarations outside the manifest are not covered. Verification was static; the Lean build and audit were not run.
+          reference: PvsNP/Proof/CountingGap.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:184-187 PvsNP/AuditManifest.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:1591 scripts/check.ps1@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:17-20
+    revisitWhen: changes to proof-admission controls or use of prose to justify a formal claim
+  proof.induction-gaps:
+    mode: split-subject
+    declaredSubject:
+      - manifest-listed-formal
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: Induction sketched in prose can omit a case. Four passages rely on an induction and each is paired below. 3.1 NEXT_STEPS lines 71-72 say prove it by induction on k, bounded by the loop length. 3.4 ADR-019 lines 34-35 call steps_congr a three-line induction (the proof is nine lines). 3.5 ADR-022 lines 120-121 call pow_add_mul_le a four-line induction (about fifteen lines; four-line fits two_mul_pow_self_le, which applies it). 3.6 ADR-022 lines 136-138 say the recursion is on the size of V alone with b universally quantified inside the induction. Verification was static; the Lean build and audit were not run.
+          reference: docs/NEXT_STEPS.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:71-72 docs/ADR/ADR-019-oracle-machine-model.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:34-35 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:120-121 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:136-138
+    structurallyImpossibleFor:
+      - subject: manifest-listed-formal
+        basis:
+          statement: Scoped to manifest-listed declarations only. Checked statements by actual proof structure. 3.1 loopTM_steps (Loop.lean lines 107-117, manifest 280) is structural recursion on k by an equation-compiler match, and scanRight_steps (Scan.lean lines 149-155, manifest 792) is a corollary with no induction of its own. 3.4 steps_congr (Defs.lean lines 270-281, manifest 1196) is structural recursion on a natural number by match. 3.5 pow_add_mul_le (CubeSize.lean lines 55-70, manifest 1850) is structural recursion on a natural number by match; two_mul_pow_self_le (manifest 1851) is not itself an induction. 3.6 exists_narrow_refutation (SizeWidth.lean lines 68-72 and the induction at line 74, manifest 1800) is a tactic induction n with on a bound n at least the size of V, not strong induction, although its module docstring says strong. A match that omits a required case, or a tactic induction that omits an alternative, does not elaborate. The kernel checks the proof of the stated motive, not that the motive is the claim. Declarations outside the manifest are not covered. Verification was static; the Lean build and audit were not run.
+          reference: PvsNP/TM/Loop.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:107-117 PvsNP/TM/Scan.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:149-155 PvsNP/Oracle/Defs.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:270-281 PvsNP/Proof/CubeSize.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:55-70 PvsNP/Proof/SizeWidth.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:68-72 PvsNP/AuditManifest.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:1800
+    revisitWhen: changes to induction proof-admission controls or prose proof scope

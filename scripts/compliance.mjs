@@ -22,6 +22,7 @@
 
 import { resolve } from "./catalog.mjs";
 import { inspectionFor } from "./surfaces.mjs";
+import { validateApplicability, classifySplit, ApplicabilityError } from "./applicability.mjs";
 
 const noDetectorInspection = () => inspectionFor("__no-detector__", () => []);
 
@@ -53,8 +54,24 @@ const RESULT = { passed: "passed", failed: "failed", warning: "warning", skipped
  *                  A rule absent from this set was not checked, and reporting it as passing
  *                  because nothing failed is the false green this whole framework exists to stop.
  * @param today     ISO date, for exception expiry
+ * @param files     optional Set of repository-relative paths, used only to report whether a split
+ *                  declaration's repository-path references resolve (`reference-unresolved`)
+ *
+ * FE-25 (#56). A split-subject declaration is evaluated on its `appliesTo` portions only. The split
+ * facts (coverage, evaluated and structurally impossible portions, scope, the precise not-evaluated
+ * reason) are returned as `verdict.splitSubject`, a SIDE CHANNEL that `envelope()` does not copy.
+ * The 2.0 envelope is unchanged: a split rule's result uses only the 2.0 vocabulary. What a 3.0
+ * envelope would carry is held; see design/fe25-split-subject-applicability.md, "Held behind 3.0".
+ * A split rule is never `not-applicable`.
  */
-export function evaluate({ catalog, policy, findings, evaluated, inspections, today, digests }) {
+export function evaluate({ catalog, policy, findings, evaluated, inspections, today, digests, files }) {
+  // Fail closed: an invalid split declaration is a configuration error, never a result.
+  if (policy) {
+    const invalid = validateApplicability(policy, catalog, { splitOnly: true });
+    if (invalid.length > 0) throw new ApplicabilityError(invalid);
+  }
+  /** rule id → the precise reason a split rule is not evaluated (held 3.0 tokens, side channel only). */
+  const splitReason = new Map();
   const declaredRules = policy?.rules ?? {};
   const applicability = policy?.applicability ?? {};
   const exceptions = Array.isArray(policy?.exceptions) ? policy.exceptions : [];
@@ -107,6 +124,17 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
       continue;
     }
 
+    // FE-25. A valid split declaration makes the rule an applicable rule evaluated on its
+    // `appliesTo` portions; it is never `not-applicable`.
+    const split = applies?.mode === "split-subject" ? classifySplit(applies, files) : null;
+    const attestedPortions = split ? (attestations[rule.id]?.reviewedAgainst?.portions ?? []) : [];
+    const notEvaluatedSplit = (reason, message) => {
+      // 2.0 vocabulary only: the same disposition and token as any manual-review rule awaiting
+      // judgement. The precise reason is in `message` and in the `splitSubject` side channel.
+      splitReason.set(rule.id, reason);
+      results.push(base(rule, level, RESULT.skipped, "not-evaluated", message, null, noDetectorInspection(), "no-detector"));
+    };
+
     // A recorded human judgement (ADR 0005). Checked BEFORE not-evaluated, because an attestation
     // is precisely what turns "nobody looked" into "somebody looked" — but AFTER the automated
     // findings are collected, because it may never override one.
@@ -122,6 +150,26 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
         inspectedByRule.get(rule.id) ?? noDetectorInspection(),
       );
       if (verdict && !verdict.fallThrough) {
+        // An APPROVAL cannot discharge while a declared portion is unclassified, or while a portion
+        // the rule is evaluated on was not the one reviewed. A REJECTION fails whatever the
+        // coverage (judgeAttestation returns it above), and the side channel shows both facts.
+        if (split && verdict.disposition === "attested") {
+          if (!split.covered) {
+            notEvaluatedSplit(
+              "unclassified-subject",
+              `${rule.id} has unclassified portion(s) (${split.unclassified.join(", ")}); an approval cannot discharge it until each is classified.`,
+            );
+            continue;
+          }
+          const unattested = split.evaluated.map((e) => e.subject).filter((s) => !attestedPortions.includes(s));
+          if (unattested.length > 0) {
+            notEvaluatedSplit(
+              "portion-unattested",
+              `${rule.id} is attested for ${attestedPortions.join(", ")} only; ${unattested.join(", ")} remain(s) unattested, so the approval does not discharge it.`,
+            );
+            continue;
+          }
+        }
         results.push(verdict);
         continue;
       }
@@ -136,6 +184,16 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     }
 
     const hits = byRule.get(rule.id) ?? [];
+
+    // FE-25. Neither passed nor not-applicable: a portion the declaration lists and does not
+    // classify leaves the rule not evaluated.
+    if (split && !split.covered) {
+      notEvaluatedSplit(
+        "unclassified-subject",
+        `${rule.id} has unclassified portion(s) (${split.unclassified.join(", ")}); it is not evaluated until each is classified.`,
+      );
+      continue;
+    }
 
     // A manual-review rule is never ESTABLISHED by an automated run. Without a valid attestation it
     // is not-evaluated, even if the evaluator examined it and found nothing — "no automated finding"
@@ -248,6 +306,26 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     results.push(result);
   }
 
+  // FE-25 side channel, read off the loop's own results before any later result is appended.
+  const splitSubject = [];
+  for (const rule of catalog.rules.values()) {
+    const decl = applicability[rule.id];
+    if (decl?.mode !== "split-subject") continue;
+    const split = classifySplit(decl, files);
+    const result = results.find((r) => r.ruleId === rule.id);
+    const attested = attestations[rule.id]?.reviewedAgainst?.portions ?? null;
+    splitSubject.push({
+      ruleId: rule.id,
+      ...split,
+      attestedPortions: attested,
+      unattestedPortions: attested ? split.evaluated.map((e) => e.subject).filter((s) => !attested.includes(s)) : [],
+      status: result?.status ?? null,
+      disposition: result?.disposition ?? null,
+      // The precise not-evaluated reason when the 2.0 token is the generic one; null otherwise.
+      notEvaluatedBecause: splitReason.get(rule.id) ?? null,
+    });
+  }
+
   for (const entry of rejectedExceptions) {
     const rule = resolve(catalog, entry.rule);
     results.push({
@@ -289,7 +367,9 @@ export function evaluate({ catalog, policy, findings, evaluated, inspections, to
     });
   }
 
-  return summarise(results, policy);
+  const verdict = summarise(results, policy);
+  verdict.splitSubject = splitSubject;
+  return verdict;
 }
 
 /**

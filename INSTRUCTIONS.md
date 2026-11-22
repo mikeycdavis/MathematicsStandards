@@ -61,6 +61,12 @@ job: it is telling you the coverage figure is not the whole picture.
 `.lean` file is added", "a computation is committed". Without one it is a permanent exemption wearing
 a temporary label, and `math-standards policy` refuses it.
 
+**A rule whose subject only partly exists is split, not not-applicable.** Declare
+`mode: split-subject` with `declaredSubject`, `appliesTo`, `structurallyImpossibleFor` and a
+`revisitWhen` (see `standards/01-applicability-and-scope.md`). The rule is scored on the evaluated
+portion only, an unclassified portion is not-evaluated, and an attestation must name the portions it
+covers in `reviewedAgainst.portions`.
+
 **Attestations are evidence, not waivers.** An attestation that contradicts an observed finding
 *fails*. It records the files it reviewed, and goes stale — back to not-evaluated, not to failure —
 when they change. It can also record a **rejection**: "I reviewed this and it is not met" is a

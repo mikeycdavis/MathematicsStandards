@@ -11,6 +11,17 @@ is one of the arms protecting Standard 21 (see `standards/21-standards-integrity
 
 ## Unreleased
 
+**Split-subject applicability for manual-review rules (FE-25, #56; refs only).**
+`applicability.<rule>.mode: split-subject` with `declaredSubject`, `appliesTo`,
+`structurallyImpossibleFor` and a required `revisitWhen`; shared semantic validation in `validate`,
+`policy` and the engine (invalid declaration exits 2); an unclassified portion is not-evaluated;
+attestations on split rules bind to `reviewedAgainst.portions`. The human report and `explain` show the
+split. Mechanism evidence only; nothing here is credited to C2. The 2.0 envelope is unchanged.
+**Held behind the 3.0 envelope change (not in this release):** `denominator.splitSubject` and
+`unclassifiedSubject`, the per-result `applicability` object, the tokens `applicability-incomplete`,
+`unclassified-subject` and `portion-unattested` in JSON, and signature-dependent attestation parts
+(blocked by #55/#57).
+
 **New recommended rule `problems.barrier-profiles-valid`: structured barrier profiles (FE-29, #60).**
 The `## Known Barriers` section of an open-problem record is now either one or more `###` profiles
 (Statement, Scope, Rules out, Does not rule out, Evidence) or an explicit `none`. A profile is

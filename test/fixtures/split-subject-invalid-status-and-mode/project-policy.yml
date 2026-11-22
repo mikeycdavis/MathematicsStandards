@@ -1,0 +1,28 @@
+# MECHANISM EVIDENCE ONLY, NOT CREDITED TO C2 (#56).
+# Negative or engine-state fixture split-subject-invalid-status-and-mode.
+# Names, portions, statements and files here are stand-ins chosen to exercise the split-subject
+# mechanism. None is adopter data, and none was copied from any adopter repository.
+standardVersion: "1.0.0"
+mathematics:
+  regimes:
+    - informal
+    - theorem-proving
+applicability:
+  proof.edge-cases-addressed:
+    mode: split-subject
+    declaredSubject:
+      - formal-development
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: The prose record can state a result without its edge cases.
+          reference: BARRIERS.md
+    structurallyImpossibleFor:
+      - subject: formal-development
+        basis:
+          statement: The formal development is machine-checked.
+          reference: formal/Main.lean
+    revisitWhen: the prose record is folded into the formal development
+    status: applicable
+    reason: both

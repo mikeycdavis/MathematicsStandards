@@ -1,0 +1,7 @@
+standardVersion: "1.0.0"
+mathematics:
+  regimes:
+    - informal
+applicability:
+  proof.edge-cases-addressed:
+    reviewedAt: "2026-11-16"

@@ -1,0 +1,52 @@
+# MECHANISM EVIDENCE ONLY, NOT CREDITED TO C2 (#56).
+# Mechanism stand-in S2: a rejection bound to the prose-record portion. A rejection fails the rule.
+# Names, portions, statements and files here are stand-ins chosen to exercise the split-subject
+# mechanism. None is adopter data, and none was copied from any adopter repository.
+standardVersion: "1.0.0"
+project: split-subject-standin
+mathematics:
+  regimes:
+    - informal
+    - theorem-proving
+applicability:
+  proof.edge-cases-addressed:
+    mode: split-subject
+    declaredSubject:
+      - formal-development
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: The prose record can state a result without its edge cases.
+          reference: BARRIERS.md
+    structurallyImpossibleFor:
+      - subject: formal-development
+        basis:
+          statement: The formal development is machine-checked.
+          reference: formal/Main.lean
+    revisitWhen: the prose record is folded into the formal development
+  proof.induction-gaps:
+    mode: split-subject
+    declaredSubject:
+      - formal-development
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: An induction sketched in prose can omit its base case.
+    structurallyImpossibleFor:
+      - subject: formal-development
+        basis:
+          statement: A Lean induction cannot omit its base case.
+    revisitWhen: the prose record is folded into the formal development
+attestations:
+  proof.edge-cases-addressed:
+    status: rejected
+    reviewedBy: Example Reviewer
+    reviewedAt: "2026-11-16"
+    evidence: Read BARRIERS.md; it states no edge cases for the claim, so the rule is not met.
+    reviewedAgainst:
+      paths:
+        - BARRIERS.md
+      portions:
+        - prose-record

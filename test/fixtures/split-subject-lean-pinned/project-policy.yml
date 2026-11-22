@@ -1,0 +1,79 @@
+# MECHANISM EVIDENCE ONLY, NOT CREDITED TO C2 (#56).
+#
+# Declarations-only fixture with pinned adopter citations. It holds NO adopter file: every
+# `reference` is a `path@<40-hex>:lines` citation into PvsNP at the pinned commit
+#   a2789dfe75f0c342c3a1001f4ec334aec34bb3dd
+# and the framework reports each as `reference-unresolved` (a pinned citation names a file of another
+# repository, never of this one). That report is expected and accepted.
+#
+# Status of each declaration. None is "evidenced" in the sense the owner defined (a real adopter
+# citation at the pinned SHA, a per-rule basis for each portion, the checked statements named, AND
+# owner review). The citations were read against the sibling checkout, but no owner review has
+# occurred, so every declaration here is UNEVIDENCED: mechanism evidence only, not credited to C2.
+# C2 stays open. Reworded T19 is a separate owner-reviewed change.
+#
+# Case 1, proof.edge-cases-addressed: portion id `rewind-formal` for PvsNP/TM/Rewind.lean (owner
+#   ruling 2026-11-22). Evidence PENDING. Rewind's general statements do not establish C2 evidence;
+#   the basis below states what the checked statements quantify over and names their hypotheses.
+# Case 2, proof.unjustified-triviality: formal wording scoped to manifest-listed declarations.
+# Case 3, proof.induction-gaps: formal wording scoped to manifest-listed declarations; prose
+#   citations name the specific induction-dependent passages, NEXT_STEPS.md the concrete reference.
+# Case 4, rigor.symbolic-validity-conditions: NOT-EVALUATED. It is evidence-pending, is neither split
+#   nor not-applicable, and has deliberately NO applicability entry here. A test pins that the rule
+#   is not `not-applicable` and carries no `applicability.mode`. Revisit when the rule's scope is
+#   clarified or a real applicable symbolic step is identified.
+standardVersion: "1.0.0"
+project: split-subject-lean-pinned
+mathematics:
+  regimes:
+    - informal
+    - theorem-proving
+applicability:
+  proof.edge-cases-addressed:
+    mode: split-subject
+    declaredSubject:
+      - rewind-formal
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: The prose record argues its edge cases in prose, where one can be omitted.
+          reference: docs/ADR/ADR-004-alphabet.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:48-58
+    structurallyImpossibleFor:
+      - subject: rewind-formal
+        basis:
+          statement: PENDING owner review. The checked statements rewindTM_steps, rewindTM_result_from and rewindTM_result quantify over x as a List with no non-emptiness hypothesis, so the empty input is inside their scope. Their hypotheses (no blank symbol in x, p at most the length of x, the zero case) restrict the inputs covered, and they are named here as limits. A statement that merely permits the empty list is not coverage.
+          reference: PvsNP/TM/Rewind.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:116-217
+    revisitWhen: changes to theorem hypotheses or edge-case coverage
+  proof.unjustified-triviality:
+    mode: split-subject
+    declaredSubject:
+      - manifest-listed-formal
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: Prose may call a step trivial without discharging it.
+          reference: docs/ADR/ADR-021-bottleneck-route-closed.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:12
+    structurallyImpossibleFor:
+      - subject: manifest-listed-formal
+        basis:
+          statement: PENDING owner review. Scoped to declarations listed in the axiom manifest only. A listed declaration is kernel-checked and axiom-audited, so an informal appeal to triviality cannot discharge it. Declarations outside the manifest are not covered by this statement.
+          reference: PvsNP/Audit.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:36-49
+    revisitWhen: changes to proof-admission controls or use of prose to justify a formal claim
+  proof.induction-gaps:
+    mode: split-subject
+    declaredSubject:
+      - manifest-listed-formal
+      - prose-record
+    appliesTo:
+      - subject: prose-record
+        basis:
+          statement: Induction sketched in prose can omit a case. The concrete reference is the proof pattern in NEXT_STEPS.md lines 71-72; ADR-001 line 25, ADR-014 lines 33-35, ADR-019 line 35 and ADR-022 lines 121 and 136-138 are the passages that rely on an induction.
+          reference: docs/NEXT_STEPS.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:71-72 docs/ADR/ADR-001-model.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:25 docs/ADR/ADR-014-front-end-assembly.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:33-35 docs/ADR/ADR-019-oracle-machine-model.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:35 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:121 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:136-138
+    structurallyImpossibleFor:
+      - subject: manifest-listed-formal
+        basis:
+          statement: PENDING owner review. Scoped to declarations listed in the axiom manifest only. A Lean induction that omits a required case does not elaborate. Declarations outside the manifest are not covered by this statement.
+          reference: PvsNP/Audit.lean@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:36-49
+    revisitWhen: changes to induction proof-admission controls or prose proof scope

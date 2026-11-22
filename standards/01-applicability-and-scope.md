@@ -53,6 +53,24 @@ there rather than in the schema because the requirement is conditional on `statu
 evaluator implements no conditional keywords — a deliberate limit, since a validator that silently
 ignored a keyword it did not understand would be worse than one that refuses it.
 
+#### Split-subject applicability (manual-review rules only)
+
+A rule whose subject divides into portions, one the rule can fail on and one it structurally cannot,
+is declared `mode: split-subject`, never `not-applicable`. The declaration lists every portion in
+`declaredSubject`, then places each in `appliesTo` (evaluated) or `structurallyImpossibleFor` (with a
+`basis` giving a `statement` and optionally a `reference`), and names a `revisitWhen`. A portion
+declared but placed in neither set is an unclassified portion: the rule is **not evaluated**, never
+passed. An invalid declaration is a configuration error (exit 2) in `validate`, `policy` and the engine
+alike. The rule is scored on the evaluated portion only, and the report says so.
+
+An attestation on a split rule MUST list `reviewedAgainst.portions`, a subset of `appliesTo`. An
+approval covering only some of `appliesTo` does not discharge the rule; a rejection always fails.
+`portions` on an unsplit rule is refused. A `reference` of the form `path@<40-hex>:lines` is a pinned
+citation into another repository; it is reported `reference-unresolved` and never resolved locally.
+
+A split declaration is mechanism evidence, not compliance evidence, until a real adopter citation,
+a per-rule basis for each portion, named checked statements and owner review exist.
+
 ### R3 — Not applicable and not evaluated are different answers
 
 Four outcomes are distinguishable, and collapsing any two of them is how a report becomes a lie:

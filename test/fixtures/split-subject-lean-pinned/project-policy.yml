@@ -37,7 +37,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: The prose record argues its edge cases in prose, where one can be omitted.
+          statement: The prose record argues its edge cases in prose, where one can be omitted. Mechanism evidence only, not credited to C2.
           reference: docs/ADR/ADR-004-alphabet.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:48-58
     structurallyImpossibleFor:
       - subject: rewind-formal
@@ -53,7 +53,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: Prose may call a step trivial without discharging it.
+          statement: Prose may call a step trivial without discharging it. Mechanism evidence only, not credited to C2.
           reference: docs/ADR/ADR-021-bottleneck-route-closed.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:12
     structurallyImpossibleFor:
       - subject: manifest-listed-formal
@@ -69,7 +69,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: Induction sketched in prose can omit a case. The concrete reference is the proof pattern in NEXT_STEPS.md lines 71-72; ADR-001 line 25, ADR-014 lines 33-35, ADR-019 line 35 and ADR-022 lines 121 and 136-138 are the passages that rely on an induction.
+          statement: Induction sketched in prose can omit a case. The concrete reference is the proof pattern in NEXT_STEPS.md lines 71-72; ADR-001 line 25, ADR-014 lines 33-35, ADR-019 line 35 and ADR-022 lines 121 and 136-138 are the passages that rely on an induction. Mechanism evidence only, not credited to C2.
           reference: docs/NEXT_STEPS.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:71-72 docs/ADR/ADR-001-model.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:25 docs/ADR/ADR-014-front-end-assembly.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:33-35 docs/ADR/ADR-019-oracle-machine-model.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:35 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:121 docs/ADR/ADR-022-tseitin-target.md@a2789dfe75f0c342c3a1001f4ec334aec34bb3dd:136-138
     structurallyImpossibleFor:
       - subject: manifest-listed-formal

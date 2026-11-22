@@ -13,7 +13,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: The prose record can state a result without its edge cases.
+          statement: The prose record can state a result without its edge cases. Mechanism evidence only, not credited to C2.
           reference: BARRIERS.md
     structurallyImpossibleFor:
       - subject: formal-development

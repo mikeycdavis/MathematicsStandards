@@ -68,6 +68,9 @@ approval covering only some of `appliesTo` does not discharge the rule; a reject
 `portions` on an unsplit rule is refused. A `reference` of the form `path@<40-hex>:lines` is a pinned
 citation into another repository; it is reported `reference-unresolved` and never resolved locally.
 
+Whether an approval may discharge a split rule awaits the signature design (#55/#57); until then an
+approval is judged as it is today, and the portion binding above is the only added condition.
+
 A split declaration is mechanism evidence, not compliance evidence, until a real adopter citation,
 a per-rule basis for each portion, named checked statements and owner review exist.
 

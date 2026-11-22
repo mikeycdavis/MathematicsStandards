@@ -17,7 +17,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: The prose record can state a result without its edge cases.
+          statement: The prose record can state a result without its edge cases. Mechanism evidence only, not credited to C2.
           reference: BARRIERS.md
     structurallyImpossibleFor:
       - subject: formal-development
@@ -33,7 +33,7 @@ applicability:
     appliesTo:
       - subject: prose-record
         basis:
-          statement: An induction sketched in prose can omit its base case.
+          statement: An induction sketched in prose can omit its base case. Mechanism evidence only, not credited to C2.
     structurallyImpossibleFor:
       - subject: formal-development
         basis:

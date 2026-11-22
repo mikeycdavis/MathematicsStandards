@@ -85,7 +85,11 @@ export function validateApplicability(document, catalog, { splitOnly = false } =
     }
 
     // Invariants 2 to 4, per array.
-    const declared = new Set(Array.isArray(decl.declaredSubject) ? decl.declaredSubject : []);
+    const declaredList = Array.isArray(decl.declaredSubject) ? decl.declaredSubject : [];
+    declaredList.forEach((s, i) => {
+      if (declaredList.indexOf(s) !== i) add("applicability.split-duplicate", `${at}.declaredSubject[${i}]`, `subject '${s}' is repeated within declaredSubject`);
+    });
+    const declared = new Set(declaredList);
     const seenIn = { appliesTo: new Set(), structurallyImpossibleFor: new Set() };
     for (const key of ["appliesTo", "structurallyImpossibleFor"]) {
       const entries = Array.isArray(decl[key]) ? decl[key] : [];
@@ -109,6 +113,20 @@ export function validateApplicability(document, catalog, { splitOnly = false } =
             `${where}.basis.reference`,
             `'${reference}' is not a reference (a path, URL or 'commit <sha>')`,
           );
+          return;
+        }
+        // Every citation in the reference is checked, not only the first.
+        if (typeof reference === "string") {
+          const tokens = citationTokens(reference);
+          const anyPinned = tokens.some((t) => PINNED.test(t));
+          for (const t of tokens) {
+            if (PINNED.test(t)) continue;
+            if (t.includes("@")) {
+              add("applicability.reference-malformed", `${where}.basis.reference`, `'${t}' is not a valid pinned citation (path@<40-hex sha>[:lines])`);
+            } else if (anyPinned) {
+              add("applicability.reference-malformed", `${where}.basis.reference`, `'${t}' is unpinned among pinned citations; pin it as path@<40-hex sha>[:lines]`);
+            }
+          }
         }
       });
     }
@@ -132,6 +150,9 @@ export function validateApplicability(document, catalog, { splitOnly = false } =
         continue;
       }
       const evaluated = new Set(subjectsOf(decl.appliesTo));
+      portions.forEach((p, i) => {
+        if (portions.indexOf(p) !== i) add("applicability.split-duplicate", `${at}[${i}]`, `portion '${p}' is repeated in the attestation`);
+      });
       for (const portion of portions) {
         if (!evaluated.has(portion)) {
           add("attestation.portion-not-evaluated", at, `portion '${portion}' is not a member of appliesTo for '${ruleId}'`);
@@ -161,11 +182,26 @@ export function referenceState(reference, files) {
   if (reference === undefined) return { state: "none" };
   const text = String(reference).trim();
   if (/\bhttps?:\/\/\S+/i.test(text) || /\bcommit:?\s+[0-9a-f]{7,40}\b/i.test(text)) return { state: "not-a-path" };
-  const token = text.split(/[\s,;]+/).map((t) => t.replace(/^[("'`]+|[)"'`.,;:]+$/g, "")).find((t) => t.includes("/") || /\.[A-Za-z0-9]{1,6}(#|$|@)/.test(t)) ?? text;
-  if (PINNED.test(token)) return { state: "reference-unresolved", pinned: true };
+  const tokens = citationTokens(text);
+  if (tokens.length === 0) return unresolvedOrUnchecked(text, files);
+  // Every citation is classified, not only the first. All pinned: reference-unresolved (pinned).
+  if (tokens.every((t) => PINNED.test(t))) return { state: "reference-unresolved", pinned: true };
+  if (tokens.some((t) => PINNED.test(t))) return { state: "reference-unresolved", pinned: false };
+  return unresolvedOrUnchecked(tokens, files);
+}
+
+function unresolvedOrUnchecked(tokensOrText, files) {
   if (!files) return { state: "unchecked" };
-  const file = token.split("#")[0];
-  return files.has(file) ? { state: "resolved" } : { state: "reference-unresolved", pinned: false };
+  const list = Array.isArray(tokensOrText) ? tokensOrText : [tokensOrText];
+  return list.every((t) => files.has(t.split("#")[0])) ? { state: "resolved" } : { state: "reference-unresolved", pinned: false };
+}
+
+/** The path-like tokens of a reference, in order (a token has a slash or a file extension). */
+export function citationTokens(text) {
+  return String(text)
+    .split(/[\s,;]+/)
+    .map((t) => t.replace(/^[("'`]+|[)"'`.,;:]+$/g, ""))
+    .filter((t) => t.includes("/") || /\.[A-Za-z0-9]{1,6}(#|$|@)/.test(t));
 }
 
 /**

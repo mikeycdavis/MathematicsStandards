@@ -55,7 +55,7 @@ test("every split-subject and attestation-binding fixture header says mechanism 
     "split-subject-invalid-missing-subject", "split-subject-invalid-missing-statement", "split-subject-invalid-basis-string",
     "split-subject-invalid-malformed-reference", "split-subject-invalid-overlap", "split-subject-invalid-unknown-subject",
     "split-subject-unclassified-portion", "split-subject-invalid-unclear", "split-subject-invalid-profile-key",
-    "split-subject-invalid-status-and-mode", "split-subject-invalid-no-revisit", "split-subject-invalid-detector-rule",
+    "split-subject-invalid-unpinned-later-citation", "split-subject-invalid-status-and-mode", "split-subject-invalid-no-revisit", "split-subject-invalid-detector-rule",
     "attestation-portions-missing", "attestation-portion-impossible", "attestation-portions-on-unsplit", "attestation-partial-portions",
   ];
   for (const name of names) {
@@ -140,7 +140,8 @@ const NEGATIVES = [
   ["split-subject-invalid-profile-key", /unknown property 'profile'/],
   ["split-subject-invalid-missing-declared", /applicability\.split-incomplete/],
   ["split-subject-invalid-malformed-reference", /applicability\.reference-malformed/],
-  ["split-subject-invalid-overlap", /applicability\.split-overlap/],
+  ["split-subject-invalid-unpinned-later-citation", /applicability\.reference-malformed.*'docs\/B\.md' is unpinned among pinned citations/],
+  ["split-subject-invalid-overlap",/applicability\.split-overlap/],
   ["split-subject-invalid-unknown-subject", /applicability\.unknown-subject/],
   ["split-subject-invalid-status-and-mode", /applicability\.status-and-mode/],
   ["split-subject-invalid-no-revisit", /applicability\.split-missing-revisit/],
@@ -181,6 +182,25 @@ test("positive twins: the valid fixtures pass the semantic layer", () => {
   for (const name of ["split-subject-standin", "split-subject-standin-attested", "split-subject-lean-pinned", "split-subject-unclassified-portion", "attestation-partial-portions"]) {
     assert.deepEqual(validateApplicability(policyOf(name), catalog), [], name);
   }
+});
+
+test("every citation in a multi-citation reference is checked, and duplicates are refused with the existing id", () => {
+  const base = policyOf("split-subject-standin");
+  const sha = SHA;
+  const withRef = (ref) => {
+    const p = clone(base);
+    p.applicability[EDGE].appliesTo[0].basis.reference = ref;
+    return validateApplicability(p, catalog);
+  };
+  assert.deepEqual(withRef(`docs/A.md@${sha}:1-2 docs/B.md@${sha}:3`), []);
+  assert.match(withRef(`docs/A.md@${sha}:1-2 docs/B.md@abc:3`)[0].message, /docs\/B\.md@abc:3' is not a valid pinned citation/);
+  assert.match(withRef(`docs/A.md@${sha}:1-2 docs/B.md`)[0].message, /unpinned among pinned/);
+  const dup = clone(base);
+  dup.applicability[EDGE].declaredSubject.push("prose-record");
+  assert.equal(validateApplicability(dup, catalog)[0].id, "applicability.split-duplicate");
+  const dupPortions = clone(base);
+  dupPortions.attestations = { [EDGE]: ATTEST("approved", ["prose-record", "prose-record"]) };
+  assert.equal(validateApplicability(dupPortions, catalog)[0].id, "applicability.split-duplicate");
 });
 
 test("the detector-rule fixture really is a rule the catalog does not evaluate by manual review", () => {

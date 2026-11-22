@@ -6,6 +6,18 @@
 **Evidence base:** the gap-check report for #56 (`evidence-56/ac-gap-check/report.md`) and the live repository at main 14562f6.
 **Blocked item:** the approved C2 ("the four Lean cases are the initial fixture") is NOT satisfied by anything in this record. See "Lean fixture: BLOCKED" and `design/fe25-lean-data-packet.md`.
 
+**Owner-approved amendment, 2026-11-22** (source: `F:\GitHub Evidence\MathematicsStandards\evidence-56\decisions\c2-amendment-and-case1-boundary-2026-11-22.md`, owner message cmsg_01S962nAgzeF44i1MHDz4h1uASWwfczUGnhiUiAoZuMBCm):
+
+1. **C2 requires evidenced fixtures for cases 1, 2 and 3** (`proof.edge-cases-addressed`, `proof.unjustified-triviality`, `proof.induction-gaps`). Case 4 (`rigor.symbolic-validity-conditions`) is evidence-pending and `not-evaluated`; it is never `not-applicable` and is neither split nor claimed. C2 and #56 stay open until all three required fixtures are evidenced.
+2. **Case 1 formal boundary** is `PvsNP/TM/Rewind.lean`. It is widened only if a specific case 1 claim relies on a checked statement in `PvsNP/Sat/Encoding.lean` that establishes the missing edge-case coverage. A statement merely permitting the empty list does not establish coverage. `ADR-015:23` guides the check.
+3. **Stand-ins are mechanism fixtures** and do not satisfy C2.
+4. **Citations use full 40-character SHAs.** The pinned PvsNP commit is `a2789dfe75f0c342c3a1001f4ec334aec34bb3dd`.
+5. **"Evidenced" for a fixture** means all of: a real adopter citation at the pinned SHA; a per-rule basis for each portion; the checked statements it relies on named; and owner review.
+6. **Approved revisit triggers.** Case 1: changes to theorem hypotheses or edge-case coverage. Case 2: changes to proof-admission controls or use of prose to justify a formal claim. Case 3: changes to induction proof-admission controls or prose proof scope. Case 4: clarification of the rule's scope, or identification of a real applicable symbolic step.
+7. **Test T19 must be reworded** to match the amended C2; its exact new wording is a separate owner-reviewed change. Tests are not implemented by this amendment.
+
+This amendment does not lift the implementation-blocked statement above. Where the text below says "four" cases or "four-case fixture", the amendment above governs.
+
 ## Scope
 
 One issue, #56 (FE-25). The typed-evidence and warrant work (#55, #57) is a separate record, `design/fe24-fe26-typed-evidence-and-warrants.md`. The two share one decision: the envelope `schemaVersion` advances to `"3.0"` (see "Envelope version"), and whichever implementation lands first makes the change.
